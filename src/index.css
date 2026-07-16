@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-900 text-gray-100;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-dark-900/30 backdrop-blur-md border border-dark-700;
+  }
+  
+  .glass-card {
+    @apply glass;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-accent to-brand-primary;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0c; 
+}
+ 
+::-webkit-scrollbar-thumb {
+  background: #2a2a32; 
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6d28d9; 
+}

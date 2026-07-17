@@ -91,14 +91,14 @@ const Navbar = () => {
 
         {/* Mobile Nav */}
         {isOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full glass border-t border-dark-600/50 py-4 flex flex-col items-center gap-4">
+          <div className="md:hidden absolute top-full left-0 w-full bg-dark-900 border-b border-dark-600 flex flex-col items-start p-4 gap-2 shadow-2xl">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.path}
                 onClick={() => setIsOpen(false)}
-                className={`text-base font-medium w-full text-center py-2 ${
-                  location.pathname === link.path ? 'text-brand-primary' : 'text-gray-300'
+                className={`text-xs font-mono uppercase tracking-widest w-full text-left px-4 py-4 border border-dark-600 ${
+                  location.pathname === link.path ? 'bg-brand-primary text-white border-brand-primary' : 'bg-dark-800 text-gray-400 hover:text-white'
                 }`}
               >
                 {link.name}

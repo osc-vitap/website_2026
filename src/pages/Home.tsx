@@ -44,7 +44,7 @@ const Home = () => {
       
       {/* 1. Header Slideshow */}
       {slides.length > 0 && (
-        <section className="relative w-full aspect-video min-h-[60vh] max-h-[90vh] overflow-hidden border-b border-dark-700 bg-black">
+        <section className="relative w-full aspect-[4/3] md:aspect-video min-h-[50vh] max-h-[90vh] overflow-hidden border-b border-dark-700 bg-black">
           <AnimatePresence mode='wait'>
             <motion.div
               key={currentSlide}
@@ -61,7 +61,7 @@ const Home = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-b from-dark-900/60 via-transparent to-dark-900"></div>
               
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-10">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 md:p-8 z-10">
                 <motion.div 
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -72,7 +72,7 @@ const Home = () => {
                 </motion.div>
                 
                 <h1 
-                  className="text-5xl md:text-7xl mb-8 max-w-5xl text-white uppercase tracking-[0.3em] font-sans font-light"
+                  className="text-4xl sm:text-5xl md:text-7xl mb-6 md:mb-8 max-w-5xl text-white uppercase tracking-[0.2em] md:tracking-[0.3em] font-sans font-light"
                 >
                   {slides[currentSlide].title}
                 </h1>
@@ -129,15 +129,15 @@ const Home = () => {
                 <img src={upcomingEvent.image} alt={upcomingEvent.title} className="w-full h-full object-cover grayscale opacity-70" />
               </div>
             </div>
-            <div className="md:w-3/5 p-10 md:p-16 flex flex-col justify-center">
-              <div className="flex items-center gap-4 mb-6">
+            <div className="md:w-3/5 p-6 md:p-16 flex flex-col justify-center">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-6">
                 <span className="text-brand-accent uppercase text-xs tracking-[0.2em] font-bold bg-brand-primary/10 px-3 py-1 border border-brand-primary/30">
                   // Upcoming Directive //
                 </span>
                 <span className="text-gray-500 font-mono text-sm">{upcomingEvent.date}</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bebas text-white mb-6 uppercase tracking-wider">{upcomingEvent.title}</h2>
-              <p className="text-gray-400 font-mono text-sm mb-10 max-w-2xl leading-relaxed">{upcomingEvent.description}</p>
+              <h2 className="text-3xl md:text-5xl font-bebas text-white mb-6 uppercase tracking-wider">{upcomingEvent.title}</h2>
+              <p className="text-gray-400 font-mono text-xs md:text-sm mb-8 md:mb-10 max-w-2xl leading-relaxed">{upcomingEvent.description}</p>
               <div>
                 <a href={upcomingEvent.url} className="inline-flex items-center gap-3 px-8 py-4 bg-brand-primary text-white font-bold uppercase tracking-[0.1em] text-sm hover:bg-brand-accent transition-colors">
                   Initiate Link <ExternalLink size={16} />
@@ -149,10 +149,10 @@ const Home = () => {
       )}
 
       {/* Main Container */}
-      <div className="container mx-auto px-6 md:px-12 py-24 max-w-7xl">
+      <div className="container mx-auto px-4 md:px-12 py-16 md:py-24 max-w-7xl">
         
         {/* Quick Stats */}
-        <section className="mb-40">
+        <section className="mb-24 md:mb-40">
           <motion.div 
             variants={containerVariants}
             initial="hidden"
@@ -165,15 +165,15 @@ const Home = () => {
               { icon: <Users size={32} />, val: '350+', label: 'Active Contributors' },
               { icon: <Calendar size={32} />, val: '120+', label: 'Events Hosted' }
             ].map((stat, i) => (
-              <motion.div key={i} variants={itemVariants} className="border border-dark-700 p-10 flex flex-col bg-dark-900/40 relative overflow-hidden group">
+              <motion.div key={i} variants={itemVariants} className="border border-dark-700 p-6 md:p-10 flex flex-col bg-dark-900/40 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 text-brand-primary/10 group-hover:text-brand-primary/20 transition-colors">
                   {stat.icon}
                 </div>
-                <div className="text-brand-accent mb-8">
+                <div className="text-brand-accent mb-6 md:mb-8">
                   {stat.icon}
                 </div>
-                <h3 className="text-5xl font-michroma mb-3 text-white tracking-tighter">{stat.val}</h3>
-                <p className="text-gray-500 font-mono uppercase tracking-[0.1em] text-xs">{stat.label}</p>
+                <h3 className="text-4xl md:text-5xl font-michroma mb-3 text-white tracking-tighter">{stat.val}</h3>
+                <p className="text-gray-500 font-mono uppercase tracking-[0.1em] text-[10px] md:text-xs">{stat.label}</p>
               </motion.div>
             ))}
           </motion.div>

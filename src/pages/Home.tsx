@@ -44,7 +44,7 @@ const Home = () => {
       
       {/* 1. Header Slideshow */}
       {slides.length > 0 && (
-        <section className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden border-b border-dark-700 bg-black">
+        <section className="relative w-full aspect-video min-h-[60vh] max-h-[90vh] overflow-hidden border-b border-dark-700 bg-black">
           <div className="scanline-overlay"></div>
           <AnimatePresence mode='wait'>
             <motion.div
@@ -73,8 +73,7 @@ const Home = () => {
                 </motion.div>
                 
                 <h1 
-                  className="text-6xl md:text-8xl mb-8 max-w-5xl text-white uppercase tracking-wider font-bebas glitch-text"
-                  data-text={slides[currentSlide].title}
+                  className="text-5xl md:text-7xl mb-8 max-w-5xl text-white uppercase tracking-[0.3em] font-sans font-light"
                 >
                   {slides[currentSlide].title}
                 </h1>

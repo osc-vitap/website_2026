@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { teamData } from '../data/teamData';
-import { Github, Linkedin, Twitter, Globe } from 'lucide-react';
+import { Github, Linkedin, Instagram, Globe } from 'lucide-react';
 
 const Team = () => {
   const tiers = ["Admins", "Track Leads", "Technical Leads", "Executive Members"] as const;
@@ -69,9 +69,9 @@ const Team = () => {
                             <Linkedin size={16} />
                           </a>
                         )}
-                        {member.socials.twitter && (
-                          <a href={member.socials.twitter} target="_blank" rel="noreferrer" className="text-gray-500 hover:text-brand-primary transition-colors">
-                            <Twitter size={16} />
+                        {member.socials.instagram && (
+                          <a href={member.socials.instagram} target="_blank" rel="noreferrer" className="text-gray-500 hover:text-pink-500 transition-colors">
+                            <Instagram size={16} />
                           </a>
                         )}
                         {member.socials.website && (

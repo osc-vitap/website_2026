@@ -8,7 +8,7 @@ export interface TeamMember {
   socials: {
     github?: string;
     linkedin?: string;
-    twitter?: string;
+    instagram?: string;
     website?: string;
   };
 }
@@ -23,7 +23,7 @@ export const teamData: TeamMember[] = [
     image: "/team/faariz.webp",
     socials: {
       linkedin: "https://www.linkedin.com/in/mohammed-faariz-a-3a5600317/",
-      twitter: "https://twitter.com/_cottonrust"
+      instagram: "https://instagram.com/_cottonrust"
     }
   },
   {
@@ -35,7 +35,7 @@ export const teamData: TeamMember[] = [
     image: "/team/izhaan.webp",
     socials: {
       github: "https://github.com/Izhaan-Raza",
-      twitter: "https://twitter.com/izhaann7"
+      instagram: "https://instagram.com/izhaann7"
     }
   },
   {
@@ -48,7 +48,7 @@ export const teamData: TeamMember[] = [
     socials: {
       github: "https://github.com/pradyumnabasa",
       linkedin: "https://www.linkedin.com/in/pradyumna-basa-a1641b321",
-      twitter: "https://twitter.com/pradyumnabasa"
+      instagram: "https://instagram.com/pradyumnabasa"
     }
   },
   {
@@ -70,7 +70,7 @@ export const teamData: TeamMember[] = [
     socials: {
       github: "https://github.com/Condition00",
       linkedin: "https://www.linkedin.com/in/anantkavuru",
-      twitter: "https://twitter.com/anantkavuru"
+      instagram: "https://instagram.com/anantkavuru"
     }
   },
   {
@@ -95,7 +95,7 @@ export const teamData: TeamMember[] = [
     socials: {
       github: "https://github.com/ryan000007",
       linkedin: "https://www.linkedin.com/in/ryan-shreyas-medikonda-191a91313/",
-      twitter: "https://twitter.com/ryxn_07"
+      instagram: "https://instagram.com/ryxn_07"
     }
   },
   {
@@ -108,7 +108,7 @@ export const teamData: TeamMember[] = [
     socials: {
       github: "https://github.com/sanctionednewt/",
       linkedin: "https://linkedin.com/in/piyushps107/",
-      twitter: "https://twitter.com/h.suyi.p"
+      instagram: "https://instagram.com/h.suyi.p"
     }
   },
   {

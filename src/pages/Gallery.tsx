@@ -1,4 +1,6 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 import { galleryData } from '../data/galleryData';
 
 const containerVariants = {
@@ -15,6 +17,8 @@ const itemVariants = {
 };
 
 const Gallery = () => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   return (
     <div className="container mx-auto px-4 md:px-12 py-16 md:py-24 max-w-7xl pt-32">
       
@@ -54,7 +58,8 @@ const Gallery = () => {
               <motion.div 
                 key={i} 
                 variants={itemVariants} 
-                className="border border-dark-700 bg-dark-900/40 relative overflow-hidden group aspect-video"
+                onClick={() => setSelectedImage(id)}
+                className="border border-dark-700 bg-dark-900/40 relative overflow-hidden group aspect-video cursor-pointer"
               >
                 <div className="absolute inset-0 bg-brand-primary/10 mix-blend-overlay z-10 group-hover:opacity-0 transition-opacity duration-500 pointer-events-none"></div>
                 
@@ -74,6 +79,39 @@ const Gallery = () => {
           </motion.div>
         </section>
       ))}
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 md:p-12 backdrop-blur-sm"
+            onClick={() => setSelectedImage(null)}
+          >
+            <button 
+              className="absolute top-6 right-6 text-gray-400 hover:text-white bg-dark-900/50 p-3 rounded-full hover:bg-brand-primary/20 transition-colors z-[60]"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImage(null);
+              }}
+            >
+              <X size={28} />
+            </button>
+            <motion.img 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              src={`https://drive.google.com/thumbnail?id=${selectedImage}&sz=w1920`} 
+              alt="Expanded view"
+              className="max-w-full max-h-full object-contain border border-dark-700 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -53,12 +53,14 @@ export const teamData: TeamMember[] = [
   },
   {
     id: "track-2",
-    name: "Alex Johnson",
+    name: "Ayushi",
     role: "Non-Technical Track Lead",
     tier: "Track Leads",
-    bio: "Placeholder bio for Non-Technical Track Lead.",
-    image: "https://i.pravatar.cc/300?u=nontechtrack",
-    socials: {}
+    bio: "The only acceptable bribe is vanilla latte and dragons ✨",
+    image: "/team/ayushi.webp",
+    socials: {
+      github: "https://github.com/Ayushi-17"
+    }
   },
   {
     id: "tech-1",

@@ -45,7 +45,6 @@ const Home = () => {
       {/* 1. Header Slideshow */}
       {slides.length > 0 && (
         <section className="relative w-full aspect-video min-h-[60vh] max-h-[90vh] overflow-hidden border-b border-dark-700 bg-black">
-          <div className="scanline-overlay"></div>
           <AnimatePresence mode='wait'>
             <motion.div
               key={currentSlide}

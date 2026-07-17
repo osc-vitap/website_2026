@@ -19,9 +19,12 @@ export const teamData: TeamMember[] = [
     name: "Mohammed Faariz",
     role: "President",
     tier: "Admins",
-    bio: "Guiding the Open Source Community with a vision for innovation and collaboration.",
+    bio: "I maybe different but still the same paint over the canvas which was white before",
     image: "/team/faariz.webp",
-    socials: {}
+    socials: {
+      linkedin: "https://www.linkedin.com/in/mohammed-faariz-a-3a5600317/",
+      twitter: "https://twitter.com/_cottonrust"
+    }
   },
   {
     id: "core-2",

@@ -30,7 +30,26 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['"JetBrains Mono"', 'monospace'],
+        sans: ['"Geist Mono"', 'monospace'],
+        mono: ['"IBM Plex Mono"', 'monospace'],
+        bebas: ['"Bebas Neue"', 'sans-serif'],
+        michroma: ['"Michroma"', 'sans-serif'],
+        lora: ['"Lora"', 'serif'],
+      },
+      animation: {
+        'glitch': 'glitch 1s linear infinite',
+        'scanlines': 'scanlines 8s linear infinite',
+      },
+      keyframes: {
+        glitch: {
+          '2%, 64%': { transform: 'translate(2px,0) skew(0deg)' },
+          '4%, 60%': { transform: 'translate(-2px,0) skew(0deg)' },
+          '62%': { transform: 'translate(0,0) skew(5deg)' },
+        },
+        scanlines: {
+          '0%': { transform: 'translateY(0)' },
+          '100%': { transform: 'translateY(100vh)' }
+        }
       }
     },
   },

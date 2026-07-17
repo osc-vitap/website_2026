@@ -2,7 +2,7 @@ export interface TeamMember {
   id: string;
   name: string;
   role: string;
-  tier: "Core Leadership" | "Technical Leads" | "Executive Members";
+  tier: "Admins" | "Technical Leads" | "Executive Members" | "Track Leads";
   bio: string;
   image: string;
   socials: {
@@ -13,108 +13,108 @@ export interface TeamMember {
   };
 }
 
-// STRCIT INSTRUCTION: 2026 Placeholder Data Only
 export const teamData: TeamMember[] = [
-  // Core Leadership
   {
     id: "core-1",
-    name: "Alex Mercer",
+    name: "John Doe",
     role: "President",
-    tier: "Core Leadership",
-    bio: "Passionate about building scalable systems and empowering communities.",
-    image: "https://i.pravatar.cc/300?u=alex",
-    socials: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
-      twitter: "https://twitter.com"
-    }
+    tier: "Admins",
+    bio: "Placeholder bio for the President.",
+    image: "https://i.pravatar.cc/300?u=president",
+    socials: {}
   },
   {
     id: "core-2",
-    name: "Sarah Chen",
+    name: "Izhaan Raza",
     role: "Vice President",
-    tier: "Core Leadership",
-    bio: "Full-stack developer focused on creating intuitive user experiences.",
-    image: "https://i.pravatar.cc/300?u=sarah",
+    tier: "Admins",
+    bio: "Cool VP :) Started as IoT, transitioned to Backend dev, then agentics then system design and now Embedded Systems and low level.",
+    image: "/team/izhaan.webp",
     socials: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com"
+      github: "https://github.com/Izhaan-Raza",
+      twitter: "https://twitter.com/izhaann7"
     }
   },
-  
-  // Technical Leads
+  {
+    id: "track-1",
+    name: "Jane Smith",
+    role: "Technical Track Lead",
+    tier: "Track Leads",
+    bio: "Placeholder bio for Technical Track Lead.",
+    image: "https://i.pravatar.cc/300?u=techtrack",
+    socials: {}
+  },
+  {
+    id: "track-2",
+    name: "Alex Johnson",
+    role: "Non-Technical Track Lead",
+    tier: "Track Leads",
+    bio: "Placeholder bio for Non-Technical Track Lead.",
+    image: "https://i.pravatar.cc/300?u=nontechtrack",
+    socials: {}
+  },
   {
     id: "tech-1",
-    name: "David Kim",
+    name: "Anant Satya Mohit Kavuru",
     role: "Technical Lead",
     tier: "Technical Leads",
-    bio: "Cloud architecture enthusiast and Open Source contributor.",
-    image: "https://i.pravatar.cc/300?u=david",
+    bio: "CS undergrad, Linux enthusiast, building cool stuff.",
+    image: "/team/anant.webp",
     socials: {
-      github: "https://github.com",
-      website: "https://example.com"
+      github: "https://github.com/Condition00",
+      linkedin: "https://www.linkedin.com/in/anantkavuru",
+      twitter: "https://twitter.com/anantkavuru"
     }
   },
   {
     id: "tech-2",
-    name: "Priya Patel",
-    role: "Open Source Maintainer",
+    name: "Harshikaa lasya",
+    role: "Technical Co-Lead",
     tier: "Technical Leads",
-    bio: "Rust and WebAssembly advocate. Helping others make their first PR.",
-    image: "https://i.pravatar.cc/300?u=priya",
+    bio: "I'm a Computer Science student with a strong interest in backend development and emerging technologies. I enjoy building real-world applications and learning new tools through hands-on projects. I like collaborating with others, exploring how systems work behind the scenes, and continuously growing as a developer.",
+    image: "/team/harshikaa.webp",
     socials: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
-      twitter: "https://twitter.com"
+      github: "https://github.com/phoenixx-codes",
+      linkedin: "https://www.linkedin.com/in/bhanu-harshikaa-lasya/"
     }
   },
-  {
-    id: "tech-3",
-    name: "Marcus Johnson",
-    role: "Project Manager",
-    tier: "Technical Leads",
-    bio: "Bridging the gap between design and engineering.",
-    image: "https://i.pravatar.cc/300?u=marcus",
-    socials: {
-      linkedin: "https://linkedin.com"
-    }
-  },
-
-  // Executive Members
   {
     id: "exec-1",
-    name: "Elena Rodriguez",
-    role: "Event Coordinator",
+    name: "Ryan Shreyas Medikonda",
+    role: "Creative Lead",
     tier: "Executive Members",
-    bio: "Organizing hackathons and tech meetups for the community.",
-    image: "https://i.pravatar.cc/300?u=elena",
+    bio: "Hi! I'm Ryan, creative lead for OSC. Mostly swimming through life, making sense of it all. I currently enjoy playing video games and working out.",
+    image: "/team/ryan.webp",
     socials: {
-      twitter: "https://twitter.com",
-      linkedin: "https://linkedin.com"
+      github: "https://github.com/ryan000007",
+      linkedin: "https://www.linkedin.com/in/ryan-shreyas-medikonda-191a91313/",
+      twitter: "https://twitter.com/ryxn_07"
     }
   },
   {
     id: "exec-2",
-    name: "Tomomi Sato",
-    role: "Design Lead",
+    name: "Piyush Prasad Singh",
+    role: "Creative Co-Lead",
     tier: "Executive Members",
-    bio: "Crafting beautiful interfaces and user journeys.",
-    image: "https://i.pravatar.cc/300?u=tomomi",
+    bio: "20 year old 2D / 3D Designer.",
+    image: "/team/piyush.webp",
     socials: {
-      website: "https://example.com",
-      github: "https://github.com"
+      github: "https://github.com/sanctionednewt/",
+      linkedin: "https://linkedin.com/in/piyushps107/",
+      twitter: "https://twitter.com/h.suyi.p"
     }
   },
   {
     id: "exec-3",
-    name: "Jamal Davis",
-    role: "Content Strategist",
+    name: "Sumedh Singh Gautam",
+    role: "Events Lead",
     tier: "Executive Members",
-    bio: "Writing about tech trends and community highlights.",
-    image: "https://i.pravatar.cc/300?u=jamal",
+    bio: "Player: Sumedh Singh Gautam. Mission: Build crazy softwares, exploit intelligent systems, and level up by every project. Every challenge is another quest, and every line of code adds experience toward becoming a better engineer.",
+    image: "/team/sumedh.webp",
     socials: {
-      linkedin: "https://linkedin.com",
-      twitter: "https://twitter.com"
+      github: "https://github.com/iamsumedhsg",
+      linkedin: "https://linkedin.com/in/sumedh-singh-gautam/",
+      website: "https://instagram.com/geek_ssg"
     }
   }
 ];

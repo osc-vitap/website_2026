@@ -49,7 +49,7 @@ const Navbar = () => {
             <div className="p-2 bg-dark-900 border border-dark-600">
               <Terminal className="text-brand-primary" size={24} />
             </div>
-            <span className="font-bold text-xl tracking-tight uppercase">OSC<span className="text-brand-primary">VIT-AP</span></span>
+            <span className="font-bebas text-3xl tracking-wider uppercase">OSC<span className="text-brand-primary">VIT-AP</span></span>
           </Link>
 
           {/* Desktop Nav */}
@@ -59,7 +59,7 @@ const Navbar = () => {
                 <Link
                   key={link.name}
                   to={link.path}
-                  className={`text-sm font-medium transition-colors hover:text-brand-primary ${
+                  className={`text-xs font-mono uppercase tracking-widest transition-colors hover:text-brand-primary ${
                     location.pathname === link.path ? 'text-brand-primary' : 'text-gray-300'
                   }`}
                 >

@@ -80,7 +80,7 @@ export const teamData: TeamMember[] = [
     name: "Harshikaa lasya",
     role: "Technical Co-Lead",
     tier: "Technical Leads",
-    bio: "I'm a Computer Science student with a strong interest in backend development and emerging technologies. I enjoy building real-world applications and learning new tools through hands-on projects. I like collaborating with others, exploring how systems work behind the scenes, and continuously growing as a developer.",
+    bio: "Usually building backend stuff, occasionally breaking it, and always learning something new along the way.",
     image: "/team/harshikaa.webp",
     socials: {
       github: "https://github.com/phoenixx-codes",

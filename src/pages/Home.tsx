@@ -55,9 +55,9 @@ const Home = () => {
               className="absolute inset-0"
             >
               <img 
-                src={slides[currentSlide].image} 
+                src={slides[currentSlide].carouselImage} 
                 alt={slides[currentSlide].title} 
-                className="w-full h-full object-cover grayscale opacity-30 mix-blend-screen"
+                className="w-full h-full object-cover opacity-30 mix-blend-screen"
               />
               <div className="absolute inset-0 bg-gradient-to-b from-dark-900/60 via-transparent to-dark-900"></div>
               

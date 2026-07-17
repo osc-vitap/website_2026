@@ -58,9 +58,9 @@ const Gallery = () => {
               >
                 <div className="absolute inset-0 bg-brand-primary/10 mix-blend-overlay z-10 group-hover:opacity-0 transition-opacity duration-500 pointer-events-none"></div>
                 
-                {/* Render directly from GDrive with lazy loading */}
+                {/* Render directly from GDrive with lazy loading and optimized thumbnail sizing */}
                 <img 
-                  src={`https://drive.google.com/uc?export=view&id=${id}`} 
+                  src={`https://drive.google.com/thumbnail?id=${id}&sz=w800`} 
                   alt={`${section.category} image ${i+1}`}
                   loading="lazy"
                   className="w-full h-full object-cover grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700 transform group-hover:scale-105"

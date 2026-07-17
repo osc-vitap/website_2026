@@ -65,7 +65,7 @@
   }
   
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-accent to-brand-primary;
+    @apply text-brand-primary;
   }
 }
 

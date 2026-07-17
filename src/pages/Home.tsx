@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Code, Users, Calendar, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ArrowRight, Code, Users, Calendar, ChevronLeft, ChevronRight, ExternalLink, Target, Zap, Heart, Terminal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { eventsData } from '../data/eventsData';
 import { projectsData } from '../data/projectsData';
@@ -252,6 +252,54 @@ const Home = () => {
               </motion.div>
             ))}
           </motion.div>
+        </section>
+
+        {/* About & What We Do */}
+        <section className="mb-20">
+          <div className="flex justify-between items-end mb-12 border-b border-dark-700 pb-6">
+            <h2 className="text-4xl font-bebas uppercase tracking-widest text-white">Directive: OSC VIT-AP</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
+            <div className="border border-dark-700 p-8 flex flex-col bg-dark-900/40 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 text-brand-primary/10 group-hover:text-brand-primary/20 transition-colors">
+                <Target size={80} />
+              </div>
+              <h3 className="text-2xl font-bebas mb-4 text-white uppercase tracking-wider flex items-center gap-3">
+                <Target className="text-brand-accent" size={24} /> Mission Protocol
+              </h3>
+              <p className="text-gray-500 font-mono text-xs leading-loose relative z-10">
+                To cultivate a thriving ecosystem of developers who believe in free, accessible, and collaborative software. We aim to equip students with industry-standard skills by exposing them to version control, software architecture, and collaborative development early in their academic journey.
+              </p>
+            </div>
+            <div className="border border-dark-700 p-8 flex flex-col bg-dark-900/40 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 text-brand-primary/10 group-hover:text-brand-primary/20 transition-colors">
+                <Heart size={80} />
+              </div>
+              <h3 className="text-2xl font-bebas mb-4 text-white uppercase tracking-wider flex items-center gap-3">
+                <Heart className="text-brand-accent" size={24} /> Core Culture
+              </h3>
+              <p className="text-gray-500 font-mono text-xs leading-loose relative z-10">
+                We believe in learning in public. We foster an inclusive environment where mistakes are stepping stones, questions are encouraged, and knowledge is freely shared. Whether you're writing your first 'Hello World' or debugging complex architectures, there is a place for you here.
+              </p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { title: "Hackathons", icon: <Zap size={24} />, desc: "Intensive coding sprints building solutions over 24-48 hours." },
+              { title: "Open Source", icon: <Terminal size={24} />, desc: "Maintain community projects and help students make first contributions." },
+              { title: "Workshops", icon: <Target size={24} />, desc: "Hands-on technical sessions covering Git, cloud, and beyond." },
+              { title: "Mentorship", icon: <Heart size={24} />, desc: "Peer-to-peer guidance navigating tech careers and development." }
+            ].map((item, i) => (
+              <motion.div key={i} variants={itemVariants} className="border border-dark-700 p-6 flex flex-col bg-dark-900/40 group hover:border-brand-primary/50 transition-colors">
+                <div className="mb-4 text-brand-accent group-hover:text-brand-primary transition-colors">
+                  {item.icon}
+                </div>
+                <h4 className="text-lg font-bebas text-white uppercase tracking-wider mb-2">{item.title}</h4>
+                <p className="text-gray-500 font-mono text-[10px] leading-loose">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </section>
 
       </div>

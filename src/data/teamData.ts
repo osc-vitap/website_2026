@@ -16,11 +16,11 @@ export interface TeamMember {
 export const teamData: TeamMember[] = [
   {
     id: "core-1",
-    name: "John Doe",
+    name: "Mohammed Faariz",
     role: "President",
     tier: "Admins",
-    bio: "Placeholder bio for the President.",
-    image: "https://i.pravatar.cc/300?u=president",
+    bio: "Guiding the Open Source Community with a vision for innovation and collaboration.",
+    image: "/team/faariz.webp",
     socials: {}
   },
   {

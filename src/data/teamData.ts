@@ -37,12 +37,16 @@ export const teamData: TeamMember[] = [
   },
   {
     id: "track-1",
-    name: "Jane Smith",
+    name: "Pradyumna Basa",
     role: "Technical Track Lead",
     tier: "Track Leads",
-    bio: "Placeholder bio for Technical Track Lead.",
-    image: "https://i.pravatar.cc/300?u=techtrack",
-    socials: {}
+    bio: "I love to make stuff and break it all apart. (Also don't ask me about PCB designing please).",
+    image: "/team/pradyumna.webp",
+    socials: {
+      github: "https://github.com/pradyumnabasa",
+      linkedin: "https://www.linkedin.com/in/pradyumna-basa-a1641b321",
+      twitter: "https://twitter.com/pradyumnabasa"
+    }
   },
   {
     id: "track-2",

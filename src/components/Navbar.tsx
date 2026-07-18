@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Search, Terminal } from 'lucide-react';
+import { Menu, X, Search } from 'lucide-react';
 import SearchModal from './SearchModal';
 
 const navLinks = [

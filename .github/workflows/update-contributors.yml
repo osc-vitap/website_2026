@@ -6,6 +6,9 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
 
+permissions:
+  contents: write
+
 jobs:
   update-contributors:
     runs-on: ubuntu-latest

@@ -4,6 +4,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Gallery from './pages/Gallery';
 import Team from './pages/Team';
+import Contributors from './pages/Contributors';
 import Events from './pages/Events';
 import Projects from './pages/Projects';
 import News from './pages/News';
@@ -25,6 +26,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/team" element={<Team />} />
+              <Route path="/contributors" element={<Contributors />} />
               <Route path="/events" element={<Events />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/news" element={<News />} />

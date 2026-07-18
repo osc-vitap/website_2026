@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { projectsData } from '../data/projectsData';
 import { eventsData } from '../data/eventsData';
 import { teamData } from '../data/teamData';
+import { contributorsData } from '../data/contributorsData';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
   const filteredProjects = projectsData.filter(p => p.title.toLowerCase().includes(query.toLowerCase()) || p.description.toLowerCase().includes(query.toLowerCase()));
   const filteredEvents = eventsData.filter(e => e.title.toLowerCase().includes(query.toLowerCase()));
   const filteredTeam = teamData.filter(t => t.name.toLowerCase().includes(query.toLowerCase()) || t.role.toLowerCase().includes(query.toLowerCase()));
+  const filteredContributors = contributorsData.filter(c => c.login.toLowerCase().includes(query.toLowerCase()));
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -96,7 +98,26 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                   ))}
                 </div>
               )}
-              {filteredProjects.length === 0 && filteredEvents.length === 0 && filteredTeam.length === 0 && (
+              {filteredContributors.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Core Contributors</h3>
+                  {filteredContributors.map(c => (
+                    <button 
+                      key={c.login} 
+                      onClick={() => {
+                        window.open(c.html_url, '_blank');
+                        onClose();
+                        setQuery('');
+                      }} 
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 transition-colors flex justify-between items-center"
+                    >
+                      <span className="text-gray-200 font-medium">@{c.login}</span>
+                      <span className="text-xs text-gray-400">GitHub</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {filteredProjects.length === 0 && filteredEvents.length === 0 && filteredTeam.length === 0 && filteredContributors.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   No results found for "{query}"
                 </div>

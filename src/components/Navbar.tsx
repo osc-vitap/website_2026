@@ -45,12 +45,19 @@ const Navbar = () => {
         <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
           
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="p-2 bg-dark-900 border border-dark-600">
-              <Terminal className="text-brand-primary" size={24} />
-            </div>
-            <span className="font-bebas text-3xl tracking-wider uppercase">OSC<span className="text-brand-primary">VIT-AP</span></span>
-          </Link>
+            <Link to="/" className="flex items-center gap-3 select-none hover:opacity-90 transition-opacity">
+              {/* Static Photo Logo */}
+              <img 
+                src="/events/favicon.png" 
+                alt="OSC Logo" 
+                className="w-8 h-8 object-contain flex-shrink-0" 
+              />
+
+              {/* Typography */}
+              <span className="font-bebas text-3xl tracking-wider uppercase font-bold text-white">
+                OSC<span className="text-[#7c3aed]">VIT-AP</span>
+              </span>
+            </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">

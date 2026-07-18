@@ -5,11 +5,6 @@ export const contributorsData = [
     "html_url": "https://github.com/abhiram-kalyan"
   },
   {
-    "login": "ammy20019",
-    "avatar_url": "https://avatars.githubusercontent.com/u/62533482?v=4",
-    "html_url": "https://github.com/ammy20019"
-  },
-  {
     "login": "ashu168",
     "avatar_url": "https://avatars.githubusercontent.com/u/73055168?v=4",
     "html_url": "https://github.com/ashu168"

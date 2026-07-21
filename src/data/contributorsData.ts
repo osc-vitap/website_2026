@@ -30,6 +30,11 @@ export const contributorsData = [
     "html_url": "https://github.com/Izhaan-Raza"
   },
   {
+    "login": "nilesh384",
+    "avatar_url": "https://avatars.githubusercontent.com/u/175202054?v=4",
+    "html_url": "https://github.com/nilesh384"
+  },
+  {
     "login": "RChandana",
     "avatar_url": "https://avatars.githubusercontent.com/u/89007620?v=4",
     "html_url": "https://github.com/RChandana"

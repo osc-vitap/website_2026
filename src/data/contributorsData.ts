@@ -1,15 +1,5 @@
 export const contributorsData = [
   {
-    "login": "abhiram-kalyan",
-    "avatar_url": "https://avatars.githubusercontent.com/u/78918000?v=4",
-    "html_url": "https://github.com/abhiram-kalyan"
-  },
-  {
-    "login": "ashu168",
-    "avatar_url": "https://avatars.githubusercontent.com/u/73055168?v=4",
-    "html_url": "https://github.com/ashu168"
-  },
-  {
     "login": "Bharath1910",
     "avatar_url": "https://avatars.githubusercontent.com/u/72338995?v=4",
     "html_url": "https://github.com/Bharath1910"
@@ -30,29 +20,24 @@ export const contributorsData = [
     "html_url": "https://github.com/Izhaan-Raza"
   },
   {
+    "login": "keiundefeated",
+    "avatar_url": "https://avatars.githubusercontent.com/u/226298442?v=4",
+    "html_url": "https://github.com/keiundefeated"
+  },
+  {
     "login": "nilesh384",
     "avatar_url": "https://avatars.githubusercontent.com/u/175202054?v=4",
     "html_url": "https://github.com/nilesh384"
   },
   {
-    "login": "RChandana",
-    "avatar_url": "https://avatars.githubusercontent.com/u/89007620?v=4",
-    "html_url": "https://github.com/RChandana"
+    "login": "phoenixx-codes",
+    "avatar_url": "https://avatars.githubusercontent.com/u/198185913?v=4",
+    "html_url": "https://github.com/phoenixx-codes"
   },
   {
     "login": "Rikhil-Nell",
     "avatar_url": "https://avatars.githubusercontent.com/u/152618980?v=4",
     "html_url": "https://github.com/Rikhil-Nell"
-  },
-  {
-    "login": "saipranay47",
-    "avatar_url": "https://avatars.githubusercontent.com/u/70259716?v=4",
-    "html_url": "https://github.com/saipranay47"
-  },
-  {
-    "login": "Susmita-Pal",
-    "avatar_url": "https://avatars.githubusercontent.com/u/55327557?v=4",
-    "html_url": "https://github.com/Susmita-Pal"
   },
   {
     "login": "SVijayB",

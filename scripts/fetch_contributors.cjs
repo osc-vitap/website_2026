@@ -5,7 +5,8 @@ const options = {
   hostname: 'api.github.com',
   path: '/orgs/osc-vitap/members',
   headers: {
-    'User-Agent': 'Node.js/OSC-VITAP-Bot'
+    'User-Agent': 'Node.js/OSC-VITAP-Bot',
+    ...(process.env.GITHUB_TOKEN ? { 'Authorization': `Bearer ${process.env.GITHUB_TOKEN}` } : {})
   }
 };
 

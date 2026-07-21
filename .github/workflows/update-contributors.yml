@@ -23,6 +23,8 @@ jobs:
           node-version: '20'
           
       - name: Run Fetch Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/fetch_contributors.cjs
         
       - name: Commit and Push Changes

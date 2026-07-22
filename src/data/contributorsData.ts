@@ -15,6 +15,11 @@ export const contributorsData = [
     "html_url": "https://github.com/fullmeteor172"
   },
   {
+    "login": "hardikxk",
+    "avatar_url": "https://avatars.githubusercontent.com/u/183656738?v=4",
+    "html_url": "https://github.com/hardikxk"
+  },
+  {
     "login": "Izhaan-Raza",
     "avatar_url": "https://avatars.githubusercontent.com/u/66744194?v=4",
     "html_url": "https://github.com/Izhaan-Raza"
@@ -23,6 +28,16 @@ export const contributorsData = [
     "login": "keiundefeated",
     "avatar_url": "https://avatars.githubusercontent.com/u/226298442?v=4",
     "html_url": "https://github.com/keiundefeated"
+  },
+  {
+    "login": "KrishnaBakaraju",
+    "avatar_url": "https://avatars.githubusercontent.com/u/202231883?v=4",
+    "html_url": "https://github.com/KrishnaBakaraju"
+  },
+  {
+    "login": "libremelon",
+    "avatar_url": "https://avatars.githubusercontent.com/u/157024103?v=4",
+    "html_url": "https://github.com/libremelon"
   },
   {
     "login": "nilesh384",

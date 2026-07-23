@@ -5,6 +5,11 @@ export const contributorsData = [
     "html_url": "https://github.com/Bharath1910"
   },
   {
+    "login": "Condition00",
+    "avatar_url": "https://avatars.githubusercontent.com/u/172305133?v=4",
+    "html_url": "https://github.com/Condition00"
+  },
+  {
     "login": "dat-adi",
     "avatar_url": "https://avatars.githubusercontent.com/u/31721284?v=4",
     "html_url": "https://github.com/dat-adi"

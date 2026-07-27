@@ -25,6 +25,11 @@ export const contributorsData = [
     "html_url": "https://github.com/hardikxk"
   },
   {
+    "login": "iamsumedhsg",
+    "avatar_url": "https://avatars.githubusercontent.com/u/170885777?v=4",
+    "html_url": "https://github.com/iamsumedhsg"
+  },
+  {
     "login": "Izhaan-Raza",
     "avatar_url": "https://avatars.githubusercontent.com/u/66744194?v=4",
     "html_url": "https://github.com/Izhaan-Raza"

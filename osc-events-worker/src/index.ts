@@ -1,0 +1,2465 @@
+function json(
+  data: unknown,
+  status = 200,
+  request?: Request,
+): Response {
+  const origin = request?.headers.get("Origin");
+
+  const allowedOrigin =
+    origin === "http://localhost:5173" ||
+    origin === "http://127.0.0.1:5173"
+      ? origin
+      : "http://localhost:5173";
+
+  return Response.json(data, {
+    status,
+    headers: {
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Credentials": "true",
+      Vary: "Origin",
+    },
+  });
+}
+
+function randomToken(): string {
+  return crypto.randomUUID() + crypto.randomUUID();
+}
+
+function getCookie(
+  request: Request,
+  name: string,
+): string | null {
+  const cookies = request.headers.get("Cookie");
+
+  if (!cookies) {
+    return null;
+  }
+
+  const match = cookies
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) =>
+      cookie.startsWith(`${name}=`),
+    );
+
+  return match
+    ? decodeURIComponent(
+        match.substring(name.length + 1),
+      )
+    : null;
+}
+
+function isLocalRequest(
+  request: Request,
+): boolean {
+  const hostname = new URL(request.url).hostname;
+
+  return (
+    hostname === "127.0.0.1" ||
+    hostname === "localhost"
+  );
+}
+
+function sessionCookie(
+  sessionId: string,
+  request: Request,
+): string {
+  const secure = !isLocalRequest(request);
+
+  return [
+    `osc_admin_session=${encodeURIComponent(sessionId)}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Max-Age=28800",
+    secure ? "Secure" : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+async function getAdminSession(
+  request: Request,
+  env: Env,
+) {
+  const sessionId = getCookie(
+    request,
+    "osc_admin_session",
+  );
+
+  if (!sessionId) {
+    return null;
+  }
+
+  const session = await env.DB
+    .prepare(`
+      SELECT
+        id,
+        github_user_id,
+        github_username,
+        expires_at
+      FROM admin_sessions
+      WHERE id = ?
+        AND expires_at > datetime('now')
+    `)
+    .bind(sessionId)
+    .first<{
+      id: string;
+      github_user_id: string;
+      github_username: string;
+      expires_at: string;
+    }>();
+
+  return session ?? null;
+}
+
+async function requireAdmin(
+  request: Request,
+  env: Env,
+): Promise<
+  | {
+      authorized: true;
+      session: {
+        id: string;
+        github_user_id: string;
+        github_username: string;
+        expires_at: string;
+      };
+    }
+  | {
+      authorized: false;
+      response: Response;
+    }
+> {
+  const session = await getAdminSession(
+    request,
+    env,
+  );
+
+  if (!session) {
+    return {
+      authorized: false,
+      response: json(
+        {
+          error: "Authentication required",
+        },
+        401,
+        request,
+      ),
+    };
+  }
+
+  return {
+    authorized: true,
+    session,
+  };
+}
+
+function csvEscape(value: unknown): string {
+  const text = value === null || value === undefined ? "" : String(value);
+  return /[",\n\r]/.test(text)
+    ? `"${text.replace(/"/g, '""')}"`
+    : text;
+}
+
+async function buildRegistrationCsv(
+  env: Env,
+  slug: string,
+): Promise<
+  | {
+      event: {
+        id: string;
+        slug: string;
+        title: string;
+      };
+      csv: string;
+    }
+  | null
+> {
+  const event = await env.DB
+    .prepare(`
+      SELECT id, slug, title
+      FROM events
+      WHERE slug = ?
+    `)
+    .bind(slug)
+    .first<{
+      id: string;
+      slug: string;
+      title: string;
+    }>();
+
+  if (!event) {
+    return null;
+  }
+
+  const { results } = await env.DB
+    .prepare(`
+      SELECT
+        r.id AS registration_id,
+        r.team_name,
+        r.team_size,
+        rm.member_number,
+        rm.name,
+        rm.year_of_study,
+        rm.college_registration_number,
+        rm.github,
+        rm.email,
+        r.created_at AS registration_date
+      FROM registrations r
+      INNER JOIN registration_members rm
+        ON rm.registration_id = r.id
+      WHERE r.event_id = ?
+      ORDER BY r.created_at ASC, rm.member_number ASC
+    `)
+    .bind(event.id)
+    .all<{
+      registration_id: number;
+      team_name: string | null;
+      team_size: number;
+      member_number: number;
+      name: string;
+      year_of_study: string;
+      college_registration_number: string;
+      github: string | null;
+      email: string;
+      registration_date: string;
+    }>();
+
+  const headers = [
+    "Registration ID",
+    "Team Name",
+    "Team Size",
+    "Member Number",
+    "Name",
+    "Year of Study",
+    "College Registration Number",
+    "GitHub",
+    "Email",
+    "Registration Date",
+  ];
+
+  const lines = [
+    headers.map(csvEscape).join(","),
+    ...results.map((row) =>
+      [
+        row.registration_id,
+        row.team_name,
+        row.team_size,
+        row.member_number,
+        row.name,
+        row.year_of_study,
+        row.college_registration_number,
+        row.github,
+        row.email,
+        row.registration_date,
+      ]
+        .map(csvEscape)
+        .join(","),
+    ),
+  ];
+
+  return {
+    event,
+    csv: `\uFEFF${lines.join("\r\n")}\r\n`,
+  };
+}
+
+function csvResponse(csv: string, filename: string, request: Request): Response {
+  const origin = request.headers.get("Origin");
+  const allowedOrigin =
+    origin === "http://localhost:5173" ||
+    origin === "http://127.0.0.1:5173"
+      ? origin
+      : "http://localhost:5173";
+
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Expose-Headers": "Content-Disposition",
+      Vary: "Origin",
+    },
+  });
+}
+
+
+async function archiveEventAfterCompletion(
+  env: Env,
+  event: {
+    id: string;
+    slug: string;
+    title: string;
+  },
+): Promise<void> {
+  /*
+   * Claim the event first so two scheduled executions cannot
+   * archive the same event at the same time.
+   *
+   * IMPORTANT: event_end_at is the trigger. The registration
+   * deadline is intentionally NOT used here.
+   */
+  const claim = await env.DB
+    .prepare(`
+      UPDATE events
+      SET archive_status = 'archiving'
+      WHERE id = ?
+        AND archive_status = 'pending'
+        AND event_end_at IS NOT NULL
+        AND datetime(event_end_at) <= datetime('now')
+    `)
+    .bind(event.id)
+    .run();
+
+  if (!claim.meta.changes) {
+    return;
+  }
+
+  const safeSlug = event.slug.replace(
+    /[^a-zA-Z0-9_-]/g,
+    "-",
+  );
+
+  const objectKey =
+    `events/${safeSlug}/registrations.csv.gz`;
+
+  try {
+    /*
+     * Build the CSV BEFORE deleting anything from D1.
+     */
+    const registrationCsv =
+      await buildRegistrationCsv(
+        env,
+        event.slug,
+      );
+
+    if (!registrationCsv) {
+      throw new Error(
+        "Event not found while creating archive.",
+      );
+    }
+
+    /*
+     * Gzip the CSV and materialize the result because R2 requires
+     * a body with a known length in local/Miniflare as well.
+     */
+    const source =
+      new Blob([
+        registrationCsv.csv,
+      ]).stream();
+
+    const compressed =
+      source.pipeThrough(
+        new CompressionStream("gzip"),
+      );
+
+    const compressedBody =
+      await new Response(
+        compressed,
+      ).arrayBuffer();
+
+    await env.osc_events_archives.put(
+      objectKey,
+      compressedBody,
+      {
+        httpMetadata: {
+          contentType:
+            "text/csv; charset=utf-8",
+          contentEncoding: "gzip",
+        },
+        customMetadata: {
+          eventSlug: event.slug,
+          eventTitle: event.title,
+          archivedBy: "scheduled-worker",
+          archivedAt:
+            new Date().toISOString(),
+        },
+      },
+    );
+
+    /*
+     * Verify the R2 object exists before deleting D1 registration data.
+     */
+    const archive =
+      await env.osc_events_archives.get(
+        objectKey,
+      );
+
+    if (!archive) {
+      throw new Error(
+        "R2 archive verification failed.",
+      );
+    }
+
+    /*
+     * Delete members first, then registrations.
+     * The archived CSV is already safely stored in R2.
+     */
+    await env.DB.batch([
+      env.DB
+        .prepare(`
+          DELETE FROM registration_members
+          WHERE event_id = ?
+        `)
+        .bind(event.id),
+
+      env.DB
+        .prepare(`
+          DELETE FROM registrations
+          WHERE event_id = ?
+        `)
+        .bind(event.id),
+    ]);
+
+    /*
+     * Mark the event archived only after the R2 archive and D1
+     * cleanup have succeeded.
+     */
+    await env.DB
+      .prepare(`
+        UPDATE events
+        SET
+          archive_status = 'archived',
+          archive_key = ?,
+          archived_at = ?
+        WHERE id = ?
+          AND archive_status = 'archiving'
+      `)
+      .bind(
+        objectKey,
+        new Date().toISOString(),
+        event.id,
+      )
+      .run();
+  } catch (error) {
+    console.error(
+      "Automatic event archive failed:",
+      event.slug,
+      error,
+    );
+
+    /*
+     * A failed archive must NEVER leave registration data deleted
+     * without a retry path.
+     */
+    await env.DB
+      .prepare(`
+        UPDATE events
+        SET archive_status = 'pending'
+        WHERE id = ?
+          AND archive_status = 'archiving'
+      `)
+      .bind(event.id)
+      .run();
+  }
+}
+
+async function processCompletedEvents(
+  env: Env,
+): Promise<void> {
+  /*
+   * Only the ACTUAL EVENT END TIME triggers cleanup.
+   * Registration deadline is deliberately ignored.
+   */
+  const { results } = await env.DB
+    .prepare(`
+      SELECT
+        id,
+        slug,
+        title
+      FROM events
+      WHERE event_end_at IS NOT NULL
+        AND datetime(event_end_at) <= datetime('now')
+        AND archive_status = 'pending'
+      ORDER BY event_end_at ASC
+      LIMIT 10
+    `)
+    .all<{
+      id: string;
+      slug: string;
+      title: string;
+    }>();
+
+  for (const event of results) {
+    await archiveEventAfterCompletion(
+      env,
+      event,
+    );
+  }
+}
+
+export default {
+  async scheduled(
+    _controller: ScheduledController,
+    env: Env,
+    _ctx: ExecutionContext,
+  ): Promise<void> {
+    await processCompletedEvents(env);
+  },
+
+  async fetch(
+    request: Request,
+    env: Env,
+  ): Promise<Response> {
+    const url = new URL(request.url);
+
+    /*
+     * ============================================================
+     * CORS
+     * ============================================================
+     */
+
+    if (request.method === "OPTIONS") {
+      const origin =
+        request.headers.get("Origin");
+
+      const allowedOrigin =
+        origin === "http://localhost:5173" ||
+        origin === "http://127.0.0.1:5173"
+          ? origin
+          : "http://localhost:5173";
+
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin":
+            allowedOrigin,
+          "Access-Control-Allow-Methods":
+            "GET, POST, PATCH, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers":
+            "Content-Type",
+          "Access-Control-Allow-Credentials":
+            "true",
+          Vary: "Origin",
+        },
+      });
+    }
+
+    /*
+     * ============================================================
+     * HEALTH
+     * ============================================================
+     */
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/health"
+    ) {
+      return json(
+        { status: "ok" },
+        200,
+        request,
+      );
+    }
+
+    /*
+     * ============================================================
+     * GITHUB OAUTH
+     * ============================================================
+     */
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/auth/github"
+    ) {
+      const state = randomToken();
+
+      const expiresAt = new Date(
+        Date.now() + 10 * 60 * 1000,
+      ).toISOString();
+
+      await env.DB
+        .prepare(`
+          INSERT INTO admin_oauth_states
+            (state, expires_at)
+          VALUES (?, ?)
+        `)
+        .bind(
+          state,
+          expiresAt,
+        )
+        .run();
+
+      const githubUrl = new URL(
+        "https://github.com/login/oauth/authorize",
+      );
+
+      githubUrl.searchParams.set(
+        "client_id",
+        env.GITHUB_CLIENT_ID,
+      );
+
+      githubUrl.searchParams.set(
+        "redirect_uri",
+        `${url.origin}/auth/github/callback`,
+      );
+
+      githubUrl.searchParams.set(
+        "scope",
+        "read:org",
+      );
+
+      githubUrl.searchParams.set(
+        "state",
+        state,
+      );
+
+      return Response.redirect(
+        githubUrl.toString(),
+        302,
+      );
+    }
+
+    /*
+     * GitHub OAuth callback
+     */
+
+    if (
+      request.method === "GET" &&
+      url.pathname ===
+        "/auth/github/callback"
+    ) {
+      const code =
+        url.searchParams.get("code");
+
+      const state =
+        url.searchParams.get("state");
+
+      if (!code || !state) {
+        return json(
+          {
+            error:
+              "Missing GitHub OAuth code or state",
+          },
+          400,
+          request,
+        );
+      }
+
+      /*
+       * Validate OAuth state
+       */
+
+      const oauthState =
+        await env.DB
+          .prepare(`
+            SELECT
+              state,
+              expires_at
+            FROM admin_oauth_states
+            WHERE state = ?
+              AND expires_at > datetime('now')
+          `)
+          .bind(state)
+          .first<{
+            state: string;
+            expires_at: string;
+          }>();
+
+      if (!oauthState) {
+        return json(
+          {
+            error:
+              "Invalid or expired OAuth state",
+          },
+          400,
+          request,
+        );
+      }
+
+      /*
+       * OAuth states are single-use.
+       */
+
+      await env.DB
+        .prepare(`
+          DELETE FROM admin_oauth_states
+          WHERE state = ?
+        `)
+        .bind(state)
+        .run();
+
+      /*
+       * Exchange authorization code
+       * for GitHub access token.
+       */
+
+      const tokenResponse =
+        await fetch(
+          "https://github.com/login/oauth/access_token",
+          {
+            method: "POST",
+            headers: {
+              Accept:
+                "application/json",
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              client_id:
+                env.GITHUB_CLIENT_ID,
+              client_secret:
+                env.GITHUB_CLIENT_SECRET,
+              code,
+              redirect_uri:
+                `${url.origin}/auth/github/callback`,
+            }),
+          },
+        );
+
+      if (!tokenResponse.ok) {
+        return json(
+          {
+            error:
+              "Failed to authenticate with GitHub",
+          },
+          502,
+          request,
+        );
+      }
+
+      const tokenData =
+        (await tokenResponse.json()) as {
+          access_token?: string;
+          token_type?: string;
+          scope?: string;
+          error?: string;
+          error_description?: string;
+        };
+
+      if (!tokenData.access_token) {
+        return json(
+          {
+            error:
+              tokenData.error_description ||
+              "GitHub did not return an access token",
+          },
+          401,
+          request,
+        );
+      }
+
+      const accessToken =
+        tokenData.access_token;
+
+      /*
+       * Get authenticated GitHub user.
+       */
+
+      const githubUserResponse =
+        await fetch(
+          "https://api.github.com/user",
+          {
+            headers: {
+              Authorization:
+                `Bearer ${accessToken}`,
+              Accept:
+                "application/vnd.github+json",
+              "X-GitHub-Api-Version":
+                "2022-11-28",
+              "User-Agent":
+                "OSC-VITAP-Events-Admin",
+            },
+          },
+        );
+
+      if (!githubUserResponse.ok) {
+        return json(
+          {
+            error:
+              "Unable to verify GitHub account",
+          },
+          502,
+          request,
+        );
+      }
+
+      const githubUser =
+        (await githubUserResponse.json()) as {
+          id: number;
+          login: string;
+        };
+
+      /*
+       * ==========================================================
+       * OSC TECHNICAL DEPARTMENT AUTHORIZATION
+       * ==========================================================
+       */
+
+      const membershipResponse =
+        await fetch(
+          `https://api.github.com/orgs/osc-vitap/teams/osc-technical-department/memberships/${encodeURIComponent(githubUser.login)}`,
+          {
+            headers: {
+              Authorization:
+                `Bearer ${accessToken}`,
+              Accept:
+                "application/vnd.github+json",
+              "X-GitHub-Api-Version":
+                "2022-11-28",
+              "User-Agent":
+                "OSC-VITAP-Events-Admin",
+            },
+          },
+        );
+
+      if (!membershipResponse.ok) {
+        const githubError =
+          await membershipResponse.text();
+
+        console.log(
+          "GitHub team membership check:",
+          membershipResponse.status,
+          githubError,
+        );
+
+        return json(
+          {
+            error:
+              "Access denied. You are not a member of the OSC technical department.",
+          },
+          403,
+          request,
+        );
+      }
+
+      const membership =
+        (await membershipResponse.json()) as {
+          state?: string;
+          role?: string;
+        };
+
+      if (
+        membership.state !== "active"
+      ) {
+        return json(
+          {
+            error:
+              "Your OSC technical department membership is not active.",
+          },
+          403,
+          request,
+        );
+      }
+
+      /*
+       * ==========================================================
+       * SERVER-SIDE SESSION
+       * ==========================================================
+       */
+
+      const sessionId =
+        randomToken();
+
+      const sessionExpiresAt =
+        new Date(
+          Date.now() +
+            8 * 60 * 60 * 1000,
+        ).toISOString();
+
+      await env.DB
+        .prepare(`
+          INSERT INTO admin_sessions
+            (
+              id,
+              github_user_id,
+              github_username,
+              expires_at
+            )
+          VALUES (?, ?, ?, ?)
+        `)
+        .bind(
+          sessionId,
+          String(githubUser.id),
+          githubUser.login,
+          sessionExpiresAt,
+        )
+        .run();
+
+      /*
+       * IMPORTANT:
+       * Do not return the authentication result as JSON here.
+       *
+       * The browser should be redirected back to the
+       * React admin dashboard after successful authentication.
+       */
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          "Location":
+            "http://localhost:5173/admin",
+          "Set-Cookie":
+            sessionCookie(
+              sessionId,
+              request,
+            ),
+        },
+      });
+    }
+
+    /*
+     * ============================================================
+     * CURRENT ADMIN SESSION
+     * ============================================================
+     */
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/admin/me"
+    ) {
+      const session =
+        await getAdminSession(
+          request,
+          env,
+        );
+
+      if (!session) {
+        return json(
+          {
+            authenticated: false,
+          },
+          401,
+          request,
+        );
+      }
+
+      return json(
+        {
+          authenticated: true,
+          github_username:
+            session.github_username,
+          role:
+            "osc-technical-department",
+          expires_at:
+            session.expires_at,
+        },
+        200,
+        request,
+      );
+    }
+
+/*
+ * ============================================================
+ * ADMIN EVENT REGISTRATIONS
+ * ============================================================
+ */
+
+if (
+  request.method === "GET" &&
+  url.pathname.match(
+    /^\/api\/admin\/events\/[^/]+\/registrations$/,
+  )
+) {
+  const auth = await requireAdmin(
+    request,
+    env,
+  );
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
+  const slug =
+    url.pathname.split("/")[4];
+
+  if (!slug) {
+    return json(
+      {
+        error:
+          "Event slug is required",
+      },
+      400,
+      request,
+    );
+  }
+
+  const event =
+    await env.DB
+      .prepare(`
+        SELECT
+          id,
+          slug,
+          title,
+          registration_type,
+          min_team_size,
+          max_team_size,
+          registration_deadline
+        FROM events
+        WHERE slug = ?
+      `)
+      .bind(slug)
+      .first<{
+        id: string;
+        slug: string;
+        title: string;
+        registration_type:
+          | "solo"
+          | "team"
+          | "workshop";
+        min_team_size: number;
+        max_team_size: number;
+        registration_deadline: string | null;
+      }>();
+
+  if (!event) {
+    return json(
+      {
+        error:
+          "Event not found",
+      },
+      404,
+      request,
+    );
+  }
+
+  const { results } =
+    await env.DB
+      .prepare(`
+        SELECT
+          r.id,
+          r.team_name,
+          r.team_size,
+          r.created_at,
+          rm.id AS member_id,
+          rm.name,
+          rm.year_of_study,
+          rm.college_registration_number,
+          rm.github,
+          rm.email,
+          rm.member_number
+        FROM registrations r
+        LEFT JOIN registration_members rm
+          ON rm.registration_id = r.id
+        WHERE r.event_id = ?
+        ORDER BY
+          r.created_at DESC,
+          rm.member_number ASC
+      `)
+      .bind(event.id)
+      .all<{
+        id: number;
+        team_name: string | null;
+        team_size: number;
+        created_at: string;
+        member_id: number | null;
+        name: string | null;
+        year_of_study: string | null;
+        college_registration_number:
+          | string
+          | null;
+        github: string | null;
+        email: string | null;
+        member_number: number | null;
+      }>();
+
+  const registrationMap =
+    new Map<
+      number,
+      {
+        id: number;
+        team_name: string | null;
+        team_size: number;
+        created_at: string;
+        members: {
+          id: number;
+          name: string;
+          year_of_study: string;
+          college_registration_number: string;
+          github: string | null;
+          email: string;
+          member_number: number;
+        }[];
+      }
+    >();
+
+  for (const row of results) {
+    if (!registrationMap.has(row.id)) {
+      registrationMap.set(row.id, {
+        id: row.id,
+        team_name: row.team_name,
+        team_size: row.team_size,
+        created_at: row.created_at,
+        members: [],
+      });
+    }
+
+    if (
+      row.member_id !== null &&
+      row.name !== null &&
+      row.year_of_study !== null &&
+      row.college_registration_number !==
+        null &&
+      row.email !== null &&
+      row.member_number !== null
+    ) {
+      registrationMap
+        .get(row.id)!
+        .members.push({
+          id: row.member_id,
+          name: row.name,
+          year_of_study:
+            row.year_of_study,
+          college_registration_number:
+            row.college_registration_number,
+          github: row.github,
+          email: row.email,
+          member_number:
+            row.member_number,
+        });
+    }
+  }
+
+  return json(
+    {
+      event,
+      registrations:
+        Array.from(
+          registrationMap.values(),
+        ),
+    },
+    200,
+    request,
+  );
+}
+
+/*
+ * ============================================================
+ * ADMIN EVENT REGISTRATIONS CSV
+ * ============================================================
+ */
+
+if (
+  request.method === "GET" &&
+  url.pathname.match(
+    /^\/api\/admin\/events\/[^/]+\/registrations\.csv$/,
+  )
+) {
+  const auth = await requireAdmin(
+    request,
+    env,
+  );
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
+  const slug =
+    url.pathname.split("/")[4];
+
+  if (!slug) {
+    return json(
+      { error: "Event slug is required" },
+      400,
+      request,
+    );
+  }
+
+  const registrationCsv =
+    await buildRegistrationCsv(
+      env,
+      slug,
+    );
+
+  if (!registrationCsv) {
+    return json(
+      { error: "Event not found" },
+      404,
+      request,
+    );
+  }
+
+  const safeSlug =
+    registrationCsv.event.slug.replace(
+      /[^a-zA-Z0-9_-]/g,
+      "-",
+    );
+
+  return csvResponse(
+    registrationCsv.csv,
+    `${safeSlug}-registrations.csv`,
+    request,
+  );
+}
+
+/*
+ * ============================================================
+ * ADMIN EVENT REGISTRATIONS R2 ARCHIVE
+ * ============================================================
+ *
+ * Creates a private gzip-compressed CSV archive in R2.
+ * This does NOT delete anything from D1.
+ */
+
+if (
+  request.method === "POST" &&
+  url.pathname.match(
+    /^\/api\/admin\/events\/[^/]+\/registrations\/archive$/,
+  )
+) {
+  const auth = await requireAdmin(
+    request,
+    env,
+  );
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
+  const slug =
+    url.pathname.split("/")[4];
+
+  if (!slug) {
+    return json(
+      { error: "Event slug is required" },
+      400,
+      request,
+    );
+  }
+
+  const registrationCsv =
+    await buildRegistrationCsv(
+      env,
+      slug,
+    );
+
+  if (!registrationCsv) {
+    return json(
+      { error: "Event not found" },
+      404,
+      request,
+    );
+  }
+
+  const safeSlug =
+    registrationCsv.event.slug.replace(
+      /[^a-zA-Z0-9_-]/g,
+      "-",
+    );
+
+  const objectKey =
+    `events/${safeSlug}/registrations.csv.gz`;
+
+  const source =
+    new Blob([
+      registrationCsv.csv,
+    ]).stream();
+
+  const compressed =
+    source.pipeThrough(
+      new CompressionStream("gzip"),
+    );
+
+  // R2 requires a body with a known length. Materialize the
+  // compressed stream before uploading so local and remote R2
+  // both receive a fixed-length body.
+  const compressedBody =
+    await new Response(
+      compressed,
+    ).arrayBuffer();
+
+  await env.osc_events_archives.put(
+    objectKey,
+    compressedBody,
+    {
+      httpMetadata: {
+        contentType:
+          "text/csv; charset=utf-8",
+        contentEncoding: "gzip",
+      },
+      customMetadata: {
+        eventSlug:
+          registrationCsv.event.slug,
+        eventTitle:
+          registrationCsv.event.title,
+        archivedBy:
+          auth.session.github_username,
+        archivedAt:
+          new Date().toISOString(),
+      },
+    },
+  );
+
+  await env.DB
+    .prepare(`
+      UPDATE events
+      SET
+        archive_status = 'archived',
+        archive_key = ?,
+        archived_at = ?
+      WHERE slug = ?
+    `)
+    .bind(
+      objectKey,
+      new Date().toISOString(),
+      registrationCsv.event.slug,
+    )
+    .run();
+
+  return json(
+    {
+      success: true,
+      message:
+        "Registration CSV archived successfully",
+      event:
+        registrationCsv.event.slug,
+      object_key:
+        objectKey,
+      archived_by:
+        auth.session.github_username,
+    },
+    200,
+    request,
+  );
+}
+
+
+/*
+ * ============================================================
+ * ADMIN EVENT REGISTRATIONS R2 ARCHIVE DOWNLOAD
+ * ============================================================
+ *
+ * Returns the private compressed registration archive from R2.
+ * Access is restricted to authenticated/authorized admins.
+ */
+
+if (
+  request.method === "GET" &&
+  url.pathname.match(
+    /^\/api\/admin\/events\/[^/]+\/registrations\/archive$/,
+  )
+) {
+  const auth = await requireAdmin(
+    request,
+    env,
+  );
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
+  const slug =
+    url.pathname.split("/")[4];
+
+  if (!slug) {
+    return json(
+      { error: "Event slug is required" },
+      400,
+      request,
+    );
+  }
+
+  const event =
+    await env.DB.prepare(
+      `SELECT slug, title
+       FROM events
+       WHERE slug = ?`,
+    )
+      .bind(slug)
+      .first<{
+        slug: string;
+        title: string;
+      }>();
+
+  if (!event) {
+    return json(
+      { error: "Event not found" },
+      404,
+      request,
+    );
+  }
+
+  const safeSlug =
+    event.slug.replace(
+      /[^a-zA-Z0-9_-]/g,
+      "-",
+    );
+
+  const objectKey =
+    `events/${safeSlug}/registrations.csv.gz`;
+
+  const archive =
+    await env.osc_events_archives.get(
+      objectKey,
+    );
+
+  if (!archive) {
+    return json(
+      {
+        error:
+          "Registration archive not found",
+      },
+      404,
+      request,
+    );
+  }
+
+  return new Response(
+    archive.body,
+    {
+      status: 200,
+      headers: {
+        "Content-Type":
+          "application/gzip",
+        "Content-Disposition":
+          `attachment; filename="${safeSlug}-registrations.csv.gz"`,
+        "Content-Length":
+          archive.size.toString(),
+        "Access-Control-Allow-Origin":
+          request.headers.get("Origin") ===
+          "http://localhost:5173"
+            ? "http://localhost:5173"
+            : "http://localhost:5173",
+        "Access-Control-Allow-Credentials":
+          "true",
+        Vary: "Origin",
+      },
+    },
+  );
+}
+
+
+/*
+ * ============================================================
+ * UPDATE ADMIN EVENT
+ * ============================================================
+ */
+
+if (
+  request.method === "PATCH" &&
+  url.pathname.match(
+    /^\/api\/admin\/events\/[^/]+$/,
+  )
+) {
+  const auth = await requireAdmin(
+    request,
+    env,
+  );
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
+  const currentSlug =
+    url.pathname.split("/")[4];
+
+  if (!currentSlug) {
+    return json(
+      {
+        error:
+          "Event slug is required",
+      },
+      400,
+      request,
+    );
+  }
+
+  const existingEvent =
+    await env.DB
+      .prepare(`
+        SELECT
+          id,
+          slug,
+          title,
+          sub_title,
+          description,
+          venue,
+          event_date,
+          image,
+          is_open,
+          registration_type,
+          min_team_size,
+          max_team_size,
+          registration_deadline
+        FROM events
+        WHERE slug = ?
+      `)
+      .bind(currentSlug)
+      .first<{
+        id: string;
+        slug: string;
+        title: string;
+        sub_title: string | null;
+        description: string | null;
+        venue: string | null;
+        event_date: string;
+        image: string | null;
+        is_open: number;
+        registration_type:
+          | "solo"
+          | "team"
+          | "workshop";
+        min_team_size: number;
+        max_team_size: number;
+        registration_deadline: string | null;
+      }>();
+
+  if (!existingEvent) {
+    return json(
+      {
+        error:
+          "Event not found",
+      },
+      404,
+      request,
+    );
+  }
+
+  let body: {
+    title?: string;
+    slug?: string;
+    sub_title?: string;
+    description?: string;
+    venue?: string;
+    event_date?: string;
+    image?: string;
+    registration_type?:
+      | "solo"
+      | "team"
+      | "workshop";
+    min_team_size?: number;
+    max_team_size?: number;
+    is_open?: boolean;
+    registration_deadline?: string | null;
+  };
+
+  try {
+    body =
+      await request.json();
+  } catch {
+    return json(
+      {
+        error:
+          "Invalid JSON body",
+      },
+      400,
+      request,
+    );
+  }
+
+  const title =
+    body.title !== undefined
+      ? body.title.trim()
+      : existingEvent.title;
+
+  const slug =
+    body.slug !== undefined
+      ? body.slug
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+      : existingEvent.slug;
+
+  const eventDate =
+    body.event_date ??
+    existingEvent.event_date;
+
+  const registrationDeadline =
+    body.registration_deadline !== undefined
+      ? body.registration_deadline
+      : existingEvent.registration_deadline;
+
+  const registrationType =
+    body.registration_type ??
+    existingEvent.registration_type;
+
+  if (!title || !slug || !eventDate) {
+    return json(
+      {
+        error:
+          "Title, slug and event date are required.",
+      },
+      400,
+      request,
+    );
+  }
+
+  if (registrationDeadline && Number.isNaN(Date.parse(registrationDeadline))) {
+    return json(
+      { error: "Invalid registration deadline." },
+      400,
+      request,
+    );
+  }
+
+  if (registrationDeadline && Date.parse(registrationDeadline) > Date.parse(eventDate)) {
+    return json(
+      { error: "Registration deadline cannot be after the event date." },
+      400,
+      request,
+    );
+  }
+
+  if (
+    ![
+      "solo",
+      "team",
+      "workshop",
+    ].includes(
+      registrationType,
+    )
+  ) {
+    return json(
+      {
+        error:
+          "Invalid registration type.",
+      },
+      400,
+      request,
+    );
+  }
+
+  let minTeamSize =
+    existingEvent.min_team_size;
+
+  let maxTeamSize =
+    existingEvent.max_team_size;
+
+  if (
+    registrationType === "team"
+  ) {
+    minTeamSize =
+      body.min_team_size ??
+      existingEvent.min_team_size;
+
+    maxTeamSize =
+      body.max_team_size ??
+      existingEvent.max_team_size;
+
+    if (
+      !Number.isInteger(
+        minTeamSize,
+      ) ||
+      !Number.isInteger(
+        maxTeamSize,
+      ) ||
+      minTeamSize < 1 ||
+      maxTeamSize < minTeamSize
+    ) {
+      return json(
+        {
+          error:
+            "Invalid team size configuration.",
+        },
+        400,
+        request,
+      );
+    }
+  } else {
+    minTeamSize = 1;
+    maxTeamSize = 1;
+  }
+
+  try {
+    await env.DB
+      .prepare(`
+        UPDATE events
+        SET
+          slug = ?,
+          title = ?,
+          sub_title = ?,
+          description = ?,
+          venue = ?,
+          event_date = ?,
+          image = ?,
+          is_open = ?,
+          registration_deadline = ?,
+          registration_type = ?,
+          min_team_size = ?,
+          max_team_size = ?
+        WHERE id = ?
+      `)
+      .bind(
+        slug,
+        title,
+        body.sub_title !== undefined
+          ? body.sub_title.trim()
+          : existingEvent.sub_title,
+        body.description !== undefined
+          ? body.description.trim()
+          : existingEvent.description,
+        body.venue !== undefined
+          ? body.venue.trim()
+          : existingEvent.venue,
+        eventDate,
+        body.image !== undefined
+          ? body.image.trim()
+          : existingEvent.image,
+        body.is_open !== undefined
+          ? body.is_open
+            ? 1
+            : 0
+          : existingEvent.is_open,
+        registrationDeadline,
+        registrationType,
+        minTeamSize,
+        maxTeamSize,
+        existingEvent.id,
+      )
+      .run();
+  } catch (error) {
+    console.error(
+      "Update event failed:",
+      error,
+    );
+
+    return json(
+      {
+        error:
+          "Unable to update event. The slug may already exist.",
+      },
+      400,
+      request,
+    );
+  }
+
+  return json(
+    {
+      success: true,
+      message:
+        "Event updated",
+      updated_by:
+        auth.session.github_username,
+    },
+    200,
+    request,
+  );
+}
+
+    /*
+     * ============================================================
+     * PROTECTED ADMIN EVENTS API
+     * ============================================================
+     */
+
+    if (
+      request.method === "GET" &&
+      url.pathname ===
+        "/api/admin/events"
+    ) {
+      const auth =
+        await requireAdmin(
+          request,
+          env,
+        );
+
+      if (!auth.authorized) {
+        return auth.response;
+      }
+
+      const { results } =
+        await env.DB
+          .prepare(`
+            SELECT
+              id,
+              slug,
+              title,
+              sub_title,
+              description,
+              venue,
+              event_date,
+              image,
+              is_open,
+              registration_type,
+              min_team_size,
+              max_team_size,
+              registration_deadline,
+              created_at
+            FROM events
+            ORDER BY event_date ASC
+          `)
+          .all();
+
+      return json(
+        {
+          events: results,
+        },
+        200,
+        request,
+      );
+    }
+
+    /*
+     * Create event
+     */
+
+    if (
+      request.method === "POST" &&
+      url.pathname ===
+        "/api/admin/events"
+    ) {
+      const auth =
+        await requireAdmin(
+          request,
+          env,
+        );
+
+      if (!auth.authorized) {
+        return auth.response;
+      }
+
+      let body: {
+        slug?: string;
+        title?: string;
+        sub_title?: string;
+        description?: string;
+        venue?: string;
+        event_date?: string;
+        image?: string;
+        is_open?: boolean;
+        registration_type?:
+          | "solo"
+          | "team"
+          | "workshop";
+        min_team_size?: number;
+        max_team_size?: number;
+        registration_deadline?: string | null;
+      };
+
+      try {
+        body =
+          await request.json();
+      } catch {
+        return json(
+          {
+            error:
+              "Invalid JSON body",
+          },
+          400,
+          request,
+        );
+      }
+
+      const slug =
+        body.slug?.trim();
+
+      const title =
+        body.title?.trim();
+
+      const registrationType =
+        body.registration_type ??
+        "solo";
+
+      if (
+        !slug ||
+        !title ||
+        !body.event_date
+      ) {
+        return json(
+          {
+            error:
+              "slug, title and event_date are required",
+          },
+          400,
+          request,
+        );
+      }
+
+      if (body.registration_deadline && Number.isNaN(Date.parse(body.registration_deadline))) {
+        return json(
+          { error: "Invalid registration deadline." },
+          400,
+          request,
+        );
+      }
+
+      if (body.registration_deadline && Date.parse(body.registration_deadline) > Date.parse(body.event_date)) {
+        return json(
+          { error: "Registration deadline cannot be after the event date." },
+          400,
+          request,
+        );
+      }
+
+      if (
+        ![
+          "solo",
+          "team",
+          "workshop",
+        ].includes(
+          registrationType,
+        )
+      ) {
+        return json(
+          {
+            error:
+              "registration_type must be solo, team or workshop",
+          },
+          400,
+          request,
+        );
+      }
+
+      let minTeamSize = 1;
+      let maxTeamSize = 1;
+
+      if (
+        registrationType ===
+        "team"
+      ) {
+        minTeamSize =
+          Math.max(
+            1,
+            body.min_team_size ??
+              2,
+          );
+
+        maxTeamSize =
+          Math.max(
+            minTeamSize,
+            body.max_team_size ??
+              minTeamSize,
+          );
+      }
+
+      try {
+        await env.DB
+          .prepare(`
+            INSERT INTO events (
+              id,
+              slug,
+              title,
+              sub_title,
+              description,
+              venue,
+              event_date,
+              image,
+              is_open,
+              registration_deadline,
+              registration_type,
+              min_team_size,
+              max_team_size
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `)
+          .bind(
+            crypto.randomUUID(),
+            slug,
+            title,
+            body.sub_title?.trim() ??
+              null,
+            body.description?.trim() ??
+              null,
+            body.venue?.trim() ??
+              null,
+            body.event_date,
+            body.image?.trim() ??
+              null,
+            body.is_open === false
+              ? 0
+              : 1,
+            body.registration_deadline ??
+              null,
+            registrationType,
+            minTeamSize,
+            maxTeamSize,
+          )
+          .run();
+      } catch (error) {
+        console.error(
+          "Create event failed:",
+          error,
+        );
+
+        return json(
+          {
+            error:
+              "Unable to create event. The slug may already exist.",
+          },
+          400,
+          request,
+        );
+      }
+
+      return json(
+        {
+          success: true,
+          message:
+            "Event created",
+          created_by:
+            auth.session
+              .github_username,
+        },
+        201,
+        request,
+      );
+    }
+
+    /*
+     * Delete event
+     */
+
+    if (
+      request.method === "DELETE" &&
+      url.pathname.startsWith(
+        "/api/admin/events/",
+      )
+    ) {
+      const auth =
+        await requireAdmin(
+          request,
+          env,
+        );
+
+      if (!auth.authorized) {
+        return auth.response;
+      }
+
+      const slug =
+        url.pathname.split("/")[4];
+
+      if (!slug) {
+        return json(
+          {
+            error:
+              "Event slug is required",
+          },
+          400,
+          request,
+        );
+      }
+
+      const result =
+        await env.DB
+          .prepare(`
+            DELETE FROM events
+            WHERE slug = ?
+          `)
+          .bind(slug)
+          .run();
+
+      if (
+        !result.meta.changes
+      ) {
+        return json(
+          {
+            error:
+              "Event not found",
+          },
+          404,
+          request,
+        );
+      }
+
+      return json(
+        {
+          success: true,
+          message:
+            "Event deleted",
+          deleted_by:
+            auth.session
+              .github_username,
+        },
+        200,
+        request,
+      );
+    }
+
+    /*
+     * ============================================================
+     * PUBLIC EVENTS API
+     * ============================================================
+     */
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/events"
+    ) {
+      const { results } =
+        await env.DB
+          .prepare(`
+            SELECT
+              id,
+              slug,
+              title,
+              sub_title,
+              description,
+              venue,
+              event_date,
+              image,
+              is_open,
+              registration_type,
+              min_team_size,
+              max_team_size,
+              registration_deadline
+            FROM events
+            ORDER BY event_date ASC
+          `)
+          .all();
+
+      return json(
+        {
+          events: results,
+        },
+        200,
+        request,
+      );
+    }
+
+    /*
+     * Get individual event
+     */
+
+    if (
+      request.method === "GET" &&
+      url.pathname.startsWith(
+        "/api/events/",
+      )
+    ) {
+      const slug =
+        url.pathname.split("/")[3];
+
+      if (!slug) {
+        return json(
+          {
+            error:
+              "Event slug is required",
+          },
+          400,
+          request,
+        );
+      }
+
+      const event =
+        await env.DB
+          .prepare(`
+            SELECT
+              id,
+              slug,
+              title,
+              sub_title,
+              description,
+              venue,
+              event_date,
+              image,
+              is_open,
+              registration_type,
+              min_team_size,
+              max_team_size,
+              registration_deadline
+            FROM events
+            WHERE slug = ?
+          `)
+          .bind(slug)
+          .first();
+
+      if (!event) {
+        return json(
+          {
+            error:
+              "Event not found",
+          },
+          404,
+          request,
+        );
+      }
+
+      return json(
+        {
+          event,
+        },
+        200,
+        request,
+      );
+    }
+
+    /*
+     * ============================================================
+     * PUBLIC REGISTRATION API
+     * ============================================================
+     */
+
+    if (
+      request.method === "POST" &&
+      url.pathname.startsWith(
+        "/api/events/",
+      ) &&
+      url.pathname.endsWith(
+        "/register",
+      )
+    ) {
+      const slug =
+        url.pathname.split("/")[3];
+
+      if (!slug) {
+        return json(
+          {
+            error:
+              "Event slug is required",
+          },
+          400,
+          request,
+        );
+      }
+
+      const event =
+        await env.DB
+          .prepare(`
+            SELECT
+              id,
+              slug,
+              title,
+              is_open,
+              registration_type,
+              min_team_size,
+              max_team_size,
+              registration_deadline
+            FROM events
+            WHERE slug = ?
+          `)
+          .bind(slug)
+          .first<{
+            id: string;
+            slug: string;
+            title: string;
+            is_open: number;
+            registration_type: string;
+            min_team_size: number;
+            max_team_size: number;
+            registration_deadline: string | null;
+          }>();
+
+      if (!event) {
+        return json(
+          {
+            error:
+              "Event not found",
+          },
+          404,
+          request,
+        );
+      }
+
+      if (!event.is_open) {
+        return json(
+          {
+            error:
+              "Registration is closed",
+          },
+          400,
+          request,
+        );
+      }
+
+      if (
+        event.registration_deadline &&
+        Date.now() >= Date.parse(event.registration_deadline)
+      ) {
+        return json(
+          {
+            error: "Registration deadline has passed",
+          },
+          400,
+          request,
+        );
+      }
+
+      let body: {
+        team_name?: string;
+        members?: {
+          name: string;
+          year_of_study: string;
+          college_registration_number: string;
+          github?: string;
+          email: string;
+        }[];
+      };
+
+      try {
+        body =
+          await request.json();
+      } catch {
+        return json(
+          {
+            error:
+              "Invalid JSON body",
+          },
+          400,
+          request,
+        );
+      }
+
+      const members =
+        body.members ?? [];
+
+      if (
+        event.registration_type ===
+          "solo" ||
+        event.registration_type ===
+          "workshop"
+      ) {
+        if (
+          members.length !== 1
+        ) {
+          return json(
+            {
+              error:
+                "This event requires exactly 1 participant",
+            },
+            400,
+            request,
+          );
+        }
+      }
+
+      if (
+        event.registration_type ===
+        "team"
+      ) {
+        if (
+          members.length <
+            event.min_team_size ||
+          members.length >
+            event.max_team_size
+        ) {
+          return json(
+            {
+              error:
+                `Team size must be between ${event.min_team_size} and ${event.max_team_size}`,
+            },
+            400,
+            request,
+          );
+        }
+      }
+
+      for (
+        const [
+          index,
+          member,
+        ] of members.entries()
+      ) {
+        if (
+          !member.name?.trim() ||
+          !member.year_of_study?.trim() ||
+          !member.college_registration_number?.trim() ||
+          !member.email?.trim()
+        ) {
+          return json(
+            {
+              error:
+                `Missing required information for member ${index + 1}`,
+            },
+            400,
+            request,
+          );
+        }
+      }
+
+      const firstMember =
+        members[0];
+
+      const registration =
+        await env.DB
+          .prepare(`
+            INSERT INTO registrations
+              (
+                event_id,
+                name,
+                year_of_study,
+                github,
+                email,
+                team_name,
+                team_size
+              )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `)
+          .bind(
+            event.id,
+            firstMember.name,
+            firstMember.year_of_study,
+            firstMember.github ??
+              null,
+            firstMember.email,
+            body.team_name ??
+              null,
+            members.length,
+          )
+          .run();
+
+      const registrationId =
+        registration.meta
+          .last_row_id;
+
+      const memberStatements =
+        members.map(
+          (
+            member,
+            index,
+          ) =>
+            env.DB
+              .prepare(`
+                INSERT INTO registration_members
+                  (
+                    registration_id,
+                    event_id,
+                    name,
+                    year_of_study,
+                    college_registration_number,
+                    github,
+                    email,
+                    member_number
+                  )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              `)
+              .bind(
+                registrationId,
+                event.id,
+                member.name,
+                member.year_of_study,
+                member.college_registration_number,
+                member.github ??
+                  null,
+                member.email,
+                index + 1,
+              ),
+        );
+
+      try {
+          await env.DB.batch(memberStatements);
+      } catch (error) {
+        console.error("Registration member insert failed:", error);
+
+        return json(
+          {
+            error:
+              "One or more members are already registered for this event.",
+          },
+           409
+  );
+}
+
+      return json(
+        {
+          success: true,
+          registration_id:
+            registrationId,
+          event: event.title,
+          members_registered:
+            members.length,
+        },
+        201,
+        request,
+      );
+    }
+
+    /*
+     * ============================================================
+     * NOT FOUND
+     * ============================================================
+     */
+
+    return json(
+      {
+        error: "Not Found",
+      },
+      404,
+      request,
+    );
+  },
+} satisfies ExportedHandler<Env>;

@@ -1461,25 +1461,43 @@ export default {
 				const { results } = await env.DB.prepare(
 					`
 	            SELECT
-	              id,
-	              slug,
-	              title,
-	              sub_title,
-	              description,
-	              venue,
-	              event_date,
-	              event_end_at,
-	              image,
-	              is_open,
-	              registration_type,
-	              min_team_size,
-	              max_team_size,
-	              registration_deadline,
-	              archive_status,
-	              archived_at,
-	              created_at
-	            FROM events
-	            ORDER BY event_date ASC
+	              e.id,
+	              e.slug,
+	              e.title,
+	              e.sub_title,
+	              e.description,
+	              e.venue,
+	              e.event_date,
+	              e.event_end_at,
+	              e.image,
+	              e.is_open,
+	              e.registration_type,
+	              e.min_team_size,
+	              e.max_team_size,
+	              e.registration_deadline,
+	              e.archive_status,
+	              e.archived_at,
+	              e.created_at,
+	              (
+	                SELECT COUNT(*)
+	                FROM registrations r
+	                WHERE r.event_id = e.id
+	              ) AS registration_count,
+	              (
+	                SELECT COUNT(*)
+	                FROM registration_members m
+	                WHERE m.event_id = e.id
+	              ) AS participant_count
+	            FROM events e
+	            /*
+	             * Newest posted first. created_at defaults to
+	             * CURRENT_TIMESTAMP, which has one-second resolution and is
+	             * never written explicitly, so events seeded in one batch
+	             * all share a timestamp — ten of them do in production.
+	             * Without the tiebreakers their relative order is arbitrary
+	             * and the list reshuffles between refreshes.
+	             */
+	            ORDER BY e.created_at DESC, e.event_date DESC, e.id DESC
 	          `,
 				).all();
 

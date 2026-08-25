@@ -38,6 +38,13 @@ interface Event {
   archive_status?: string;
   archived_at?: string | null;
   created_at?: string;
+  /*
+   * Counted by the events list query. Optional because a briefly
+   * older deployed Worker will not send them yet — read them
+   * through `?? 0` at the render site, never bare.
+   */
+  registration_count?: number;
+  participant_count?: number;
 }
 
 interface AdminUser {
@@ -117,6 +124,47 @@ const fromLocalInput = (
   if (Number.isNaN(parsed)) return null;
 
   return new Date(parsed).toISOString();
+};
+
+/*
+ * A team event's registration count is teams, not heads, so the head
+ * count is worth spelling out next to it. Solo and workshop events
+ * have one member per registration, and "5 teams · 5 people" would
+ * only be noise there.
+ */
+const countLabel = (
+  event: Event,
+): string => {
+  const registrations =
+    event.registration_count ?? 0;
+
+  const participants =
+    event.participant_count ?? 0;
+
+  if (
+    event.registration_type !== 'team'
+  ) {
+    return registrations === 1
+      ? 'registration'
+      : 'registrations';
+  }
+
+  const teams =
+    registrations === 1
+      ? 'team'
+      : 'teams';
+
+  if (
+    participants === registrations
+  ) {
+    return teams;
+  }
+
+  return `${teams} · ${participants} ${
+    participants === 1
+      ? 'person'
+      : 'people'
+  }`;
 };
 
 const emptyForm: EventForm = {
@@ -980,7 +1028,11 @@ setRegistrations(
                   </th>
 
                   <th className="px-6 py-4 text-xs text-gray-500 uppercase tracking-wider">
-                    Registration
+                    Registrations
+                  </th>
+
+                  <th className="px-6 py-4 text-xs text-gray-500 uppercase tracking-wider">
+                    Status
                   </th>
 
                   <th className="px-6 py-4 text-xs text-gray-500 uppercase tracking-wider">
@@ -1039,6 +1091,43 @@ setRegistrations(
                             {event.max_team_size}{' '}
                             members
                           </div>
+                        )}
+
+                      </td>
+
+                      <td className="px-6 py-5">
+
+                        {/*
+                          * Archiving deletes the rows from D1 after
+                          * writing the CSV to R2, so the counts really
+                          * are zero. Showing a bare 0 would read as
+                          * "nobody signed up" rather than "moved to
+                          * the archive".
+                          */}
+                        {event.archive_status ===
+                        'archived' ? (
+                          <>
+                            <div className="text-sm text-gray-400 leading-none">
+                              Archived
+                            </div>
+
+                            <div className="text-xs text-gray-500 mt-1.5">
+                              download the CSV
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-2xl font-semibold text-white tabular-nums leading-none">
+                              {
+                                event.registration_count ??
+                                  0
+                              }
+                            </div>
+
+                            <div className="text-xs text-gray-500 mt-1.5">
+                              {countLabel(event)}
+                            </div>
+                          </>
                         )}
 
                       </td>

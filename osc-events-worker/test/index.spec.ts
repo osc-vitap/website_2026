@@ -45,6 +45,63 @@ async function seedEvent(event: SeedEvent): Promise<void> {
 		.run();
 }
 
+interface SeedMember {
+	name: string;
+	college_registration_number: string;
+	email: string;
+}
+
+/*
+ * Adds one registration to an already seeded event, with one
+ * registration_members row per member — so a three-person team is
+ * one registration and three participants.
+ */
+async function seedRegistration(slug: string, members: SeedMember[]): Promise<void> {
+	const event = await env.DB.prepare(`SELECT id FROM events WHERE slug = ?`)
+		.bind(slug)
+		.first<{ id: string }>();
+
+	if (!event) {
+		throw new Error(`seedRegistration: no event seeded for slug "${slug}"`);
+	}
+
+	const registration = await env.DB.prepare(
+		`
+      INSERT INTO registrations (event_id, name, year_of_study, email, team_size)
+      VALUES (?, ?, ?, ?, ?)
+    `,
+	)
+		.bind(event.id, members[0].name, "2", members[0].email, members.length)
+		.run();
+
+	await env.DB.batch(
+		members.map((member, index) =>
+			env.DB.prepare(
+				`
+          INSERT INTO registration_members (
+            registration_id,
+            event_id,
+            name,
+            year_of_study,
+            college_registration_number,
+            email,
+            member_number
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+			).bind(
+				registration.meta.last_row_id,
+				event.id,
+				member.name,
+				"2",
+				member.college_registration_number,
+				member.email,
+				index + 1,
+			),
+		),
+	);
+}
+
 /*
  * Every test starts from an empty events table so that seeded
  * slugs cannot collide with the previous test.
@@ -362,6 +419,136 @@ describe("admin access", () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
 
 		expect((await asAdmin("/api/admin/me")).status).toBe(401);
+	});
+
+	interface AdminEvent {
+		slug: string;
+		created_at: string;
+		registration_count: number;
+		participant_count: number;
+	}
+
+	async function listEvents(): Promise<AdminEvent[]> {
+		const response = await asAdmin("/api/admin/events");
+
+		expect(response.status).toBe(200);
+
+		return ((await response.json()) as { events: AdminEvent[] }).events;
+	}
+
+	it("reports zero counts for an event nobody has registered for", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+		await seedEvent({ slug: "lonely-event", title: "Lonely Event" });
+
+		const events = await listEvents();
+
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			slug: "lonely-event",
+			registration_count: 0,
+			participant_count: 0,
+		});
+	});
+
+	it("counts registrations and participants separately for a team event", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+		await seedEvent({ slug: "team-event", title: "Team Event" });
+		await seedEvent({ slug: "solo-event", title: "Solo Event" });
+
+		// One registration, three people on the team.
+		await seedRegistration("team-event", [
+			{ name: "Captain", college_registration_number: "22BCE0001", email: "captain@example.com" },
+			{ name: "Second", college_registration_number: "22BCE0002", email: "second@example.com" },
+			{ name: "Third", college_registration_number: "22BCE0003", email: "third@example.com" },
+		]);
+
+		// Two registrations of one person each.
+		await seedRegistration("solo-event", [
+			{ name: "Alone", college_registration_number: "22BCE0004", email: "alone@example.com" },
+		]);
+		await seedRegistration("solo-event", [
+			{ name: "Also Alone", college_registration_number: "22BCE0005", email: "also@example.com" },
+		]);
+
+		const events = await listEvents();
+		const bySlug = Object.fromEntries(events.map((event) => [event.slug, event]));
+
+		expect(bySlug["team-event"]).toMatchObject({
+			registration_count: 1,
+			participant_count: 3,
+		});
+
+		expect(bySlug["solo-event"]).toMatchObject({
+			registration_count: 2,
+			participant_count: 2,
+		});
+	});
+
+	it("orders the admin list by created_at descending", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+
+		/*
+		 * seedEvent leans on CURRENT_TIMESTAMP, which only has
+		 * one-second resolution, so pin created_at by hand.
+		 */
+		const posted = [
+			// Event dates rise with created_at, so the old
+			// event_date ASC ordering would come back reversed.
+			{ slug: "posted-first", event_date: "2099-01-01", created_at: "2026-01-01 09:00:00" },
+			{ slug: "posted-second", event_date: "2099-02-01", created_at: "2026-02-01 09:00:00" },
+			{ slug: "posted-third", event_date: "2099-03-01", created_at: "2026-03-01 09:00:00" },
+		];
+
+		for (const event of posted) {
+			await seedEvent({ slug: event.slug, title: event.slug, event_date: event.event_date });
+
+			await env.DB.prepare(`UPDATE events SET created_at = ? WHERE slug = ?`)
+				.bind(event.created_at, event.slug)
+				.run();
+		}
+
+		const events = await listEvents();
+
+		expect(events.map((event) => event.slug)).toEqual(["posted-third", "posted-second", "posted-first"]);
+	});
+
+	it("orders events posted in the same second deterministically", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+
+		/*
+		 * created_at defaults to CURRENT_TIMESTAMP, so a batch of events
+		 * seeded together all share one timestamp — ten of them do in
+		 * production. Without a tiebreaker their order is arbitrary and
+		 * the admin list reshuffles between refreshes.
+		 */
+		const sameSecond = "2026-05-05 12:00:00";
+
+		for (const event of [
+			{ slug: "batch-early", event_date: "2026-01-01" },
+			{ slug: "batch-late", event_date: "2026-12-01" },
+			{ slug: "batch-middle", event_date: "2026-06-01" },
+		]) {
+			await seedEvent({ slug: event.slug, title: event.slug, event_date: event.event_date });
+
+			await env.DB.prepare(`UPDATE events SET created_at = ? WHERE slug = ?`)
+				.bind(sameSecond, event.slug)
+				.run();
+		}
+
+		const first = await listEvents();
+		const second = await listEvents();
+
+		// Newest event_date first among the tie, and stable across requests.
+		expect(first.map((event) => event.slug)).toEqual(["batch-late", "batch-middle", "batch-early"]);
+		expect(second.map((event) => event.slug)).toEqual(first.map((event) => event.slug));
 	});
 
 	it("deletes an event and reports whether an archive was removed", async () => {

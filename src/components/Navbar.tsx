@@ -28,17 +28,27 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Keyboard shortcut for search
+  // Keyboard shortcut for search, and Escape to close the mobile menu.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         setIsSearchOpen(true);
       }
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // A link is current on its own page and on anything nested under it, so
+  // /events/:slug/register still highlights Events.
+  const isActive = (path: string) =>
+    path === '/'
+      ? location.pathname === '/'
+      : location.pathname === path || location.pathname.startsWith(`${path}/`);
 
   return (
     <>
@@ -46,12 +56,14 @@ const Navbar = () => {
         <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
           
           {/* Logo */}
-            <Link to="/" className="flex items-center gap-3 select-none hover:opacity-90 transition-opacity">
+            <Link to="/" className="flex items-center gap-3 select-none hover:opacity-90 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-accent">
               {/* Static Photo Logo */}
-              <img 
-                src="/events/favicon.png" 
-                alt="OSC Logo" 
-                className="w-8 h-8 object-contain flex-shrink-0" 
+              <img
+                src="/events/favicon.png"
+                alt="OSC Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 object-contain flex-shrink-0"
               />
 
               {/* Typography */}
@@ -60,53 +72,70 @@ const Navbar = () => {
               </span>
             </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8">
+          {/* Desktop Nav. Only from lg up: the eight links plus the logo and
+              the search button do not fit on a 768px tablet. */}
+          <div className="hidden lg:flex items-center gap-8">
             <div className="flex gap-6">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
                   to={link.path}
-                  className={`text-xs font-mono uppercase tracking-widest transition-colors hover:text-brand-primary ${
-                    location.pathname === link.path ? 'text-brand-primary' : 'text-gray-300'
+                  aria-current={isActive(link.path) ? 'page' : undefined}
+                  className={`text-xs font-mono uppercase tracking-widest transition-colors hover:text-brand-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-accent ${
+                    isActive(link.path) ? 'text-brand-accent' : 'text-gray-300'
                   }`}
                 >
                   {link.name}
                 </Link>
               ))}
             </div>
-            
-            <button 
+
+            <button
               onClick={() => setIsSearchOpen(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-dark-900 text-sm text-gray-400 border border-dark-600"
+              className="flex items-center gap-2 px-3 py-2 bg-dark-900 text-sm text-gray-300 border border-dark-600 hover:text-white hover:border-brand-primary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
             >
               <Search size={16} />
               <span className="uppercase tracking-widest text-xs">Search</span>
-              <kbd className="hidden lg:inline-block text-xs bg-dark-800 px-2 py-1 ml-2 font-mono">Ctrl+K</kbd>
+              <kbd className="hidden xl:inline-block text-xs bg-dark-800 px-2 py-1 ml-2 font-mono">Ctrl+K</kbd>
             </button>
           </div>
 
           {/* Mobile Toggle */}
-          <div className="md:hidden flex items-center gap-4">
-            <button onClick={() => setIsSearchOpen(true)} className="text-gray-300 hover:text-white">
+          <div className="lg:hidden flex items-center gap-1">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Open search"
+              className="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+            >
               <Search size={20} />
             </button>
-            <button onClick={() => setIsOpen(!isOpen)} className="text-gray-300 hover:text-white">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label={isOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isOpen}
+              aria-controls="mobile-nav"
+              className="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+            >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Nav */}
+        {/* Mobile Nav. Capped and scrollable so every link stays reachable
+            on short viewports and in landscape. */}
         {isOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-dark-900 border-b border-dark-600 flex flex-col items-start p-4 gap-2 shadow-2xl">
+          <div
+            id="mobile-nav"
+            className="lg:hidden absolute top-full left-0 w-full max-h-[calc(100vh-6rem)] overflow-y-auto bg-dark-900 border-b border-dark-600 flex flex-col items-start p-4 gap-2 shadow-2xl"
+          >
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.path}
                 onClick={() => setIsOpen(false)}
-                className={`text-xs font-mono uppercase tracking-widest w-full text-left px-4 py-4 border border-dark-600 ${
-                  location.pathname === link.path ? 'bg-brand-primary text-white border-brand-primary' : 'bg-dark-800 text-gray-400 hover:text-white'
+                aria-current={isActive(link.path) ? 'page' : undefined}
+                className={`text-xs font-mono uppercase tracking-widest w-full text-left px-4 py-4 border border-dark-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent ${
+                  isActive(link.path) ? 'bg-brand-primary text-white border-brand-primary' : 'bg-dark-800 text-gray-300 hover:text-white'
                 }`}
               >
                 {link.name}

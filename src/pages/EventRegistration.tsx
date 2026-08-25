@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useId, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Github, Mail, User, Users } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
@@ -181,7 +181,10 @@ const EventRegistration = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center text-gray-400">
+      <div
+        role="status"
+        className="container mx-auto px-4 py-20 text-center text-gray-400"
+      >
         Loading event...
       </div>
     );
@@ -190,13 +193,16 @@ const EventRegistration = () => {
   if (!event) {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
-        <p className="text-red-400 mb-6">
+        <p
+          role="alert"
+          className="text-red-400 mb-6"
+        >
           {message || 'Event not found'}
         </p>
 
         <Link
           to="/events"
-          className="text-brand-primary hover:underline"
+          className="inline-flex items-center justify-center min-h-[44px] text-brand-accent hover:text-white hover:underline transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
         >
           Back to Events
         </Link>
@@ -212,7 +218,7 @@ const EventRegistration = () => {
 
       <Link
         to="/events"
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
+        className="inline-flex items-center gap-2 min-h-[44px] text-gray-400 hover:text-white mb-6 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
       >
         <ArrowLeft size={18} />
         Back to Events
@@ -247,7 +253,7 @@ const EventRegistration = () => {
                 event.registration_type}
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-3 break-words">
               Register for{' '}
               <span className="text-gradient">
                 {event.title}
@@ -284,31 +290,39 @@ const EventRegistration = () => {
                       </h2>
                     </div>
 
-                    <label className="block text-sm text-gray-300 mb-2">
+                    <label
+                      htmlFor="team-name"
+                      className="block text-sm text-gray-300 mb-2"
+                    >
                       Team Name
                     </label>
 
                     <input
+                      id="team-name"
                       value={teamName}
                       onChange={(e) =>
                         setTeamName(e.target.value)
                       }
                       placeholder="Enter your team name"
-                      className="w-full bg-dark-900/60 border border-dark-700 rounded-lg px-4 py-3 text-white outline-none focus:border-brand-primary transition-colors"
+                      className="w-full bg-dark-900/60 border border-dark-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-brand-primary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
                     />
 
-                    <label className="block text-sm text-gray-300 mt-5 mb-2">
+                    <label
+                      htmlFor="team-size"
+                      className="block text-sm text-gray-300 mt-5 mb-2"
+                    >
                       Number of Members
                     </label>
 
                     <select
+                      id="team-size"
                       value={members.length}
                       onChange={(e) =>
                         changeTeamSize(
                           Number(e.target.value),
                         )
                       }
-                      className="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-3 text-white outline-none focus:border-brand-primary"
+                      className="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-3 text-white focus:border-brand-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
                     >
                       {Array.from(
                         {
@@ -444,12 +458,14 @@ const EventRegistration = () => {
 
                 {message && (
                   <div
+                    role="status"
+                    aria-live="polite"
                     className={`glass rounded-lg p-4 text-sm ${
                       message.startsWith(
                         'Registration successful!',
                       )
                         ? 'text-green-400 border border-green-500/30'
-                        : 'text-gray-300'
+                        : 'text-red-400 border border-red-500/30'
                     }`}
                   >
                     {message}
@@ -459,7 +475,8 @@ const EventRegistration = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-all"
+                  aria-busy={submitting}
+                  className="w-full bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold min-h-[44px] py-3 rounded-lg transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
                 >
                   {submitting
                     ? 'Submitting...'
@@ -496,24 +513,32 @@ const Field = ({
   placeholder,
   type = 'text',
   required = false,
-}: FieldProps) => (
-  <div>
-    <label className="flex items-center gap-2 text-sm text-gray-300 mb-2">
-      {icon}
-      {label}
-    </label>
+}: FieldProps) => {
+  const id = useId();
 
-    <input
-      type={type}
-      value={value}
-      onChange={(e) =>
-        onChange(e.target.value)
-      }
-      placeholder={placeholder}
-      required={required}
-      className="w-full bg-dark-900/60 border border-dark-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 outline-none focus:border-brand-primary transition-colors"
-    />
-  </div>
-);
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="flex items-center gap-2 text-sm text-gray-300 mb-2"
+      >
+        {icon}
+        {label}
+      </label>
+
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
+        placeholder={placeholder}
+        required={required}
+        className="w-full bg-dark-900/60 border border-dark-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-brand-primary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+      />
+    </div>
+  );
+};
 
 export default EventRegistration;

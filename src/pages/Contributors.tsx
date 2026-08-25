@@ -31,18 +31,20 @@ const Contributors = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-gray-500 font-mono text-sm leading-loose uppercase tracking-[0.1em]"
+          className="text-gray-400 font-mono text-sm leading-loose uppercase tracking-[0.1em]"
         >
           Classified registry of all members within the OSC-VITAP GitHub organization making active open-source contributions.
         </motion.p>
       </div>
 
       <section className="mb-24">
-        <div className="flex justify-between items-end mb-12 border-b border-dark-700 pb-6">
-          <h2 className="text-4xl font-bebas uppercase tracking-widest text-white flex items-center gap-4">
-            <Github className="text-brand-accent" size={36} /> Core Contributors
+        {/* Stacks on phones: the heading and the record count cannot share a
+            row below ~640px without the heading being squeezed. */}
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:items-end mb-12 border-b border-dark-700 pb-6">
+          <h2 className="text-3xl md:text-4xl font-bebas uppercase tracking-widest text-white flex items-center gap-4">
+            <Github className="text-brand-accent flex-shrink-0" size={36} /> Core Contributors
           </h2>
-          <span className="text-gray-500 font-mono text-xs uppercase tracking-[0.1em]">{contributorsData.length} records found</span>
+          <span className="text-gray-400 font-mono text-xs uppercase tracking-[0.1em]">{contributorsData.length} records found</span>
         </div>
 
         <motion.div 
@@ -56,7 +58,7 @@ const Contributors = () => {
             <motion.div 
               key={i} 
               variants={itemVariants} 
-              className="border border-dark-700 bg-dark-900/40 relative overflow-hidden group hover:border-brand-primary/50 transition-colors flex flex-col items-center p-6"
+              className="border border-dark-700 bg-dark-900/40 relative overflow-hidden group hover:border-brand-primary/50 transition-colors flex flex-col items-center p-4 md:p-6"
             >
               <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-dark-600 mb-4 group-hover:border-brand-accent transition-colors">
                 <img 
@@ -69,13 +71,16 @@ const Contributors = () => {
               <h3 className="text-white font-mono text-xs text-center truncate w-full mb-3">
                 @{member.login}
               </h3>
-              <a 
-                href={member.html_url} 
-                target="_blank" 
+              {/* "Intel" alone is meaningless out of context, so the link
+                  carries its own label for screen readers. */}
+              <a
+                href={member.html_url}
+                target="_blank"
                 rel="noreferrer"
-                className="text-[10px] font-mono uppercase tracking-[0.1em] text-gray-500 hover:text-brand-accent flex items-center gap-2 transition-colors mt-auto"
+                aria-label={`${member.login} on GitHub`}
+                className="text-[10px] font-mono uppercase tracking-[0.1em] text-gray-400 hover:text-brand-accent flex items-center justify-center gap-2 transition-colors mt-auto px-3 min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
               >
-                Intel <ExternalLink size={10} />
+                Intel <ExternalLink size={10} className="flex-shrink-0" />
               </a>
             </motion.div>
           ))}

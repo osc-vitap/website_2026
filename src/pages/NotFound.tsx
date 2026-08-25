@@ -51,7 +51,7 @@ const NotFound = () => {
           link that brought you here is out of date.
         </p>
 
-        <p className="text-gray-600 font-mono text-xs mb-10 break-all">
+        <p className="text-gray-400 font-mono text-xs mb-10 break-all">
           {pathname}
         </p>
 
@@ -59,7 +59,7 @@ const NotFound = () => {
 
           <Link
             to="/"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 bg-brand-primary text-white font-bold uppercase tracking-[0.1em] text-sm hover:bg-brand-accent transition-colors"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 bg-brand-primary text-white font-bold uppercase tracking-[0.1em] text-sm hover:bg-brand-accent hover:text-dark-900 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
           >
             <ArrowLeft size={16} />
             Back to home
@@ -67,7 +67,7 @@ const NotFound = () => {
 
           <Link
             to="/contact"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 glass border border-dark-600 text-gray-300 font-bold uppercase tracking-[0.1em] text-sm hover:text-white hover:border-gray-500 transition-colors"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 glass border border-dark-600 text-gray-300 font-bold uppercase tracking-[0.1em] text-sm hover:text-white hover:border-gray-500 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
           >
             Report a broken link
           </Link>
@@ -80,13 +80,13 @@ const NotFound = () => {
             <Link
               key={suggestion.to}
               to={suggestion.to}
-              className="glass-card p-6 group"
+              className="glass-card p-6 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
             >
 
               <div className="flex items-center gap-3 mb-2">
                 <suggestion.icon
                   size={18}
-                  className="text-brand-accent"
+                  className="text-brand-accent shrink-0"
                 />
 
                 <span className="text-white font-bold uppercase tracking-[0.1em] text-sm">

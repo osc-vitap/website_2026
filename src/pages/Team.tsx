@@ -42,9 +42,11 @@ const Team = () => {
                   >
                     <div className="h-64 border-b border-dark-700 relative overflow-hidden bg-dark-900">
                       <div className="absolute inset-0 bg-brand-primary/10 mix-blend-overlay z-10 group-hover:opacity-0 transition-opacity"></div>
-                      <img 
-                        src={member.image} 
-                        alt={member.name} 
+                      <img
+                        src={member.image}
+                        alt={member.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
                       />
                       <div className="absolute bottom-0 left-0 right-0 p-4 bg-dark-900/90 border-t border-dark-700 z-20">
@@ -58,27 +60,33 @@ const Team = () => {
                         {member.bio}
                       </p>
                       
-                      <div className="flex items-center gap-4 pt-4 border-t border-dark-700 mt-auto">
-                        {member.socials.github && (
-                          <a href={member.socials.github} target="_blank" rel="noreferrer" className="text-gray-500 hover:text-white transition-colors">
-                            <Github size={16} />
-                          </a>
-                        )}
-                        {member.socials.linkedin && (
-                          <a href={member.socials.linkedin} target="_blank" rel="noreferrer" className="text-gray-500 hover:text-brand-accent transition-colors">
-                            <Linkedin size={16} />
-                          </a>
-                        )}
-                        {member.socials.instagram && (
-                          <a href={member.socials.instagram} target="_blank" rel="noreferrer" className="text-gray-500 hover:text-pink-500 transition-colors">
-                            <Instagram size={16} />
-                          </a>
-                        )}
-                        {member.socials.website && (
-                          <a href={member.socials.website} target="_blank" rel="noreferrer" className="text-gray-500 hover:text-white transition-colors">
-                            <Globe size={16} />
-                          </a>
-                        )}
+                      {/* Icon-only links: each needs its own accessible name,
+                          and a 44px box so it is tappable. The negative left
+                          margin keeps the first icon optically flush with the
+                          card padding. */}
+                      <div className="pt-4 border-t border-dark-700 mt-auto">
+                        <div className="flex items-center -ml-[14px]">
+                          {member.socials.github && (
+                            <a href={member.socials.github} target="_blank" rel="noreferrer" aria-label={`${member.name} on GitHub`} className="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent">
+                              <Github size={16} />
+                            </a>
+                          )}
+                          {member.socials.linkedin && (
+                            <a href={member.socials.linkedin} target="_blank" rel="noreferrer" aria-label={`${member.name} on LinkedIn`} className="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-brand-accent transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent">
+                              <Linkedin size={16} />
+                            </a>
+                          )}
+                          {member.socials.instagram && (
+                            <a href={member.socials.instagram} target="_blank" rel="noreferrer" aria-label={`${member.name} on Instagram`} className="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-pink-500 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent">
+                              <Instagram size={16} />
+                            </a>
+                          )}
+                          {member.socials.website && (
+                            <a href={member.socials.website} target="_blank" rel="noreferrer" aria-label={`${member.name}'s website`} className="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent">
+                              <Globe size={16} />
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </motion.div>

@@ -59,7 +59,7 @@ const News = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="mb-12 ml-8 md:ml-12 relative"
+              className="mb-12 last:mb-0 ml-8 md:ml-12 relative"
             >
               {/* Timeline dot */}
               <div className="absolute -left-[41px] md:-left-[57px] top-1.5 w-4 h-4 rounded-full bg-brand-primary border-4 border-dark-900 shadow-[0_0_10px_rgba(109,40,217,0.8)]"></div>
@@ -69,13 +69,17 @@ const News = () => {
                   <span className={`text-xs font-semibold px-2 py-1 rounded border ${getCategoryColor(news.category)}`}>
                     {news.category}
                   </span>
-                  <span className="text-sm text-gray-500 font-mono">{news.date}</span>
+                  <span className="text-sm text-gray-400 font-mono">{news.date}</span>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3">{news.title}</h3>
+                <h2 className="text-2xl font-bold text-white mb-3">{news.title}</h2>
                 <p className="text-gray-400 leading-relaxed">
                   {news.excerpt}
                 </p>
-                <button className="mt-4 text-brand-accent text-sm font-medium hover:text-white transition-colors">
+                <button
+                  type="button"
+                  aria-label={`Read more: ${news.title}`}
+                  className="mt-2 inline-flex items-center min-h-[44px] text-brand-accent text-sm font-medium hover:text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+                >
                   Read more →
                 </button>
               </div>

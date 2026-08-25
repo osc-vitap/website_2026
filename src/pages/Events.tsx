@@ -3,37 +3,12 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { eventsData, Event } from '../data/eventsData';
 import { eventPageForRegistration } from '../data/eventPages';
+import {
+  fetchEvents,
+  isEventUpcoming,
+  orFallback,
+} from '../data/eventsApi';
 import { MapPin, Calendar, ExternalLink, ArrowRight } from 'lucide-react';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  'https://events.oscvitap.com';
-
-interface ApiEvent {
-  id: string;
-  slug: string;
-  title: string;
-  sub_title: string | null;
-  description: string | null;
-  venue: string | null;
-  event_date: string;
-  event_end_at: string | null;
-  image: string | null;
-  is_open: number;
-  registration_type: string;
-  min_team_size: number;
-  max_team_size: number;
-  archive_status: string;
-}
-
-/*
- * The admin form saves cleared fields as empty strings rather than
- * null, so `??` alone would hand an empty src to <img>.
- */
-const orFallback = (
-  value: string | null | undefined,
-  fallback: string,
-) => (value?.trim() ? value : fallback);
 
 const createSlug = (title: string) =>
   title
@@ -41,34 +16,6 @@ const createSlug = (title: string) =>
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-
-/*
- * event_end_at is the real end of the event, so it decides
- * whether an event is still upcoming. Events created before
- * that column existed fall back to their start date, which
- * keeps an event listed for the whole day it runs on.
- */
-const isEventUpcoming = (event: ApiEvent): boolean => {
-  const endsAt = event.event_end_at
-    ? Date.parse(event.event_end_at)
-    : Number.NaN;
-
-  if (!Number.isNaN(endsAt)) {
-    return endsAt >= Date.now();
-  }
-
-  const startsAt = Date.parse(event.event_date);
-
-  if (Number.isNaN(startsAt)) {
-    return false;
-  }
-
-  const startOfToday = Date.parse(
-    new Date().toISOString().split('T')[0],
-  );
-
-  return startsAt >= startOfToday;
-};
 
 const Events = () => {
   const [activeTab, setActiveTab] =
@@ -83,26 +30,14 @@ const Events = () => {
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/events`,
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            'Failed to load events',
-          );
-        }
-
-        const data: {
-          events: ApiEvent[];
-        } = await response.json();
+        const apiEvents = await fetchEvents();
 
         /*
          * Convert D1 events into the same structure
          * already used by the existing Events page.
          */
         const apiMappedEvents: Event[] =
-          data.events.map((event) => ({
+          apiEvents.map((event) => ({
             id: event.id,
             title: event.title,
             sub_title: orFallback(
@@ -141,7 +76,7 @@ const Events = () => {
          * until they are migrated to D1.
          */
         const apiBySlug = new Map(
-          data.events.map((event) => [
+          apiEvents.map((event) => [
             event.slug,
             event,
           ]),

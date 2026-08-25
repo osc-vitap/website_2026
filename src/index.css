@@ -1,3 +1,59 @@
+/*
+ * Objectivity — the typeface used on the printed event posters.
+ * Degarism Studio, SIL Open Font License 1.1.
+ * Licence text ships alongside the files: /fonts/objectivity/OFL.txt
+ *
+ * Self-hosted rather than loaded from a CDN so the poster pages can
+ * never fall back to a different face mid-render.
+ */
+@font-face {
+  font-family: 'Objectivity';
+  src: url('/fonts/objectivity/Objectivity-Thin.woff2') format('woff2');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Objectivity';
+  src: url('/fonts/objectivity/Objectivity-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Objectivity';
+  src: url('/fonts/objectivity/Objectivity-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Objectivity';
+  src: url('/fonts/objectivity/Objectivity-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Objectivity';
+  src: url('/fonts/objectivity/Objectivity-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Objectivity';
+  src: url('/fonts/objectivity/Objectivity-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -66,6 +122,33 @@
   
   .text-gradient {
     @apply text-brand-primary;
+  }
+
+  /*
+   * Event poster wordmark: rises into place on load.
+   *
+   * animation-fill-mode: backwards means the offset only applies
+   * while the animation is pending or running — the resting state is
+   * the visible one, so the wordmark can never be left hidden if the
+   * animation is blocked or never starts.
+   */
+  @keyframes poster-rise {
+    from {
+      transform: translateY(115%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .poster-rise {
+    animation: poster-rise 0.75s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .poster-rise {
+      animation: none;
+    }
   }
 }
 

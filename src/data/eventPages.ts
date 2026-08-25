@@ -24,6 +24,9 @@ export interface EventPage {
   /** Slug of the matching event row in D1, used by the register link. */
   registrationSlug: string;
 
+  /** Extra paths that serve the same page, e.g. a shorter print URL. */
+  aliases?: string[];
+
   component: ComponentType;
 }
 
@@ -32,9 +35,22 @@ export const eventPages: EventPage[] = [
     slug: 'gittyup26',
     name: 'GITTYUP 26',
     registrationSlug: 'gittyup26',
+    aliases: ['gittyup'],
     component: GittyUp26,
   },
 ];
+
+/** Every path an event page answers on, including its aliases. */
+export const eventPageRoutes = (): {
+  path: string;
+  page: EventPage;
+}[] =>
+  eventPages.flatMap((page) => [
+    { path: page.slug, page },
+    ...(page.aliases ?? []).map(
+      (alias) => ({ path: alias, page }),
+    ),
+  ]);
 
 /** Route paths owned by the site itself, which an event slug must not shadow. */
 export const RESERVED_SLUGS = [
@@ -69,16 +85,20 @@ export const eventPageForRegistration = (
   );
 
 if (import.meta.env.DEV) {
-  for (const page of eventPages) {
-    if (RESERVED_SLUGS.includes(page.slug)) {
+  const routes = eventPageRoutes();
+
+  for (const route of routes) {
+    if (
+      RESERVED_SLUGS.includes(route.path)
+    ) {
       console.error(
-        `Event page slug "${page.slug}" collides with a site route and would shadow it.`,
+        `Event page path "${route.path}" collides with a site route and would shadow it.`,
       );
     }
   }
 
-  const slugs = eventPages.map(
-    (page) => page.slug,
+  const slugs = routes.map(
+    (route) => route.path,
   );
 
   const duplicates = slugs.filter(
@@ -88,7 +108,7 @@ if (import.meta.env.DEV) {
 
   if (duplicates.length) {
     console.error(
-      `Duplicate event page slugs: ${[...new Set(duplicates)].join(', ')}`,
+      `Duplicate event page paths: ${[...new Set(duplicates)].join(', ')}`,
     );
   }
 }

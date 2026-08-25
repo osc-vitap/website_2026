@@ -32,10 +32,14 @@ two each:
 - **Palette** — the ground, the ink, the accent. Pull real hex values from the
   image rather than approximating from memory. Note the gradient direction.
 - **Type** — the typeface's category (geometric grotesque, neo-grotesque, slab,
-  display), and the weight contrast the poster leans on. Pick the closest
-  Google Font and add it to `index.html`'s font link plus a `fontFamily` entry
-  in `tailwind.config.js` if it is not already there. Never let a face fall back
-  silently.
+  display), and the weight contrast the poster leans on. The posters are set in
+  **Objectivity**, already self-hosted at `public/fonts/objectivity/` and
+  available as `font-poster`. It ships as static weights, so only 100, 300,
+  400, 500, 700 and 900 exist — use `font-thin`, `font-light`, `font-normal`,
+  `font-medium`, `font-bold`, `font-black` and nothing in between, or the
+  browser synthesises a weight and the wordmark goes soft. If a poster genuinely
+  uses a different face, self-host it the same way rather than hotlinking a CDN,
+  and check the licence allows it. Never let a face fall back silently.
 - **Motifs** — the structural devices: a repeated wordmark, a halftone field, a
   grid, a rule, an oversized numeral, a shape that means something for the
   subject. These are what make the page read as the same artefact as the poster.

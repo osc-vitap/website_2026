@@ -4,6 +4,7 @@ import { ArrowRight, Code, Users, Calendar, ChevronLeft, ChevronRight, ExternalL
 import { Link } from 'react-router-dom';
 import { eventsData } from '../data/eventsData';
 import { projectsData } from '../data/projectsData';
+import UpcomingEvents from '../components/UpcomingEvents';
 
 const Home = () => {
   const featuredEvents = eventsData.slice(0, 3);
@@ -118,7 +119,10 @@ const Home = () => {
         </section>
       )}
 
-      {/* 2. Upcoming Event Banner */}
+      {/* 2. Upcoming events, live from D1 */}
+      <UpcomingEvents />
+
+      {/* Legacy hardcoded banner, kept for events that predate D1 */}
       {upcomingEvent && (
         <section className="w-full bg-dark-900 border-b border-dark-700 relative overflow-hidden">
           <div className="absolute inset-0 bg-brand-primary/5 pattern-grid opacity-20"></div>

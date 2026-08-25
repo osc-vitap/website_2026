@@ -17,7 +17,7 @@ import AdminDashboard from './pages/AdminDashboard';
 
 import NotFound from './pages/NotFound';
 
-import { eventPages } from './data/eventPages';
+import { eventPageRoutes } from './data/eventPages';
 
 /*
  * The site shell: starfield, navbar and footer around a page.
@@ -45,15 +45,18 @@ function App() {
     <Router>
       <Routes>
 
-        {/* One top-level route per event, e.g. /gittyup26. Declared
-            before the shell so an event slug wins over the 404. */}
-        {eventPages.map((event) => (
-          <Route
-            key={event.slug}
-            path={`/${event.slug}`}
-            element={<event.component />}
-          />
-        ))}
+        {/* One top-level route per event page and its aliases, e.g.
+            /gittyup26 and /gittyup. Declared before the shell so an
+            event path wins over the 404. */}
+        {eventPageRoutes().map(
+          ({ path, page }) => (
+            <Route
+              key={path}
+              path={`/${path}`}
+              element={<page.component />}
+            />
+          ),
+        )}
 
         <Route element={<SiteLayout />}>
 

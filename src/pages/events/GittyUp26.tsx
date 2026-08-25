@@ -1,79 +1,61 @@
 import { ArrowRight } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import {
   EventPageFrame,
   RegisterLink,
 } from './eventPageKit';
 import { useEventPageMeta } from './useEventPageMeta';
+import {
+  POSTER_COUNT,
+  variantFromParam,
+} from './gittyUp26Variants';
 
 /*
  * GITTYUP 2026 — 29 August 2026, AB-2 Auditorium.
  *
- * Built from the printed poster: violet-to-indigo gradient under a
+ * Built from the printed poster: a violet-to-indigo gradient under a
  * halftone dot field, the wordmark repeated four times in alternating
- * Poppins weights, the toggle mark, and the oversized "26".
+ * Objectivity weights, the toggle mark and the oversized "26".
+ *
+ * ?pg=1…25 selects the poster variant, so a QR code scanned off a
+ * particular printed poster lands on a page that matches it. See
+ * ./gittyUp26Variants.ts.
  */
-
-const INK = '#150A4E';
-
-const wordmarkRows = [
-  {
-    gitty: 'font-extralight',
-    up: 'font-black',
-    indent: '0%',
-    gap: '0.36em',
-  },
-  {
-    gitty: 'font-extralight',
-    up: 'font-black',
-    indent: '0%',
-    gap: '0.44em',
-  },
-  {
-    gitty: 'font-black',
-    up: 'font-extralight',
-    indent: '0%',
-    gap: '0.30em',
-  },
-  {
-    gitty: 'font-black',
-    up: 'font-extralight',
-    indent: '0%',
-    gap: '0.38em',
-  },
-];
 
 const topics = [
   'Version Control',
-  'Git & GitHub',
+  'Git, GitHub and more',
   'Home Labs',
 ];
 
 const GittyUp26 = () => {
+  const [searchParams] = useSearchParams();
+
+  const variant = variantFromParam(
+    searchParams.get('pg'),
+  );
+
   useEventPageMeta(
     'GITTYUP 26 · Open Source Community, VIT-AP',
-    'GITTYUP 2026 — an introductory session on version control, Git, GitHub and home labs. 29 August 2026, AB-2 Auditorium, VIT-AP University.',
+    'GITTYUP 2026 — one day on version control, Git, GitHub and home labs. 29 August 2026, AB-2 Auditorium, VIT-AP University.',
   );
 
   return (
-    <EventPageFrame className="bg-[#4A1AE0] font-poster text-white selection:bg-[#150A4E] selection:text-white">
+    <EventPageFrame className="bg-[#4A1AE0] font-poster text-white selection:bg-white selection:text-[#150A4E]">
 
       {/* Poster ground: gradient, halftone field, vignette */}
 
       <div
         aria-hidden="true"
         className="absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(125% 95% at 18% -5%, #8B5CFF 0%, #7040FF 22%, #5A27F2 48%, #4517D8 72%, #2E0BA6 100%)',
-        }}
+        style={{ background: variant.gradient }}
       />
 
       <div
         aria-hidden="true"
         className="absolute inset-0 opacity-80"
         style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(21,10,78,0.62) 1.25px, transparent 1.35px)',
+          backgroundImage: `radial-gradient(circle, ${variant.dot} 1.25px, transparent 1.35px)`,
           backgroundSize: '8px 8px',
           maskImage:
             'radial-gradient(130% 100% at 20% 0%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.75) 55%, #000 100%)',
@@ -92,10 +74,15 @@ const GittyUp26 = () => {
 
           <div className="flex items-center gap-3">
 
+            {/*
+              * The mark carries a violet lobe that would sink into this
+              * ground, so it gets a drop shadow that follows the
+              * transparency rather than a tile behind it.
+              */}
             <img
               src="/events/favicon.png"
               alt=""
-              className="h-9 w-9 md:h-11 md:w-11"
+              className="h-9 w-9 shrink-0 drop-shadow-[0_2px_5px_rgba(8,3,32,0.75)] md:h-11 md:w-11"
             />
 
             <div className="leading-none">
@@ -117,7 +104,7 @@ const GittyUp26 = () => {
           </div>
 
           <div className="text-right leading-none">
-            <div className="font-serif text-base font-bold tracking-wide md:text-2xl">
+            <div className="font-serif text-base font-bold tracking-wide drop-shadow-[0_2px_6px_rgba(10,4,40,0.5)] md:text-2xl">
               VIT-AP
             </div>
             <div className="mt-1 font-serif text-[10px] tracking-[0.2em] text-white/80 md:text-xs">
@@ -135,26 +122,43 @@ const GittyUp26 = () => {
 
           <section className="relative">
 
+            {/*
+              * Each row is clipped separately, which both masks the
+              * rise-in animation and stops descenders colliding with
+              * the row below. The line box is 1.2em so Objectivity's
+              * descenders sit inside it rather than being cut off;
+              * the negative top margin pulls the rows back together,
+              * and overlapping transparent boxes do not clip each
+              * other.
+              */}
             <div
-              className="select-none leading-[0.86] tracking-[-0.02em]"
-              style={{ color: INK }}
+              className="select-none tracking-[-0.015em]"
+              style={{ color: variant.ink }}
             >
-              {wordmarkRows.map((row, index) => (
+              {variant.rows.map((row, index) => (
                 <div
                   key={index}
-                  className="flex whitespace-nowrap text-[clamp(2.5rem,13vw,7.5rem)] lg:text-[min(9.4vw,13.4vh)]"
-                  style={{ paddingLeft: row.indent }}
+                  className={`overflow-hidden ${index > 0 ? '-mt-[0.26em]' : ''}`}
                 >
-                  <span className={row.gitty}>
-                    gitty
-                  </span>
-
-                  <span
-                    className={row.up}
-                    style={{ marginLeft: row.gap }}
+                  <div
+                    className="poster-rise flex whitespace-nowrap leading-[1.2] text-[clamp(2.5rem,12vw,7rem)] lg:text-[min(8.6vw,11.8vh)]"
+                    style={{
+                      animationDelay: `${index * 0.09}s`,
+                    }}
                   >
-                    up
-                  </span>
+                    <span className={row.gitty}>
+                      gitty
+                    </span>
+
+                    <span
+                      className={row.up}
+                      style={{
+                        marginLeft: row.gap,
+                      }}
+                    >
+                      up
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -165,18 +169,27 @@ const GittyUp26 = () => {
 
               <div
                 aria-hidden="true"
-                className="flex w-[clamp(6rem,13vw,9.5rem)] items-center justify-end rounded-full border-[3px] p-[0.3rem] md:border-4"
-                style={{ borderColor: INK }}
+                className={`flex w-[clamp(6rem,13vw,9.5rem)] items-center rounded-full border-[3px] p-[0.3rem] md:border-4 ${
+                  variant.toggle === 'right'
+                    ? 'justify-end'
+                    : 'justify-start'
+                }`}
+                style={{
+                  borderColor: variant.ink,
+                }}
               >
                 <div
                   className="aspect-square w-[clamp(1.4rem,3.2vw,2.3rem)] rounded-full"
-                  style={{ backgroundColor: INK }}
+                  style={{
+                    backgroundColor:
+                      variant.ink,
+                  }}
                 />
               </div>
 
               <div
                 className="font-black leading-none text-[clamp(3rem,9vw,6rem)] lg:text-[min(6vw,9vh)]"
-                style={{ color: INK }}
+                style={{ color: variant.ink }}
               >
                 26
               </div>
@@ -197,8 +210,8 @@ const GittyUp26 = () => {
 
             <div className="border-t-2 border-white/25 pt-6">
 
-              <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">
-                Introductory Session
+              <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/70">
+                One Day · Open to All First Years
               </div>
 
               <div className="mt-4 text-[clamp(1.75rem,4vw,2.6rem)] font-bold leading-none">
@@ -246,14 +259,26 @@ const GittyUp26 = () => {
 
         {/* Footline */}
 
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-white/20 pt-5 text-[11px] font-light text-white/70 md:text-xs">
+        <footer
+          className="flex flex-wrap items-center justify-between gap-3 border-t border-white/20 pt-5 text-[11px] font-light text-white/70 md:text-xs"
+          >
 
           <span className="font-medium text-white/90">
             oscvitap.com/gittyup26
           </span>
 
-          <span>
-            Open Source Community · VIT-AP University
+          <span className="flex items-center gap-3">
+            <span>
+              Open Source Community · VIT-AP University
+            </span>
+
+            <span
+              className="tabular-nums text-white/45"
+              title={`Poster ${variant.id} of ${POSTER_COUNT}`}
+            >
+              {String(variant.id).padStart(2, '0')}/
+              {POSTER_COUNT}
+            </span>
           </span>
 
         </footer>

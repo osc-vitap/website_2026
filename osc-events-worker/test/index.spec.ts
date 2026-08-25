@@ -384,6 +384,108 @@ describe("admin access", () => {
 		expect(remaining?.n).toBe(0);
 	});
 
+	it("persists event_end_at when creating an event", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+
+		const response = await asAdmin("/api/admin/events", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				slug: "ends-later",
+				title: "Ends Later",
+				event_date: "2026-08-29",
+				event_end_at: "2026-08-29T10:30:00.000Z",
+			}),
+		});
+
+		expect(response.status).toBe(201);
+
+		const event = await env.DB.prepare(`SELECT event_end_at FROM events WHERE slug = ?`)
+			.bind("ends-later")
+			.first<{ event_end_at: string }>();
+
+		expect(event?.event_end_at).toBe("2026-08-29T10:30:00.000Z");
+	});
+
+	it("updates and clears event_end_at", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+		await seedEvent({ slug: "movable", title: "Movable", event_date: "2026-08-29" });
+
+		const patch = (body: unknown) =>
+			asAdmin("/api/admin/events/movable", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			});
+
+		expect((await patch({ event_end_at: "2026-08-29T12:00:00.000Z" })).status).toBe(200);
+
+		const set = await env.DB.prepare(`SELECT event_end_at FROM events WHERE slug = ?`)
+			.bind("movable")
+			.first<{ event_end_at: string | null }>();
+
+		expect(set?.event_end_at).toBe("2026-08-29T12:00:00.000Z");
+
+		// Omitting the field leaves it alone.
+		expect((await patch({ venue: "Somewhere" })).status).toBe(200);
+
+		const untouched = await env.DB.prepare(`SELECT event_end_at FROM events WHERE slug = ?`)
+			.bind("movable")
+			.first<{ event_end_at: string | null }>();
+
+		expect(untouched?.event_end_at).toBe("2026-08-29T12:00:00.000Z");
+
+		// An empty string clears it.
+		expect((await patch({ event_end_at: "" })).status).toBe(200);
+
+		const cleared = await env.DB.prepare(`SELECT event_end_at FROM events WHERE slug = ?`)
+			.bind("movable")
+			.first<{ event_end_at: string | null }>();
+
+		expect(cleared?.event_end_at).toBeNull();
+	});
+
+	it("rejects an event end that is invalid or before the event date", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+
+		const create = (body: unknown) =>
+			asAdmin("/api/admin/events", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			});
+
+		const invalid = await create({
+			slug: "bad-end",
+			title: "Bad End",
+			event_date: "2026-08-29",
+			event_end_at: "not a date",
+		});
+
+		expect(invalid.status).toBe(400);
+		expect(await invalid.json()).toEqual({ error: "Invalid event end date." });
+
+		const backwards = await create({
+			slug: "backwards",
+			title: "Backwards",
+			event_date: "2026-08-29",
+			event_end_at: "2026-08-01T10:00:00.000Z",
+		});
+
+		expect(backwards.status).toBe(400);
+		expect(await backwards.json()).toEqual({ error: "Event end cannot be before the event date." });
+
+		const count = await env.DB.prepare(`SELECT COUNT(*) AS n FROM events`).first<{ n: number }>();
+
+		expect(count?.n).toBe(0);
+	});
+
 	it("does not treat a nested admin path as a delete", async () => {
 		env.ADMIN_GITHUB_USERS = "";
 

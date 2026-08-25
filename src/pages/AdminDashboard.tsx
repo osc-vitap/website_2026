@@ -81,6 +81,44 @@ interface Registration {
 
 //reg response removed
 
+/*
+ * <input type="datetime-local"> works in the admin's local time and has
+ * no timezone in its value, while event_end_at is stored as a UTC
+ * instant. Without converting, an event ending at 4pm IST would be read
+ * as 4pm UTC and archive itself five and a half hours late.
+ */
+const toLocalInput = (
+  utcValue: string | null | undefined,
+): string => {
+  if (!utcValue) return '';
+
+  const parsed = Date.parse(utcValue);
+
+  if (Number.isNaN(parsed)) return '';
+
+  const local = new Date(
+    parsed -
+      new Date(parsed).getTimezoneOffset() *
+        60_000,
+  );
+
+  return local
+    .toISOString()
+    .slice(0, 16);
+};
+
+const fromLocalInput = (
+  localValue: string,
+): string | null => {
+  if (!localValue) return null;
+
+  const parsed = Date.parse(localValue);
+
+  if (Number.isNaN(parsed)) return null;
+
+  return new Date(parsed).toISOString();
+};
+
 const emptyForm: EventForm = {
   title: '',
   slug: '',
@@ -300,7 +338,7 @@ const AdminDashboard = () => {
             event_date:
               form.event_date,
             event_end_at:
-              form.event_end_at || null,
+              fromLocalInput(form.event_end_at),
             image:
               form.image.trim(),
             registration_type:
@@ -361,7 +399,7 @@ const AdminDashboard = () => {
       event_date:
         event.event_date,
       event_end_at:
-        event.event_end_at ?? '',
+        toLocalInput(event.event_end_at),
       image: event.image ?? '',
       registration_type:
         event.registration_type,
@@ -630,7 +668,7 @@ setRegistrations(
             event_date:
               manageForm.event_date,
             event_end_at:
-              manageForm.event_end_at || null,
+              fromLocalInput(manageForm.event_end_at),
             image:
               manageForm.image.trim(),
             registration_type:
@@ -683,7 +721,7 @@ setRegistrations(
         event_date:
           manageForm.event_date,
         event_end_at:
-          manageForm.event_end_at || null,
+          fromLocalInput(manageForm.event_end_at),
         image:
           manageForm.image.trim() ||
           null,

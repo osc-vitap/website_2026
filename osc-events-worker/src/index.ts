@@ -62,6 +62,30 @@ function isAllowedAdmin(username: string, env?: Env): boolean {
 	return allowList.length === 0 || allowList.includes(username.toLowerCase());
 }
 
+/*
+ * When an event actually finishes. Drives both the "this event has
+ * already ended" rejection on registration and the scheduled archive
+ * job, so it is stored as a UTC instant.
+ *
+ * The admin form posts a value from an <input type="datetime-local">,
+ * which the browser converts to UTC before sending. A bare local
+ * string arriving from anywhere else is read as UTC, matching how
+ * SQLite's datetime() treats it.
+ */
+function normalizeEventEnd(value: string | null | undefined): { ok: true; value: string | null } | { ok: false } {
+	if (value === undefined || value === null || value.trim() === '') {
+		return { ok: true, value: null };
+	}
+
+	const parsed = Date.parse(value);
+
+	if (Number.isNaN(parsed)) {
+		return { ok: false };
+	}
+
+	return { ok: true, value: new Date(parsed).toISOString() };
+}
+
 function randomToken(): string {
 	return crypto.randomUUID() + crypto.randomUUID();
 }
@@ -1207,6 +1231,7 @@ export default {
 	          description,
 	          venue,
 	          event_date,
+	          event_end_at,
 	          image,
 	          is_open,
 	          registration_type,
@@ -1226,6 +1251,7 @@ export default {
 						description: string | null;
 						venue: string | null;
 						event_date: string;
+						event_end_at: string | null;
 						image: string | null;
 						is_open: number;
 						registration_type: 'solo' | 'team' | 'workshop';
@@ -1252,6 +1278,7 @@ export default {
 					description?: string;
 					venue?: string;
 					event_date?: string;
+					event_end_at?: string | null;
 					image?: string;
 					registration_type?: 'solo' | 'team' | 'workshop';
 					min_team_size?: number;
@@ -1303,6 +1330,23 @@ export default {
 					return json({ error: 'Registration deadline cannot be after the event date.' }, 400, request, env);
 				}
 
+				/*
+				 * Omitting event_end_at leaves the stored value alone;
+				 * sending null or an empty string clears it.
+				 */
+				const eventEnd =
+					body.event_end_at === undefined
+						? { ok: true as const, value: existingEvent.event_end_at }
+						: normalizeEventEnd(body.event_end_at);
+
+				if (!eventEnd.ok) {
+					return json({ error: 'Invalid event end date.' }, 400, request, env);
+				}
+
+				if (eventEnd.value && Date.parse(eventEnd.value) < Date.parse(eventDate)) {
+					return json({ error: 'Event end cannot be before the event date.' }, 400, request, env);
+				}
+
 				if (!['solo', 'team', 'workshop'].includes(registrationType)) {
 					return json(
 						{
@@ -1349,6 +1393,7 @@ export default {
 	          description = ?,
 	          venue = ?,
 	          event_date = ?,
+	          event_end_at = ?,
 	          image = ?,
 	          is_open = ?,
 	          registration_deadline = ?,
@@ -1365,6 +1410,7 @@ export default {
 							body.description !== undefined ? body.description.trim() : existingEvent.description,
 							body.venue !== undefined ? body.venue.trim() : existingEvent.venue,
 							eventDate,
+							eventEnd.value,
 							body.image !== undefined ? body.image.trim() : existingEvent.image,
 							body.is_open !== undefined ? (body.is_open ? 1 : 0) : existingEvent.is_open,
 							registrationDeadline,
@@ -1465,6 +1511,7 @@ export default {
 					description?: string;
 					venue?: string;
 					event_date?: string;
+					event_end_at?: string | null;
 					image?: string;
 					is_open?: boolean;
 					registration_type?: 'solo' | 'team' | 'workshop';
@@ -1511,6 +1558,16 @@ export default {
 					return json({ error: 'Registration deadline cannot be after the event date.' }, 400, request, env);
 				}
 
+				const eventEnd = normalizeEventEnd(body.event_end_at);
+
+				if (!eventEnd.ok) {
+					return json({ error: 'Invalid event end date.' }, 400, request, env);
+				}
+
+				if (eventEnd.value && Date.parse(eventEnd.value) < Date.parse(body.event_date)) {
+					return json({ error: 'Event end cannot be before the event date.' }, 400, request, env);
+				}
+
 				if (!['solo', 'team', 'workshop'].includes(registrationType)) {
 					return json(
 						{
@@ -1542,6 +1599,7 @@ export default {
 	              description,
 	              venue,
 	              event_date,
+	              event_end_at,
 	              image,
 	              is_open,
 	              registration_deadline,
@@ -1549,7 +1607,7 @@ export default {
 	              min_team_size,
 	              max_team_size
 	            )
-	            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	          `,
 					)
 						.bind(
@@ -1560,6 +1618,7 @@ export default {
 							body.description?.trim() ?? null,
 							body.venue?.trim() ?? null,
 							body.event_date,
+							eventEnd.value,
 							body.image?.trim() ?? null,
 							body.is_open === false ? 0 : 1,
 							body.registration_deadline ?? null,

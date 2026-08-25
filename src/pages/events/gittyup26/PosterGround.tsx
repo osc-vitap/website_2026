@@ -19,17 +19,39 @@ const GRAIN_SVG = encodeURIComponent(
 );
 
 /*
- * Whether this poster's ground reads as a dot field — a CSS lattice in
- * its layers, or one of the halftone-style photographs. Only those get
- * the cursor light; adding dots to a poster that has none would invent
- * a texture the print version does not have.
+ * A layer that paints a repeating dot lattice: a circular gradient tiled
+ * at a fixed size. Grain and full-bleed washes are not dots and are left
+ * out.
  */
-const isDotted = (variant: PosterVariant) =>
-  variant.layers.some(
-    (layer) =>
-      /radial-gradient\(\s*circle/.test(layer) &&
-      /\d+px\s+\d+px/.test(layer),
-  ) || /halftone|noisy/.test(variant.image ?? '');
+const isDotLayer = (layer: string) =>
+  /radial-gradient\(\s*circle/.test(layer) &&
+  /\/\s*[\d.]+px\s+[\d.]+px/.test(layer);
+
+/*
+ * The poster's own dot layers, returned verbatim.
+ *
+ * The cursor light re-paints exactly these rather than drawing a dot
+ * field of its own. The old light carried its own lattice at its own
+ * spacing and phase, so it beat against the dots underneath and read as
+ * moiré — two grids, not one responding. Re-painting the poster's own
+ * values lines them up by construction: the dots it already has simply
+ * strengthen where the pointer is.
+ *
+ * Only these lattices count. A poster with no dot layer gets no light,
+ * because there is nothing there to react — the noisy-* and grain
+ * textures are not dot fields, and the two halftone posters each carry
+ * a lattice of their own anyway.
+ */
+const dotLayers = (variant: PosterVariant) => variant.layers.filter(isDotLayer);
+
+/*
+ * How many times the light re-paints those layers. The lattices are
+ * deliberately faint — several sit at 7% alpha — so a single extra pass
+ * is barely a change. Stacking identical copies at identical offsets
+ * composes alpha over itself and deepens only the dots, never the space
+ * between them.
+ */
+const REINFORCE = 3;
 
 interface PosterGroundProps {
   variant: PosterVariant;
@@ -40,9 +62,9 @@ const PosterGround = ({
 }: PosterGroundProps) => {
   const spotRef = useRef<HTMLDivElement>(null);
 
-  const dotted = isDotted(variant);
+  const dots = dotLayers(variant);
 
-  useCursorSpotlight(spotRef, dotted);
+  useCursorSpotlight(spotRef, dots.length > 0);
 
   return (
   <>
@@ -95,22 +117,24 @@ const PosterGround = ({
     ) : null}
 
     {/*
-      * A brighter copy of the dot field, revealed only in a circle
-      * around the cursor, so the dots appear to light up under it. The
-      * mask is driven by --mx / --my, which the hook writes directly on
-      * this element — no React render per pointer move.
+      * A second pass over the poster's own dots, revealed only in a
+      * circle around the cursor, so those dots deepen where the pointer
+      * is instead of a separate pattern appearing over them.
       *
-      * --spot drops to 0 when the pointer leaves the window, so the
-      * light fades out rather than freezing wherever it left.
+      * The mask is driven by --mx / --my, which the hook writes directly
+      * on this element — no React render per pointer move. --spot drops
+      * to 0 when the pointer leaves the window, so the light fades out
+      * rather than freezing wherever it left.
       */}
-    {dotted && (
+    {dots.length > 0 && (
       <div
         ref={spotRef}
         aria-hidden="true"
         className="poster-spotlight pointer-events-none absolute inset-0"
         style={{
-          backgroundImage: `radial-gradient(circle, ${variant.ink} 1.3px, transparent 1.4px)`,
-          backgroundSize: '8px 8px',
+          background: Array.from({ length: REINFORCE }, () => dots)
+            .flat()
+            .join(', '),
         }}
       />
     )}

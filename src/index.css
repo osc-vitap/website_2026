@@ -181,9 +181,13 @@
   }
 
   /*
-   * Cursor light on the dotted poster grounds. The dot field is painted
-   * across the whole page and then masked to a circle that follows the
-   * pointer, so only the dots near the cursor show.
+   * Cursor light on the dotted poster grounds.
+   *
+   * The layer repaints the poster's own dot lattice — the same gradient
+   * at the same size and offset — and masks it to a circle that follows
+   * the pointer. Because the dots land exactly on the ones already
+   * drawn, they read as deepening under the cursor rather than as a
+   * second grid sliding over the first.
    *
    * --mx / --my are written by useCursorSpotlight; the defaults park the
    * light off-screen so nothing shows before the first pointer move.
@@ -194,7 +198,7 @@
     --my: -100vh;
     --spot: 1;
 
-    opacity: calc(var(--spot) * 0.85);
+    opacity: var(--spot);
     transition: opacity 0.35s ease-out;
     mask-image: radial-gradient(
       circle 170px at var(--mx) var(--my),

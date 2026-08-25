@@ -9,6 +9,8 @@ export interface Event {
   url: string;
   isUpcoming: boolean;
   description: string;
+  /** Set when the event has a poster page of its own, e.g. /gittyup26 */
+  eventPageUrl?: string;
 }
 
 // Extracted from original OSC-Web repository.

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { eventsData, Event } from '../data/eventsData';
-import { MapPin, Calendar, ExternalLink } from 'lucide-react';
+import { eventPageForRegistration } from '../data/eventPages';
+import { MapPin, Calendar, ExternalLink, ArrowRight } from 'lucide-react';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -105,6 +106,12 @@ const Events = () => {
             carouselImage:
               event.image ?? '',
             url: `/events/${event.slug}/register`,
+            eventPageUrl:
+              eventPageForRegistration(
+                event.slug,
+              )
+                ? `/${eventPageForRegistration(event.slug)!.slug}`
+                : undefined,
             isUpcoming:
               isEventUpcoming(event),
             description:
@@ -155,6 +162,12 @@ const Events = () => {
                 apiEvent.image ??
                 localEvent.carouselImage,
               url: `/events/${apiEvent.slug}/register`,
+              eventPageUrl:
+                eventPageForRegistration(
+                  apiEvent.slug,
+                )
+                  ? `/${eventPageForRegistration(apiEvent.slug)!.slug}`
+                  : undefined,
               isUpcoming:
                 isEventUpcoming(apiEvent),
               description:
@@ -348,7 +361,24 @@ const Events = () => {
 
                 </div>
 
-                {event.isUpcoming ? (
+                {/*
+                  * An event with a poster page of its own is the
+                  * front door — it carries the details and its own
+                  * Register Now. Everything else goes straight to
+                  * the registration form.
+                  */}
+                {event.eventPageUrl ? (
+                  <Link
+                    to={event.eventPageUrl}
+                    className="group mt-auto w-full py-2.5 rounded-lg font-semibold text-center transition-all flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary/90 text-white"
+                  >
+                    View Event
+                    <ArrowRight
+                      size={16}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </Link>
+                ) : event.isUpcoming ? (
                   <Link
                     to={event.url}
                     className="mt-auto w-full py-2.5 rounded-lg font-semibold text-center transition-all flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary/90 text-white"

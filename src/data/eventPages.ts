@@ -55,6 +55,19 @@ export const eventPageBySlug = (
     (page) => page.slug === slug,
   );
 
+/*
+ * Finds the poster page for a D1 event, so listings can link to it
+ * instead of dropping people straight into the registration form.
+ */
+export const eventPageForRegistration = (
+  registrationSlug: string,
+): EventPage | undefined =>
+  eventPages.find(
+    (page) =>
+      page.registrationSlug ===
+      registrationSlug,
+  );
+
 if (import.meta.env.DEV) {
   for (const page of eventPages) {
     if (RESERVED_SLUGS.includes(page.slug)) {

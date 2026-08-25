@@ -1,12 +1,15 @@
 /*
  * Colour helpers for the poster pages.
  *
- * The wordmark sits directly on photographic backgrounds whose
- * brightness varies across the page, so it needs a shadow that lifts it
- * off whatever is behind it. Which shadow depends on the ink: a light
- * wordmark needs a dark halo, a dark one needs a light halo. That has
- * to be derived from the colour rather than hardcoded, because the
- * thirty posters run from #ffffff to near-black ink.
+ * Small copy sits directly on photographic backgrounds whose brightness
+ * varies across the page, so it needs a shadow that lifts it off
+ * whatever is behind it. Which shadow depends on the text colour: light
+ * copy needs a dark halo, dark copy needs a light one. That has to be
+ * derived from the colour rather than hardcoded, because the thirty
+ * posters run from #ffffff to near-black.
+ *
+ * The display wordmark deliberately gets none of this — at that size a
+ * halo reads as a glow around the letterforms.
  */
 
 interface Rgb {
@@ -72,21 +75,6 @@ export const luminance = (
     0.7152 * channel(rgb.g) +
     0.0722 * channel(rgb.b)
   );
-};
-
-/*
- * A halo that separates display type from a busy background without
- * reading as a drop shadow. Two stacked shadows: a tight one to define
- * the edge, a wide soft one to darken (or lighten) the area behind.
- */
-export const contrastHalo = (
-  ink: string,
-): string => {
-  const light = luminance(ink) > 0.4;
-
-  return light
-    ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.55)) drop-shadow(0 4px 22px rgba(0,0,0,0.45))'
-    : 'drop-shadow(0 1px 2px rgba(255,255,255,0.35)) drop-shadow(0 4px 22px rgba(255,255,255,0.25))';
 };
 
 /*

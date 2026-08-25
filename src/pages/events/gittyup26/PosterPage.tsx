@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import PosterGround from './PosterGround';
 import { PosterVariant } from './posterTypes';
 import PosterRegisterForm from './PosterRegisterForm';
-import { contrastHalo, textHalo } from './posterColor';
+import { textHalo } from './posterColor';
 import { useFittingRows } from './useFittingRows';
 
 /*
@@ -120,12 +120,6 @@ const PosterPage = ({
                     key={index}
                     className={`overflow-hidden ${index > 0 ? '-mt-[0.26em]' : ''}`}
                   >
-                    {/*
-                      * Only the thin weight carries a halo. The black
-                      * weight has enough mass to hold its own against a
-                      * bright background, and shadowing it just made the
-                      * display type look grubby.
-                      */}
                     <div
                       className="poster-rise flex whitespace-nowrap leading-[1.2]"
                       style={{
@@ -139,11 +133,6 @@ const PosterPage = ({
                             ? 'font-thin'
                             : 'font-black'
                         }
-                        style={
-                          index % 2 === 0
-                            ? { filter: contrastHalo(variant.ink) }
-                            : undefined
-                        }
                       >
                         gitty
                       </span>
@@ -156,10 +145,6 @@ const PosterPage = ({
                         }
                         style={{
                           marginLeft: '0.36em',
-                          filter:
-                            index % 2 === 0
-                              ? undefined
-                              : contrastHalo(variant.ink),
                         }}
                       >
                         up

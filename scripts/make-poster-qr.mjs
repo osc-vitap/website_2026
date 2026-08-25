@@ -23,6 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 const [countArg = '30', outArg = 'qr'] = process.argv.slice(2);
 
@@ -56,6 +57,49 @@ mkdirSync(tempDir, { recursive: true });
 
 const asFileUrl = (p) => `file:///${p.replace(/\\/g, '/')}`;
 
+/*
+ * The OSC mark is full colour, which reads as a stray sticker in the
+ * middle of a black and white code. Desaturating it and pushing the
+ * contrast turns it into a mono silhouette that belongs to the code.
+ *
+ * Contrast matters beyond looks: the mark covers 43% of the symbol and
+ * the dots behind it are cleared, so it is already spending error
+ * correction. Mid greys would blur into the white field and give a
+ * scanner less to lock onto than solid dark shapes do.
+ *
+ * Derived at generation time rather than committed, so it can never
+ * drift from the mark it comes from.
+ */
+const monoLogo = path.join(tempDir, 'osc-mark-mono.png');
+
+/*
+ * Painted from the alpha channel rather than desaturated. Plain
+ * grayscale maps the mark's yellow figure to near-white, which
+ * disappears against the code's white field and leaves the logo looking
+ * lopsided — one arm of the ring simply missing. Taking the silhouette
+ * keeps every figure at equal weight and the gaps between them
+ * transparent.
+ */
+const { width: logoW = 512, height: logoH = 512 } =
+	await sharp(LOGO).metadata();
+
+const logoAlpha = await sharp(LOGO)
+	.ensureAlpha()
+	.extractChannel('alpha')
+	.toBuffer();
+
+await sharp({
+	create: {
+		width: logoW,
+		height: logoH,
+		channels: 3,
+		background: '#000000',
+	},
+})
+	.joinChannel(logoAlpha)
+	.png()
+	.toFile(monoLogo);
+
 const page = (url) => `<!doctype html>
 <html><head><meta charset="utf-8"><style>
   html,body{margin:0;padding:0;background:#fff}
@@ -71,7 +115,7 @@ const page = (url) => `<!doctype html>
     height: ${SIZE},
     type: 'svg',
     data: ${JSON.stringify(url)},
-    image: ${JSON.stringify(asFileUrl(LOGO))},
+    image: ${JSON.stringify(asFileUrl(monoLogo))},
     margin: 0,
     qrOptions: { errorCorrectionLevel: 'H' },
     dotsOptions: { color: '#000000', type: 'rounded' },

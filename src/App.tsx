@@ -15,6 +15,8 @@ import EventRegistration from './pages/EventRegistration';
 
 import AdminDashboard from './pages/AdminDashboard';
 
+import NotFound from './pages/NotFound';
+
 function App() {
   return (
     <Router>
@@ -40,6 +42,10 @@ function App() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/news" element={<News />} />
               <Route path="/contact" element={<Contact />} />
+
+              {/* Vercel rewrites every unknown path to index.html, so the
+                  404 is rendered here rather than by the host. */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
 

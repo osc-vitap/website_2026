@@ -43,7 +43,6 @@ export const posterVariants: PosterVariant[] = [
 		"id": 2,
 		"layout": "wordmark-stack",
 		"ground": "#04040a",
-		"image": "/events/gittyup26/chrome-3.webp",
 		"layers": [
 			"linear-gradient(102deg,#3a3550 0%,#6a6486 12%,#2a2740 24%,#7d7699 38%,#232036 52%,#8f88ab 64%,#2c2942 78%,#6f6890 90%,#1e1b2e 100%)",
 			"linear-gradient(78deg,rgba(216,209,236,.5) 0%,rgba(216,209,236,.5) 9%,rgba(40,36,58,.55) 9%,rgba(40,36,58,.55) 17%,rgba(180,172,204,.3) 17%,rgba(180,172,204,.3) 23%,rgba(30,27,45,.6) 23%,rgba(30,27,45,.6) 38%,rgba(230,224,244,.26) 38%,rgba(230,224,244,.26) 44%,rgba(46,42,66,.5) 44%,rgba(46,42,66,.5) 62%,rgba(198,190,222,.28) 62%,rgba(198,190,222,.28) 70%,rgba(26,23,40,.55) 70%,rgba(26,23,40,.55) 100%)",
@@ -65,7 +64,6 @@ export const posterVariants: PosterVariant[] = [
 		"id": 3,
 		"layout": "wordmark-stack",
 		"ground": "#03100f",
-		"image": "/events/gittyup26/noisy-2.webp",
 		"layers": [
 			"radial-gradient(120% 85% at 50% 30%,#0d6b74 0%,#0a4d55 34%,#062e33 64%,#03100f 100%)",
 			"linear-gradient(160deg,rgba(13,107,116,.42) 0%,rgba(3,16,15,.15) 52%,rgba(13,107,116,.28) 100%)",
@@ -91,10 +89,10 @@ export const posterVariants: PosterVariant[] = [
 		"ground": "#000",
 		"image": "/events/gittyup26/glass-x.webp",
 		"layers": [
-			"linear-gradient(172deg,#0b0722 0%,#050310 52%,#0a0526 100%)",
 			"repeating-linear-gradient(96deg,#0f0c1d 0px,#3b3550 9px,#15111f 17px,#5b5470 24px,#1b1729 33px,#46405c 41px,#100d1c 52px) 0 68%/100% 18% no-repeat",
 			"linear-gradient(80deg,rgba(255,255,255,0) 0%,rgba(226,220,246,.22) 24%,rgba(255,255,255,0) 40%,rgba(183,157,255,.16) 62%,rgba(255,255,255,0) 84%) 0 68%/100% 18% no-repeat",
-			"linear-gradient(180deg,#050310 0%,rgba(5,3,16,0) 16%,rgba(5,3,16,0) 84%,#050310 100%) 0 68%/100% 18% no-repeat"
+			"linear-gradient(180deg,#050310 0%,rgba(5,3,16,0) 16%,rgba(5,3,16,0) 84%,#050310 100%) 0 68%/100% 18% no-repeat",
+			"linear-gradient(rgba(3,2,10,.5), rgba(3,2,10,.5))"
 		],
 		"ink": "#ffffff",
 		"text": "rgba(255,255,255,.72)",
@@ -112,13 +110,13 @@ export const posterVariants: PosterVariant[] = [
 		"ground": "#02060f",
 		"image": "/events/gittyup26/grad-warmcool.webp",
 		"layers": [
-			"linear-gradient(160deg,#5f00ff 0%,#3a00ad 34%,#1a0058 70%,#0b0022 100%)",
 			"radial-gradient(circle at 50% 50%,rgba(11,0,34,.34) 0 26%,rgba(11,0,34,0) 28%) 0 0/16px 16px",
-			"radial-gradient(circle at 50% 50%,rgba(26,0,88,.22) 0 18%,rgba(26,0,88,0) 20%) 8px 8px/16px 16px"
+			"radial-gradient(circle at 50% 50%,rgba(26,0,88,.22) 0 18%,rgba(26,0,88,0) 20%) 8px 8px/16px 16px",
+			"linear-gradient(rgba(2,6,15,.44), rgba(2,6,15,.44))"
 		],
 		"ink": "#ffffff",
 		"text": "rgba(255,255,255,.84)",
-		"accent": "#a78bff",
+		"accent": "#d8caff",
 		"rows": 3,
 		"eyebrow": "A history of version control",
 		"headline": "Your remote can live in your room.",
@@ -152,6 +150,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#15003e",
 		"image": "/events/gittyup26/halftone.webp",
+		"imageBlend": "multiply",
 		"layers": [
 			"linear-gradient(31.637deg,#5600ff 0%,#3700a4 24.76%,#15003e 57.87%)",
 			"radial-gradient(78% 52% at 46% 26%,rgba(150,104,255,.26) 0%,rgba(96,26,220,.13) 42%,rgba(21,0,62,0) 76%)",
@@ -171,7 +170,6 @@ export const posterVariants: PosterVariant[] = [
 		"id": 8,
 		"layout": "wordmark-stack",
 		"ground": "#000000",
-		"image": "/events/gittyup26/chrome-rings.webp",
 		"layers": [
 			"linear-gradient(104deg,#26242e 0%,#6e6b7c 8%,#171620 14%,#57545f 22%,#100f16 29%,#807d8e 40%,#212028 47%,#4c4a57 57%,#131219 65%,#6d6a7b 77%,#1b1a22 85%,#3f3d49 100%)",
 			"linear-gradient(-16deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 11%,rgba(255,255,255,.11) 19%,rgba(255,255,255,0) 30%,rgba(255,255,255,.15) 43%,rgba(255,255,255,0) 54%,rgba(255,255,255,.08) 67%,rgba(255,255,255,0) 79%,rgba(255,255,255,.12) 92%,rgba(255,255,255,0) 100%)",
@@ -301,7 +299,6 @@ export const posterVariants: PosterVariant[] = [
 		"id": 13,
 		"layout": "wordmark-stack",
 		"ground": "#000000",
-		"image": "/events/gittyup26/art-arc.webp",
 		"layers": [
 			"radial-gradient(120% 78% at 50% 34%,#2a1f3d 0%,#181128 38%,#0a0713 66%,#000000 100%)",
 			"radial-gradient(58% 42% at 50% 66%,rgba(138,105,208,.22) 0%,rgba(60,34,120,.10) 46%,rgba(0,0,0,0) 76%)",
@@ -324,6 +321,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#1c0060",
 		"image": "/events/gittyup26/halftone.webp",
+		"imageBlend": "multiply",
 		"layers": [
 			"linear-gradient(148deg,#8a2bff 0%,#6200ff 30%,#4a00d0 64%,#3a00a0 100%)",
 			"radial-gradient(circle at center,rgba(18,0,60,.34) 0 3px,rgba(18,0,60,0) 3.6px) 0 0 / 18px 18px",
@@ -342,7 +340,6 @@ export const posterVariants: PosterVariant[] = [
 		"id": 15,
 		"layout": "headline-led",
 		"ground": "#000000",
-		"image": "/events/gittyup26/chrome-blobs.webp",
 		"layers": [
 			"radial-gradient(56% 50% at 74% 40%,#9fa5b2 0%,#6a707b 30%,#3a3e46 56%,#101216 78%,#000000 100%)",
 			"linear-gradient(118deg,rgba(0,0,0,0) 32%,#787e8a 39%,#d3d8e0 45%,#868c99 49%,#f1f4f9 55%,#474c56 59%,#bcc2cc 65%,#22252b 71%,rgba(0,0,0,0) 86%)",
@@ -388,7 +385,6 @@ export const posterVariants: PosterVariant[] = [
 		"id": 17,
 		"layout": "wordmark-stack",
 		"ground": "#06040f",
-		"image": "/events/gittyup26/chrome-blobs2.webp",
 		"layers": [
 			"linear-gradient(102deg, #26272e 0%, #6e7180 8%, #34353e 14%, #9ea1ae 22%, #40414a 29%, #c2c5d0 37%, #2f303a 45%, #8d909d 54%, #292a33 61%, #adb0bc 70%, #383943 78%, #787b88 87%, #2a2b33 100%)",
 			"linear-gradient(168deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 11%, rgba(0,0,0,.36) 21%, rgba(255,255,255,.12) 33%, rgba(0,0,0,.30) 46%, rgba(255,255,255,.18) 60%, rgba(0,0,0,.42) 75%, rgba(255,255,255,.09) 87%, rgba(0,0,0,.32) 100%)",
@@ -476,7 +472,6 @@ export const posterVariants: PosterVariant[] = [
 		"id": 21,
 		"layout": "wordmark-stack",
 		"ground": "#12003c",
-		"image": "/events/gittyup26/noisy-4.webp",
 		"layers": [
 			"radial-gradient(120% 95% at 28% 10%,#2e0c78 0%,#1a0350 46%,#0a0020 100%)",
 			"linear-gradient(200deg,rgba(106,18,255,.82) 0%,rgba(66,0,196,.82) 36%,rgba(32,0,110,.82) 72%,rgba(13,0,38,.82) 100%)",
@@ -638,7 +633,6 @@ export const posterVariants: PosterVariant[] = [
 		"id": 29,
 		"layout": "wordmark-stack",
 		"ground": "#08031c",
-		"image": "/events/gittyup26/noisy-1.webp",
 		"layers": [
 			"radial-gradient(115% 85% at 46% 34%, #4a1fb5 0%, #2b0c7d 30%, #150547 62%, #08031c 100%)",
 			"radial-gradient(60% 45% at 78% 78%, rgba(106,13,255,.35) 0%, rgba(106,13,255,0) 70%)",

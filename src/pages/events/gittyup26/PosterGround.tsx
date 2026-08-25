@@ -74,7 +74,7 @@ const PosterGround = ({
       style={{ background: variant.ground }}
     />
 
-    {variant.image && (
+    {variant.image && !variant.imageBlend && (
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-cover bg-center"
@@ -92,6 +92,22 @@ const PosterGround = ({
         style={{ background: layer }}
       />
     ))}
+
+    {/*
+      * A blended texture rides above the tints rather than under them.
+      * Below them it would have nothing to blend with — the layers would
+      * just paint over the result.
+      */}
+    {variant.image && variant.imageBlend && (
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url(${variant.image})`,
+          mixBlendMode: variant.imageBlend,
+        }}
+      />
+    )}
 
     {variant.grid && (
       <div

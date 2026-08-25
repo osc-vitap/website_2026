@@ -34,6 +34,18 @@ export interface PosterVariant {
   image?: string;
 
   /**
+   * Blend mode for `image`. Setting one also lifts the image above
+   * `layers` — a texture that is meant to blend has to reach the tints
+   * it blends with.
+   *
+   * This is how the halftone posters work: the screen is a white sheet
+   * with black dots, so `multiply` drops the white away and prints the
+   * dots onto the colour underneath, the way the press does. Laid flat
+   * it would simply cover the poster in white.
+   */
+  imageBlend?: 'multiply' | 'screen' | 'overlay' | 'soft-light';
+
+  /**
    * CSS background values painted over the ground, first entry
    * closest to the ground. Taken from the poster's own overlays,
    * plus a replacement for the photograph where there was one.

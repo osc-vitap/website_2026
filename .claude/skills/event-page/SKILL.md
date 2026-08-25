@@ -90,6 +90,18 @@ entry to `public/sitemap.xml`.
    check the ink colour against the gradient's lightest and darkest points.
 8. Match the file conventions already in `src/pages/events/`.
 
+## Several posters for one event
+
+When an event prints more than one poster design, each gets its own QR code
+pointing at `?pg=N`, and the page renders a matching variant. `?pg=` is read in
+the page component and resolved against a variants file (see
+`src/pages/events/gittyUp26Variants.ts`); an absent or out-of-range value falls
+back to the first variant, so a smudged QR still lands somewhere.
+
+Once the pages exist, the posters need QR codes that actually encode those
+URLs — see [references/poster-qr-prompt.md](references/poster-qr-prompt.md) for
+a prompt to hand back to the design tool, and how to verify before printing.
+
 ## Create the event in D1
 
 The Register button is dead until the event row exists. Create it through the

@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import PosterGround from './PosterGround';
 import { PosterVariant } from './posterTypes';
 import PosterRegisterForm from './PosterRegisterForm';
-import { contrastHalo } from './posterColor';
+import { contrastHalo, textHalo } from './posterColor';
 import { useFittingRows } from './useFittingRows';
 
 /*
@@ -254,15 +254,6 @@ const PosterPage = ({
                 </div>
               )}
 
-              <p
-                className="mt-6 max-w-md text-xs font-light leading-relaxed opacity-75 md:text-sm"
-                style={{ color: variant.text }}
-              >
-                Mandatory for all first years. No prior
-                knowledge of Git or GitHub needed —
-                start from zero.
-              </p>
-
               {/*
                 * Registration happens here rather than on a separate
                 * page: someone who scanned a poster should not be
@@ -299,18 +290,25 @@ const PosterPage = ({
           style={{
             borderColor: withAlpha(variant.accent, 25),
             color: variant.text,
+            /*
+              * The footline sits at the bottom of the page where the
+              * background photographs are often at their brightest, and
+              * it is the smallest type on the poster. The halo holds it
+              * apart from whatever is behind it.
+              */
+            textShadow: textHalo(variant.text),
           }}
         >
           <span style={{ color: variant.accent }}>
             oscvitap.com/gittyup26
           </span>
 
-          <span className="opacity-70">
+          <span className="opacity-80">
             Open Source Community · VIT-AP University
           </span>
 
           <span
-            className="tabular-nums opacity-40"
+            className="tabular-nums opacity-60"
             title={`Poster ${variant.id} of 30`}
           >
             {String(variant.id).padStart(2, '0')}/30

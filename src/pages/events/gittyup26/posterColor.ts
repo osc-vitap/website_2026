@@ -88,3 +88,19 @@ export const contrastHalo = (
     ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.55)) drop-shadow(0 4px 22px rgba(0,0,0,0.45))'
     : 'drop-shadow(0 1px 2px rgba(255,255,255,0.35)) drop-shadow(0 4px 22px rgba(255,255,255,0.25))';
 };
+
+/*
+ * The same idea for small copy. Text this size cannot carry a wide
+ * blur without going muddy, so it gets a tight shadow plus a short
+ * spread — enough to hold the letterforms apart from a background
+ * that brightens underneath them.
+ */
+export const textHalo = (
+  color: string,
+): string => {
+  const light = luminance(color) > 0.4;
+
+  return light
+    ? '0 1px 2px rgba(0,0,0,0.75), 0 0 10px rgba(0,0,0,0.5)'
+    : '0 1px 2px rgba(255,255,255,0.6), 0 0 10px rgba(255,255,255,0.4)';
+};

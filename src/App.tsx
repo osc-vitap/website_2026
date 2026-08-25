@@ -11,6 +11,10 @@ import News from './pages/News';
 import Contact from './pages/Contact';
 import StarBackground from './components/StarBackground';
 
+import EventRegistration from './pages/EventRegistration';
+
+import AdminDashboard from './pages/AdminDashboard';
+
 function App() {
   return (
     <Router>
@@ -23,6 +27,11 @@ function App() {
           
           <main className="flex-grow">
             <Routes>
+
+              <Route path="/events/:slug/register" element={<EventRegistration />} />
+
+              <Route path="/admin" element={<AdminDashboard />} />
+
               <Route path="/" element={<Home />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/team" element={<Team />} />

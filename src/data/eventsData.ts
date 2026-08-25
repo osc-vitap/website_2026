@@ -11,34 +11,12 @@ export interface Event {
   description: string;
 }
 
-// Extracted from original OSC-Web repository + Added placeholders for 2026
+// Extracted from original OSC-Web repository.
+//
+// Past events only. Upcoming events are created in the admin
+// dashboard and served from D1 via GET /api/events, so nothing
+// upcoming should be hardcoded here.
 export const eventsData: Event[] = [
-  // Upcoming Events (2026 Placeholders)
-  {
-    id: "upcoming-1",
-    title: "OSC Hack 2026",
-    sub_title: "Annual Open Source Hackathon",
-    venue: "Main Auditorium, VIT-AP",
-    date: "15 Oct 2026",
-    image: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-    carouselImage: "",
-    url: "#",
-    isUpcoming: true,
-    description: "Join us for 48 hours of non-stop coding, collaboration, and open-source contributions. Exciting prizes and swags await!"
-  },
-  {
-    id: "test-event",
-    title: "Git & GitHub Workshop",
-    sub_title: "Version Control Masterclass",
-    venue: "AB1-G03",
-    date: "28 Aug 2026",
-    carouselImage: "",
-    image: "https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-    url: "#",
-    isUpcoming: true,
-    description: "Learn the fundamentals of version control, making your first PR, and collaborating on open-source projects."
-  },
-  
   // Past Events (From JSON)
   {
     id: "past-2026-3",

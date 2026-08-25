@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { EventPageFrame } from './eventPageKit';
 import { useEventPageMeta } from './useEventPageMeta';
-import { useFontsReady } from './gittyup26/useFontsReady';
+import { usePosterReady } from './gittyup26/usePosterReady';
 import PosterPage from './gittyup26/PosterPage';
 import { variantFromParam } from './gittyup26/posterVariants';
 
@@ -33,7 +33,23 @@ const GittyUp26 = () => {
     [pg],
   );
 
-  const fontsReady = useFontsReady();
+  /*
+   * The splash also waits on the images the first screen needs: the
+   * poster's own texture and the two marks in the masthead. Without
+   * that the poster renders as a flat gradient for a beat and the
+   * texture snaps in under the type.
+   */
+  const ready = usePosterReady(
+    useMemo(
+      () =>
+        [
+          variant.image,
+          '/events/gittyup26/osc-lockup.webp',
+          '/events/gittyup26/vitap-logo.webp',
+        ].filter((src): src is string => Boolean(src)),
+      [variant.image],
+    ),
+  );
 
   useEventPageMeta(
     'GITTYUP 26 · Open Source Community, VIT-AP',
@@ -52,7 +68,7 @@ const GittyUp26 = () => {
         * never renders in a fallback face first. Fades out rather than
         * cutting, and is removed from the tree once it has.
         */}
-      {!fontsReady && (
+      {!ready && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ background: variant.ground }}

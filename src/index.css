@@ -180,11 +180,53 @@
     animation: poster-slide-in 0.75s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   }
 
+  /*
+   * Cursor light on the dotted poster grounds. The dot field is painted
+   * across the whole page and then masked to a circle that follows the
+   * pointer, so only the dots near the cursor show.
+   *
+   * --mx / --my are written by useCursorSpotlight; the defaults park the
+   * light off-screen so nothing shows before the first pointer move.
+   * --spot fades the whole layer when the pointer leaves the window.
+   */
+  .poster-spotlight {
+    --mx: -100vw;
+    --my: -100vh;
+    --spot: 1;
+
+    opacity: calc(var(--spot) * 0.85);
+    transition: opacity 0.35s ease-out;
+    mask-image: radial-gradient(
+      circle 170px at var(--mx) var(--my),
+      #000 0%,
+      rgba(0, 0, 0, 0.55) 45%,
+      transparent 75%
+    );
+    -webkit-mask-image: radial-gradient(
+      circle 170px at var(--mx) var(--my),
+      #000 0%,
+      rgba(0, 0, 0, 0.55) 45%,
+      transparent 75%
+    );
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .poster-rise,
     .poster-fade-up,
     .poster-slide-in {
       animation: none;
+    }
+
+    /* The hook already bails out, but never leave the layer visible. */
+    .poster-spotlight {
+      display: none;
+    }
+  }
+
+  /* No hover position to follow on a touch screen. */
+  @media (hover: none), (pointer: coarse) {
+    .poster-spotlight {
+      display: none;
     }
   }
 }

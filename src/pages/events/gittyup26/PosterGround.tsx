@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { PosterVariant } from './posterTypes';
+import { useCursorSpotlight } from './useCursorSpotlight';
 
 /*
  * The background of a poster page: the flat ground, the poster's own
@@ -16,13 +18,33 @@ const GRAIN_SVG = encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="160" height="160" filter="url(#n)" opacity="1"/></svg>`,
 );
 
+/*
+ * Whether this poster's ground reads as a dot field — a CSS lattice in
+ * its layers, or one of the halftone-style photographs. Only those get
+ * the cursor light; adding dots to a poster that has none would invent
+ * a texture the print version does not have.
+ */
+const isDotted = (variant: PosterVariant) =>
+  variant.layers.some(
+    (layer) =>
+      /radial-gradient\(\s*circle/.test(layer) &&
+      /\d+px\s+\d+px/.test(layer),
+  ) || /halftone|noisy/.test(variant.image ?? '');
+
 interface PosterGroundProps {
   variant: PosterVariant;
 }
 
 const PosterGround = ({
   variant,
-}: PosterGroundProps) => (
+}: PosterGroundProps) => {
+  const spotRef = useRef<HTMLDivElement>(null);
+
+  const dotted = isDotted(variant);
+
+  useCursorSpotlight(spotRef, dotted);
+
+  return (
   <>
     <div
       aria-hidden="true"
@@ -71,7 +93,29 @@ const PosterGround = ({
         }}
       />
     ) : null}
+
+    {/*
+      * A brighter copy of the dot field, revealed only in a circle
+      * around the cursor, so the dots appear to light up under it. The
+      * mask is driven by --mx / --my, which the hook writes directly on
+      * this element — no React render per pointer move.
+      *
+      * --spot drops to 0 when the pointer leaves the window, so the
+      * light fades out rather than freezing wherever it left.
+      */}
+    {dotted && (
+      <div
+        ref={spotRef}
+        aria-hidden="true"
+        className="poster-spotlight pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: `radial-gradient(circle, ${variant.ink} 1.3px, transparent 1.4px)`,
+          backgroundSize: '8px 8px',
+        }}
+      />
+    )}
   </>
-);
+  );
+};
 
 export default PosterGround;

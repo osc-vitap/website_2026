@@ -1361,12 +1361,15 @@ export default {
 	              description,
 	              venue,
 	              event_date,
+	              event_end_at,
 	              image,
 	              is_open,
 	              registration_type,
 	              min_team_size,
 	              max_team_size,
 	              registration_deadline,
+	              archive_status,
+	              archived_at,
 	              created_at
 	            FROM events
 	            ORDER BY event_date ASC
@@ -1904,6 +1907,21 @@ export default {
 					await env.DB.batch(memberStatements);
 				} catch (error) {
 					console.error('Registration member insert failed:', error);
+
+					/*
+					 * The parent registration row was inserted before the
+					 * members, so it has to be removed again. Otherwise a
+					 * rejected registration is left behind as a member-less
+					 * row in the admin dashboard.
+					 */
+					await env.DB.prepare(
+						`
+              DELETE FROM registrations
+              WHERE id = ?
+            `,
+					)
+						.bind(registrationId)
+						.run();
 
 					return json(
 						{

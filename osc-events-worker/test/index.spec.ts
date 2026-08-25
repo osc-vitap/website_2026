@@ -238,6 +238,37 @@ describe("registration lifecycle", () => {
 		expect(response.status).toBe(201);
 	});
 
+	it("leaves no member-less registration behind when a duplicate is rejected", async () => {
+		await seedEvent({ slug: "dupe-event", title: "Dupe Event" });
+
+		const body = JSON.stringify({ members: [member] });
+
+		const first = await fetchWorker("/api/events/dupe-event/register", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body,
+		});
+
+		const second = await fetchWorker("/api/events/dupe-event/register", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body,
+		});
+
+		expect(first.status).toBe(201);
+		expect(second.status).toBe(409);
+
+		const counts = await env.DB.prepare(
+			`
+        SELECT
+          (SELECT COUNT(*) FROM registrations) AS registrations,
+          (SELECT COUNT(*) FROM registration_members) AS members
+      `,
+		).first<{ registrations: number; members: number }>();
+
+		expect(counts).toEqual({ registrations: 1, members: 1 });
+	});
+
 	it("closes registration when the scheduled job archives a finished event", async () => {
 		await seedEvent({
 			slug: "ending-event",

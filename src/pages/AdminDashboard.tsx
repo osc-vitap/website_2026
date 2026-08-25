@@ -27,11 +27,14 @@ interface Event {
   description: string | null;
   venue: string | null;
   event_date: string;
+  event_end_at?: string | null;
   image: string | null;
   is_open: number;
   registration_type: 'solo' | 'team' | 'workshop';
   min_team_size: number;
   max_team_size: number;
+  archive_status?: string;
+  archived_at?: string | null;
   created_at?: string;
 }
 
@@ -406,14 +409,24 @@ setRegistrations(
     }
   };
 
-  const downloadRegistrationsArchive = async (
+  /*
+   * Live events are still in D1, so their registrations come from
+   * the CSV endpoint. Once an event has been archived its rows are
+   * deleted from D1 and only the gzipped R2 archive is left.
+   */
+  const downloadRegistrations = async (
     slug: string,
+    archived: boolean,
   ) => {
     try {
       setManageError('');
 
+      const path = archived
+        ? `registrations/archive`
+        : `registrations.csv`;
+
       const response = await fetch(
-        `${API_BASE_URL}/api/admin/events/${encodeURIComponent(slug)}/registrations/archive`,
+        `${API_BASE_URL}/api/admin/events/${encodeURIComponent(slug)}/${path}`,
         {
           credentials: 'include',
         },
@@ -427,7 +440,7 @@ setRegistrations(
 
       if (!response.ok) {
         let message =
-          'Unable to download registration archive.';
+          'Unable to download registrations.';
 
         try {
           const data = await response.json();
@@ -446,8 +459,9 @@ setRegistrations(
           'Content-Disposition',
         );
 
-      let filename =
-        `${slug}-registrations.csv.gz`;
+      let filename = archived
+        ? `${slug}-registrations.csv.gz`
+        : `${slug}-registrations.csv`;
 
       const filenameMatch =
         contentDisposition?.match(
@@ -476,7 +490,7 @@ setRegistrations(
       setManageError(
         err instanceof Error
           ? err.message
-          : 'Unable to download registration archive.',
+          : 'Unable to download registrations.',
       );
     }
   };
@@ -1823,14 +1837,25 @@ setRegistrations(
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() =>
-                        downloadRegistrationsArchive(
+                        downloadRegistrations(
                           selectedEvent.slug,
+                          selectedEvent.archive_status ===
+                            'archived',
                         )
+                      }
+                      title={
+                        selectedEvent.archive_status ===
+                        'archived'
+                          ? 'This event has been archived. Downloads the compressed archive from R2.'
+                          : 'Downloads the current registrations as a CSV file.'
                       }
                       className="px-4 py-2 rounded-lg border border-dark-600 text-gray-300 hover:text-white hover:border-gray-500 transition-colors flex items-center justify-center gap-2"
                     >
                       <Download size={16} />
-                      Download
+                      {selectedEvent.archive_status ===
+                      'archived'
+                        ? 'Download archive'
+                        : 'Download CSV'}
                     </button>
 
                     <button

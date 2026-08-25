@@ -27,7 +27,7 @@ export const eventsData: Event[] = [
     description: "Join us for 48 hours of non-stop coding, collaboration, and open-source contributions. Exciting prizes and swags await!"
   },
   {
-    id: "upcoming-2",
+    id: "test-event",
     title: "Git & GitHub Workshop",
     sub_title: "Version Control Masterclass",
     venue: "AB1-G03",

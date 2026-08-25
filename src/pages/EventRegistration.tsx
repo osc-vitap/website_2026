@@ -53,6 +53,7 @@ const EventRegistration = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [bannerSrc, setBannerSrc] = useState('');
 
   useEffect(() => {
     if (!slug) return;
@@ -75,6 +76,16 @@ const EventRegistration = () => {
         }
 
         setEvent(data.event);
+
+        const image: string =
+          data.event.image ?? '';
+
+        setBannerSrc(
+          image.replace(
+            /\.(webp|png|jpe?g)$/i,
+            '-banner.webp',
+          ),
+        );
 
         const initialSize =
           data.event.registration_type === 'team'
@@ -238,8 +249,18 @@ const EventRegistration = () => {
 
           {event.image && (
             <div className="h-48 md:h-64 overflow-hidden">
+              {/*
+                * Event posters are portrait, and object-cover slices one
+                * through the middle in a banner this short. Prefer a
+                * purpose-cropped wide band where the event has one —
+                * scripts/make-event-banner.mjs produces it — and fall
+                * back to the poster itself when it does not.
+                */}
               <img
-                src={event.image}
+                src={bannerSrc}
+                onError={() =>
+                  setBannerSrc(event.image ?? '')
+                }
                 alt={event.title}
                 className="w-full h-full object-cover"
               />

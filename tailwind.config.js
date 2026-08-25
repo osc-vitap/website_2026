@@ -35,6 +35,8 @@ export default {
         bebas: ['"Bebas Neue"', 'sans-serif'],
         // Objectivity — the typeface the printed event posters use.
         poster: ['Objectivity', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        // The posters pair it with JetBrains Mono for labels and data.
+        postermono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
         michroma: ['"Michroma"', 'sans-serif'],
         lora: ['"Lora"', 'serif'],
       },

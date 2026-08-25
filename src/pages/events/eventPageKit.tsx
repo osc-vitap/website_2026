@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 /*
@@ -36,6 +36,8 @@ export const EventPageFrame = ({
 interface RegisterLinkProps {
   registrationSlug: string;
   className?: string;
+  /** Poster pages colour the button from their own palette. */
+  style?: CSSProperties;
   children?: ReactNode;
 }
 
@@ -46,11 +48,13 @@ interface RegisterLinkProps {
 export const RegisterLink = ({
   registrationSlug,
   className = '',
+  style,
   children,
 }: RegisterLinkProps) => (
   <Link
     to={`/events/${registrationSlug}/register`}
     className={className}
+    style={style}
   >
     {children ?? 'Register Now'}
   </Link>

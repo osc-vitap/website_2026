@@ -33,6 +33,8 @@ export default {
         sans: ['"Geist Mono"', 'monospace'],
         mono: ['"IBM Plex Mono"', 'monospace'],
         bebas: ['"Bebas Neue"', 'sans-serif'],
+        // Geometric grotesque used by the event poster pages.
+        poster: ['Poppins', 'Helvetica Neue', 'Arial', 'sans-serif'],
         michroma: ['"Michroma"', 'sans-serif'],
         lora: ['"Lora"', 'serif'],
       },

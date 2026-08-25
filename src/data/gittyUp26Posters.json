@@ -1,0 +1,694 @@
+[
+  {
+    "id": 1,
+    "headline": "You inherited a solution. Come meet the problem.",
+    "eyebrow": "A history of version control",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "wordmarkRepeats": 5,
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#020610",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.86)",
+      "accent": "rgba(86,0,255,.3)"
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/art-glacial.jpg",
+      "css": "background:url(assets/art-glacial.jpg) center/cover no-repeat",
+      "overlay": "linear-gradient(178deg,rgba(2,6,16,.88) 0%,rgba(2,6,16,.5) 26%,rgba(2,6,16,.62) 54%,rgba(2,6,16,.95) 84%,#020610 100%) then radial-gradient(90% 44% at 76% 12%,rgba(86,0,255,.3) 0%,rgba(86,0,255,0) 66%)"
+    },
+    "typography": "Wordmark grid: Objectivity 300px, line-height 1.04, letter-spacing -.01em, per-character variable weights, solid #fff, rows justified space-between across a 2152px column. Eyebrow: JetBrains Mono 500 38px, letter-spacing .26em, uppercase, rgba(255,255,255,.6). Headline: Objectivity weight 100 at 116px, line-height 1.12, letter-spacing -.03em, with the single word 'problem' bumped to weight 800. Date: Objectivity 700 96px, letter-spacing -.025em. Venue: Objectivity 300 46px. URL: JetBrains Mono 500 44px.",
+    "summary": "Icy glacial photograph darkened by a near-vertical 178deg scrim with a violet radial bloom in the upper right; solid white wordmark grid and the boldest, heaviest date treatment of the three (Objectivity 700 96px, spelled-out '29 August 2026')."
+  },
+  {
+    "id": 2,
+    "headline": "Undo is a design decision.",
+    "eyebrow": "A history of version control",
+    "dateLine": "29 . 08 . 26",
+    "venueLine": "10:00 to 17:00 · AB-2 Auditorium",
+    "wordmarkRepeats": 5,
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#04040a",
+      "ink": "#cfc6e8",
+      "text": "rgba(255,255,255,.78)",
+      "accent": "#6f6390"
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/chrome-3.jpg",
+      "css": "background:url(assets/chrome-3.jpg) center/cover no-repeat;opacity:.62",
+      "overlay": "linear-gradient(180deg,rgba(4,4,10,.8) 0%,rgba(4,4,10,.42) 30%,rgba(4,4,10,.8) 66%,#04040a 94%)"
+    },
+    "typography": "Wordmark grid: Objectivity 300px, line-height 1.04, letter-spacing -.01em, per-character variable weights, filled with a chrome gradient via background-clip:text and color:transparent — linear-gradient(102deg,#cfc6e8 0%,#6f6390 14%,#e6e0f4 30%,#574d76 46%,#d8d1ec 62%,#655a88 80%,#ded7f0 100%). Eyebrow: JetBrains Mono 500 38px, letter-spacing .28em, uppercase, rgba(255,255,255,.55) — sits BELOW the wordmark block's top edge in source order but above it visually at top:760px vs wordmark top:900px. Headline: Objectivity weight 100 at 116px, line-height 1.12, letter-spacing -.03em, 'design decision' at weight 800. Date: Objectivity weight 100 at 108px, letter-spacing -.03em (hairline, not bold). Venue and URL: JetBrains Mono 400/500 42px.",
+    "summary": "The chrome poster — its wordmark is not a flat colour but a seven-stop 102deg liquid-metal gradient clipped to the text, and the date is set in hairline Objectivity 100 as spaced digits '29 . 08 . 26'."
+  },
+  {
+    "id": 3,
+    "headline": "Nobody remembers the workaround. Everybody uses the fix.",
+    "eyebrow": "",
+    "dateLine": "2026-08-29 · 10:00-17:00",
+    "venueLine": "AB-2 Auditorium · VIT-AP",
+    "wordmarkRepeats": 6,
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#03100f",
+      "ink": "#eafcfb",
+      "text": "rgba(255,255,255,.76)",
+      "accent": "#7fdde4"
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/noisy-2.webp",
+      "css": "background:url(assets/noisy-2.webp) center/cover no-repeat;filter:brightness(.44) contrast(1.2)",
+      "overlay": "Four stacked layers: the filtered photo, then background:#0d6b74 with mix-blend-mode:color, then linear-gradient(180deg,rgba(3,16,15,.74) 0%,rgba(3,16,15,.36) 34%,rgba(3,16,15,.9) 76%,#03100f 100%), then a 110px x 110px graph grid built from linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px) and linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px)"
+    },
+    "typography": "Wordmark grid: Objectivity 290px (smaller than the others) over a taller 1880px block, line-height 1.04, letter-spacing -.01em, per-character variable weights, colour #eafcfb. No eyebrow — its place is taken by a 1px rgba(255,255,255,.2) full-width hairline rule at y=620. Headline: Objectivity weight 100 at 108px, line-height 1.12, letter-spacing -.03em, 'fix' at weight 800. Entire detail block is JetBrains Mono: date 70px/500 at letter-spacing -.02em, venue 38px, URL 38px/500 in #7fdde4.",
+    "summary": "Teal-washed noise texture under a #0d6b74 colour-blend layer and a faint 110px engineering grid, with no eyebrow line — a hairline rule and an all-monospace ISO-format detail block instead, plus six wordmark rows rather than five."
+  },
+  {
+    "id": 4,
+    "headline": "First they lost the work. Then they built git.",
+    "eyebrow": "",
+    "dateLine": "29 August 2026 / 10am to 5pm",
+    "venueLine": "AB-2 Auditorium",
+    "wordmarkRepeats": 4,
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#050310",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.72)",
+      "accent": "#b79dff"
+    },
+    "background": {
+      "kind": "gradient",
+      "css": "linear-gradient(172deg,#0b0722 0%,#050310 52%,#0a0526 100%)",
+      "image": "assets/art-liquidmetal.jpg",
+      "overlay": "Full-bleed dark violet gradient over base #050310; a separate inset image band (2152x620 at top 1960) uses url(assets/art-liquidmetal.jpg) center 40%/cover no-repeat. Hairlines: 4px solid #fff rule at top 560, 2px rgba(255,255,255,.45) rule at top 2660."
+    },
+    "typography": "Wordmark block: Objectivity 300px, line-height 1.04, letter-spacing -.01em, #fff, per-character mixed weights justified edge-to-edge across 2152px (4 rows). Headline: Objectivity 110px weight 100, line-height 1.12, letter-spacing -.03em, with the word 'git' at weight 800. Details column: JetBrains Mono 36px, 22px gap, date at #fff weight 500, URL at #b79dff weight 500.",
+    "summary": "The darkest and most editorial of the three: near-black violet gradient, only four huge wordmark rows, a liquid-metal photographic band slicing the middle, hairline rules, and a right-hand mono details column with a lilac #b79dff URL. No instruction-like text in the file."
+  },
+  {
+    "id": 5,
+    "headline": "Your remote can live in your room.",
+    "eyebrow": "",
+    "dateLine": "29 Aug 2026 / 10am to 5pm · AB-2",
+    "venueLine": "AB-2",
+    "wordmarkRepeats": 10,
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#0b0022",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.86)",
+      "accent": "#5f00ff"
+    },
+    "background": {
+      "kind": "gradient",
+      "css": "linear-gradient(160deg,#5f00ff 0%,#3a00ad 34%,#1a0058 70%,#0b0022 100%)",
+      "image": "assets/halftone.jpg",
+      "overlay": "Electric-violet gradient over base #0b0022, then a full-bleed halftone texture: url(assets/halftone.jpg) center/cover no-repeat at opacity .32 with mix-blend-mode:color-burn."
+    },
+    "typography": "Wordmark block: Objectivity 224px, line-height 1.04, letter-spacing -.005em, #fff, per-character mixed weights justified across 2152px, 10 rows filling 2340px — the type IS the poster. Headline: Objectivity 84px weight 100, line-height 1.14, letter-spacing -.03em, 'your room' at weight 800. Date: Objectivity 74px weight 700, letter-spacing -.025em, line-height 1, right-aligned. Sub-line Objectivity 36px weight 300 at rgba(255,255,255,.86); URL JetBrains Mono 36px weight 500.",
+    "summary": "A saturated #5f00ff-to-black gradient wall almost entirely filled by ten tightly stacked wordmark rows with a color-burn halftone over the top, and a compact right-aligned date block instead of a details column."
+  },
+  {
+    "id": 6,
+    "headline": "The graph came before the command.",
+    "eyebrow": "",
+    "dateLine": "29 August 2026 / 10am to 5pm · AB-2 Auditorium",
+    "venueLine": "AB-2 Auditorium",
+    "wordmarkRepeats": 5,
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#0d0316",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.86)",
+      "accent": "#8a0f9e"
+    },
+    "background": {
+      "kind": "image",
+      "css": "background:url(assets/noisy-4.webp) center/cover no-repeat;filter:brightness(.5) contrast(1.15)",
+      "image": "assets/noisy-4.webp",
+      "overlay": "Four stacked full-bleed layers over base #0d0316: (1) noisy-4.webp cover, brightness(.5) contrast(1.15); (2) flat #8a0f9e with mix-blend-mode:color to magenta-tint the photo; (3) linear-gradient(180deg,rgba(13,3,22,.72) 0%,rgba(13,3,22,.3) 32%,rgba(13,3,22,.9) 74%,#0d0316 100%); (4) url(assets/halftone.jpg) center/1300px repeat at opacity .4, mix-blend-mode:overlay."
+    },
+    "typography": "Wordmark block starts low (top 900): Objectivity 300px, line-height 1.04, letter-spacing -.01em, #fff, per-character mixed weights justified across 2152px, 5 rows. Headline: Objectivity 114px weight 100, line-height 1.12, letter-spacing -.03em, 'command' at weight 800. Date: Objectivity 94px weight 700, letter-spacing -.025em; sub-line Objectivity 44px weight 300 at rgba(255,255,255,.86); URL JetBrains Mono 42px weight 500. Baseline row of past-event marks centred at opacity .76.",
+    "summary": "The only photographic ground: a noisy texture image magenta-tinted by a #8a0f9e color blend, darkened by a four-stop gradient scrim and an overlay halftone, with five large wordmark rows pushed down the page and a left-aligned date block. No instruction-like text in the file."
+  },
+  {
+    "id": 7,
+    "headline": "Somebody had to invent undo.",
+    "eyebrow": "A history of version control",
+    "dateLine": "29 August 2026 / 10am to 5pm · AB-2 Auditorium",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 6,
+    "palette": {
+      "ground": "#15003e",
+      "ink": "#ffffff at 20% — rgba(255,255,255,.2) on the 286px wordmark stack; the 122px headline below it is solid #ffffff",
+      "text": "rgba(255,255,255,.82) for the time/venue line; rgba(255,255,255,.62) for the eyebrow; rgba(255,255,255,.55) for the footer label",
+      "accent": "#5600ff (gradient head stop), with #3700a4 as the mid stop and #f2ecff as the QR chip ground"
+    },
+    "background": {
+      "kind": "gradient",
+      "css": "background:#15003e with an overlay div flipped by transform:matrix(-1,0,0,1,2480,0) carrying linear-gradient(-31.637deg,#5600ff 0%,#3700a4 24.76%,#15003e 57.87%)",
+      "image": "",
+      "overlay": "Two full-bleed texture layers over the gradient: assets/art-arc.jpg at opacity .26 with mix-blend-mode:screen, then assets/halftone.jpg at opacity .41 with mix-blend-mode:color-burn. Both center/cover no-repeat."
+    },
+    "typography": "Objectivity for display, JetBrains Mono for labels/URL. Wordmark stack: font-size 286px, line-height .998, white-space nowrap, six lines climbing through weights 100/300/400/500/700/800, clipped by a 1500x1712 overflow:hidden window so the right edge of the words is cut off. Headline: 122px weight 100, line-height 1.08, letter-spacing -.03em, with the single word \"undo\" set at weight 800. Eyebrow: JetBrains Mono 38px weight 500, letter-spacing .26em, uppercase. Date: Objectivity 96px weight 700, letter-spacing -.025em. Time/venue: Objectivity 46px weight 300, letter-spacing .04em. URL: JetBrains Mono 44px weight 500. Footer label: 32px weight 500, letter-spacing .26em, uppercase.",
+    "summary": "Deep violet poster whose signature move is a six-line \"gitty up\" wordmark ladder in 20%-opacity white climbing from weight 100 to 800, bled off the right edge, over a diagonal purple gradient with screen and color-burn texture layers; the details sit in a frosted glass card (rgba(255,255,255,.08), 60px backdrop blur, 38px radius, inset top highlight)."
+  },
+  {
+    "id": 8,
+    "headline": "Before git, there was a problem worth solving.",
+    "eyebrow": "A history of version control",
+    "dateLine": "29 . 08 . 26",
+    "venueLine": "10:00 to 17:00 · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 4,
+    "palette": {
+      "ground": "#000000 (declared as #000)",
+      "ink": "transparent text filled by a chrome gradient — linear-gradient(104deg,#d9d2ee 0%,#6d6190 15%,#efeaf9 31%,#544a72 47%,#ded7ee 63%,#615680 81%,#e8e2f5 100%) via background-clip:text; brightest stop #efeaf9, darkest #544a72",
+      "text": "rgba(255,255,255,.74) for the time/venue line; rgba(255,255,255,.6) for the eyebrow; #ffffff for the headline, date and URL",
+      "accent": "no chromatic accent — the chrome text gradient and a fading rule, linear-gradient(90deg,rgba(255,255,255,.5),rgba(255,255,255,0)), do the work; QR chip ground #f4f4f8"
+    },
+    "background": {
+      "kind": "image",
+      "css": "radial-gradient(120% 78% at 50% 24%,rgba(0,0,0,.1) 0%,rgba(0,0,0,.84) 50%,#000 82%)",
+      "image": "chrome-rings.jpg",
+      "overlay": "assets/chrome-rings.jpg placed oversized and offset (left:-500px; top:-420px; 3500x2500) at opacity .34 with filter:blur(18px) saturate(130%), then crushed by the radial vignette above so only a soft glow survives near the top centre."
+    },
+    "typography": "Objectivity display, JetBrains Mono for labels. The wordmark block is enormous — 396px, line-height 1.04, letter-spacing -.02em — and is built per-character rather than per-word: four rows (sc-for over {{ sw4 }}) of eight spans (sc-for over {{ row.chars }}) with display:flex; justify-content:space-between, so each row of \"gitty up\" is justified edge-to-edge across the 2152px column and every glyph carries its own weight ({{ ch.w }}). Clipped to 1660px height. Headline: 118px weight 100, line-height 1.1, letter-spacing -.03em, \"git\" at weight 800. Eyebrow: JetBrains Mono 40px weight 500, letter-spacing .3em, uppercase. Date: Objectivity 116px weight 100, letter-spacing -.03em. Time/venue and URL: JetBrains Mono 42px, weights 400 and 500.",
+    "summary": "Black poster with a liquid-chrome wordmark: four justified rows of per-glyph mixed-weight type at 396px, filled with a seven-stop silver/violet gradient clipped to the text, floating over a blurred chrome-rings photo that a heavy radial vignette almost entirely swallows. Contains sc-for/{{ }} templating placeholders in the source, which are markup, not instructions."
+  },
+  {
+    "id": 9,
+    "headline": "Someone had to decide what a version was.",
+    "eyebrow": "",
+    "dateLine": "DATE 2026-08-29 / TIME 10:00 to 17:00",
+    "venueLine": "VENUE AB-2 Auditorium (also HOST Open Source Community, ENTRY open · free)",
+    "layout": "data-block",
+    "wordmarkRepeats": 5,
+    "palette": {
+      "ground": "#07060c",
+      "ink": "#ffffff on the bottom wordmark line, with the four lines above stepping through rgba(255,255,255,.26), .4, .56 and .76",
+      "text": "rgba(255,255,255,.7) for the standfirst; #ffffff for the spec values; rgba(255,255,255,.36) for the footer label",
+      "accent": "#2a8c97 (teal — spec labels, URL line, and the rgba(42,140,151,.32) glow), with a secondary #5600ff violet glow at rgba(86,0,255,.36)"
+    },
+    "background": {
+      "kind": "pattern",
+      "css": "linear-gradient(160deg,#0d0a1a 0%,#07060c 45%,#0a0716 100%) over base #07060c; then a 124px x 124px graph grid — background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px); background-size:124px 124px",
+      "image": "",
+      "overlay": "Two corner glows above the grid: radial-gradient(90% 60% at 78% 20%,rgba(42,140,151,.32) 0%,rgba(42,140,151,0) 62%) top-right teal, and radial-gradient(80% 55% at 12% 84%,rgba(86,0,255,.36) 0%,rgba(86,0,255,0) 60%) bottom-left violet."
+    },
+    "typography": "Objectivity display, JetBrains Mono for the spec column. Wordmark: 244px, line-height 1.06, nowrap, five lines at weights 100/300/400/500/800 where the weight ramp is doubled by an opacity ramp so the stack fades up out of the ground into solid white; clipped to a 1600x1300 window. Headline: 112px weight 100, line-height 1.1, letter-spacing -.025em, \"version\" at weight 700. Standfirst: Objectivity 48px weight 300, line-height 1.4. Spec column: JetBrains Mono 34px/1.45, labels at 27px with letter-spacing .2em uppercase in teal, values in white. URL: JetBrains Mono 50px weight 500 in #2a8c97. Footer label: JetBrains Mono 30px weight 400, letter-spacing .2em, uppercase. Two full-width 1px hairlines at rgba(255,255,255,.18) rule the page into bands.",
+    "summary": "Near-black technical layout on a 124px graph grid: a five-line wordmark fading up from 26% to solid white sits left, a teal-labelled DATE/TIME/VENUE/HOST/ENTRY spec column runs down the right, hairline rules band the page, and the footer credits past events as \"Previous builds\"."
+  },
+  {
+    "id": 10,
+    "headline": "Every commit has an ancestor.",
+    "eyebrow": "A history of version control",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "wordmarkRepeats": 4,
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#05030c",
+      "ink": "#c9a4ff",
+      "text": "#ffffff",
+      "accent": "#c9b3ff"
+    },
+    "background": {
+      "kind": "image",
+      "image": "art-purple.png",
+      "css": "position:absolute;left:-620px;top:-100px;width:3720px;height:2400px;background:url(assets/art-purple.png) center/cover no-repeat",
+      "overlay": "linear-gradient(180deg,rgba(5,3,12,.6) 0%,rgba(5,3,12,.16) 24%,rgba(5,3,12,.8) 60%,#05030c 86%)"
+    },
+    "typography": "Display: Objectivity 296px / line-height 1.04 / letter-spacing -.015em, laid out as 4 justified rows of 8 characters (display:flex;justify-content:space-between) with a per-character variable weight ({{ ch.w }}), so the wordmark reads as a 4-row grid of stretched 'gitty up'. The display type is not a flat colour: it is background-clipped text combining the artwork and a gradient — background-image:url(assets/art-purple.png),linear-gradient(96deg,#c9a4ff 0%,#f0e6ff 34%,#8e5cff 62%,#e4d5ff 100%); background-size:150% auto,100% 100%; background-position:36% 42%,center; background-blend-mode:screen; color:transparent. Headline: Objectivity 100 weight, 106px, line-height 1.12, tracking -.03em, colour rgba(255,255,255,.96), with 'commit' bumped to weight 800. Eyebrow: JetBrains Mono 500 32px, tracking .24em, uppercase, #c9b3ff. Date: Objectivity 700 96px, tracking -.025em. Venue: Objectivity 300 46px at rgba(255,255,255,.84). URL: JetBrains Mono 500 44px. Footer strip of four past-event logos at opacity .72.",
+    "summary": "Purple nebula artwork poster whose four-row 'gitty up' grid is filled with the same artwork screen-blended over a violet-to-white gradient, so the type glows out of the background it sits on; contains no text that reads as instructions to the reader."
+  },
+  {
+    "id": 11,
+    "headline": "Copies of copies of copies. Then git.",
+    "eyebrow": "",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "wordmarkRepeats": 4,
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#060210",
+      "ink": "#ffffff",
+      "text": "#ffffff",
+      "accent": "#4b12c8"
+    },
+    "background": {
+      "kind": "image",
+      "image": "noisy-3.webp",
+      "css": "background:url(assets/noisy-3.webp) center/cover no-repeat;filter:brightness(.45) contrast(1.2) — then a full-bleed colour layer background:#4b12c8;mix-blend-mode:color, and a texture layer opacity:.45;mix-blend-mode:overlay;background:url(assets/halftone.jpg) center/1400px repeat",
+      "overlay": "linear-gradient(180deg,rgba(6,2,16,.66) 0%,rgba(6,2,16,.3) 34%,rgba(6,2,16,.92) 74%,#060210 100%)"
+    },
+    "summary": "Four-layer grungy build-up — a darkened noisy photo, a #4b12c8 colour-blend wash, a dark vertical gradient and a repeating halftone overlay — under a solid white four-row 'gitty up' grid; no injected instruction-like text in the file.",
+    "typography": "Display: Objectivity 296px / line-height 1.04 / tracking -.015em, solid #fff, again 4 justified rows of 8 characters with per-character weights ({{ ch.w }}) filling the full 2152px column. Headline: Objectivity 100 weight, 112px, line-height 1.1, tracking -.03em, #fff, with 'git' at weight 800. Deck line under it: Objectivity 300 46px, line-height 1.4, rgba(255,255,255,.78) — 'A history of version control, and the case for hosting your own.' (no mono eyebrow on this one). Date: Objectivity 700 92px, tracking -.025em. Venue: Objectivity 300 44px at rgba(255,255,255,.86). URL: JetBrains Mono 500 42px. Past-event logo row at opacity .76.",
+    "palette_note": ""
+  },
+  {
+    "id": 12,
+    "headline": "Undo was not always free.",
+    "eyebrow": "A history of version control",
+    "dateLine": "29 . 08 . 26",
+    "venueLine": "10:00 to 17:00 · AB-2 Auditorium",
+    "wordmarkRepeats": 2,
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#000000",
+      "ink": "#cdc5e6",
+      "text": "#ffffff",
+      "accent": "#e7e1f4"
+    },
+    "background": {
+      "kind": "image",
+      "image": "chrome-rings.jpg",
+      "css": "position:absolute;left:0;top:0;width:2480px;height:1900px;background:url(assets/chrome-rings.jpg) center/cover no-repeat — image occupies only the top 1900px of the 3508px page; the remainder is flat #000",
+      "overlay": "linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.7) 55%,#000 100%) applied over a 1100px band starting at top:900px"
+    },
+    "summary": "Black poster split between a chrome-rings photograph on top and empty black below, with the wordmark set twice on single nowrap lines — thin over heavy — in a hard chrome gradient, separated from the details by a fading hairline rule; no instruction-like text present.",
+    "typography": "Display: Objectivity 396px, line-height 1.02, tracking -.025em, white-space:nowrap, two stacked lines of 'gitty up' — the first at font-weight 100, the second at 800. Both are background-clipped chrome: linear-gradient(101deg,#cdc5e6 0%,#615679 16%,#e7e1f4 32%,#4c4368 48%,#dbd4ec 64%,#585072 82%,#e2dcf2 100%) with color:transparent. A 2px hairline rule sits above the headline: linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,0)). Headline: Objectivity 100 weight, 96px, line-height 1.12, tracking -.03em, #fff, with 'free' at weight 800. Eyebrow: JetBrains Mono 500 34px, tracking .26em, uppercase, rgba(255,255,255,.6). Date: Objectivity 100 weight, 96px, tracking -.03em, #fff — the only poster whose date is set light rather than bold. Venue: JetBrains Mono 400 38px at rgba(255,255,255,.78). URL: JetBrains Mono 500 38px #fff. Logo row at opacity .68 with smaller 52-56px marks."
+  },
+  {
+    "id": 13,
+    "headline": "Every tool you trust was once a workaround.",
+    "eyebrow": "gitty up · 2026",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 2,
+    "palette": {
+      "ground": "#000000",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.8)",
+      "accent": "rgba(86,0,255,.4)"
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/art-arc.jpg",
+      "css": "background:url(assets/art-arc.jpg) center/cover no-repeat",
+      "overlay": "linear-gradient(178deg,rgba(0,0,0,.82) 0%,rgba(0,0,0,.44) 30%,rgba(0,0,0,.58) 58%,rgba(0,0,0,.9) 84%,#000 100%) over a radial-gradient(70% 44% at 50% 40%,rgba(86,0,255,.4) 0%,rgba(55,0,164,.12) 44%,rgba(0,0,0,0) 74%) violet bloom"
+    },
+    "typography": "Objectivity display. Wordmark 234px / line-height 1.02 / letter-spacing -.035em, stacked as two lines with contrasting weights (100 then 800), all #fff. Headline set at 100 weight 88px, line-height 1.2, tracking -.02em in rgba(255,255,255,.8) with the word 'workaround' bumped to weight 700 and #fff. Vertical right-edge rail: JetBrains Mono 400 38px, letter-spacing .5em, uppercase, rgba(255,255,255,.4), rotated 90deg. Date 700 100px tracking -.03em; venue 300 44px; URL JetBrains Mono 500 40px.",
+    "summary": "Dark photographic poster: an arc artwork under heavy black scrims with a violet radial bloom, a two-line thin/heavy 'gitty up' stack, and all event details collected in a large frosted-glass card (rgba(255,255,255,.06), 80px blur, 56px radius, 2px rgba(255,255,255,.14) border) near the base; no instruction-like text was present in the file."
+  },
+  {
+    "id": 14,
+    "headline": "Your history should answer to you.",
+    "eyebrow": "",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 4,
+    "palette": {
+      "ground": "#1c0060",
+      "ink": "#12003c",
+      "text": "#ffffff",
+      "accent": "#8a2bff"
+    },
+    "background": {
+      "kind": "gradient",
+      "image": "",
+      "css": "background:#1c0060 base with linear-gradient(148deg,#8a2bff 0%,#6200ff 30%,#4a00d0 64%,#3a00a0 100%)",
+      "overlay": "url(assets/halftone.jpg) center/cover no-repeat at opacity .34, mix-blend-mode:color-burn"
+    },
+    "typography": "Objectivity display. Four full-bleed 'gitty up' lines at 398px, line-height 1.04, letter-spacing -.035em, white-space nowrap, in near-black violet #12003c, each line pairing different weights across the two words (100/800, 300/700, 700/300, 800/100) so the emphasis walks down the stack. A big '26' set 800 250px, line-height .9, tracking -.04em in #12003c sits beside a 190px-tall pill outlined 12px #12003c with a solid 124px dot. Headline 100 weight 100px, line-height 1.1, tracking -.03em in #fff with 'history' at weight 800. Date 700 84px tracking -.025em; venue 300 40px rgba(255,255,255,.9); URL JetBrains Mono 500 38px.",
+    "summary": "Saturated violet gradient poster where the wordmark repeats four times at poster-width scale in dark ink over a color-burn halftone texture, with a pill-and-dot graphic and oversized '26' acting as the lockup; no instruction-like text was present in the file."
+  },
+  {
+    "id": 15,
+    "headline": "Undo has an origin story.",
+    "eyebrow": "We all use the solution. Almost nobody knows the problem.",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "headline-led",
+    "wordmarkRepeats": 9,
+    "palette": {
+      "ground": "#000000",
+      "ink": "rgba(255,255,255,.9)",
+      "text": "rgba(255,255,255,.74)",
+      "accent": "#fff0fa"
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/chrome-blobs.jpg",
+      "css": "background:url(assets/chrome-blobs.jpg) 22% 18%/220% no-repeat;filter:saturate(120%) placed in a 1900x1900 block at left:1080px;top:540px on a #000 ground",
+      "overlay": "radial-gradient(56% 40% at 78% 38%,rgba(0,0,0,0) 0%,rgba(0,0,0,.4) 58%,rgba(0,0,0,.96) 88%) plus a left scrim linear-gradient(90deg,#000 0%,rgba(0,0,0,.94) 60%,rgba(0,0,0,0) 100%) and a bottom scrim linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.88) 38%,#000 72%)"
+    },
+    "typography": "Objectivity throughout. Left column holds a justified 9-row character grid at 174px, line-height .97, letter-spacing -.015em, rgba(255,255,255,.9) — each row is the 8 characters of the wordmark spread edge to edge with a per-character weight, so weight varies letter by letter. Headline set 100 weight 148px, line-height 1.08, tracking -.035em in #fff with 'origin story' at weight 800. Supporting line 300 44px, line-height 1.4, rgba(255,255,255,.74). Date 500 76px tracking -.02em; venue 300 38px rgba(255,255,255,.78); URL JetBrains Mono 500 38px.",
+    "summary": "Black poster with a chrome-blob render bleeding off the right edge, vignetted and scrimmed on three sides, against a tall justified letter-grid of the wordmark on the left and a large thin/heavy headline across the lower third; the file contains sc-for template markup with {{ ch.c }} / {{ ch.w }} placeholders, which is source templating rather than content and was ignored, and no instruction-like text was present."
+  },
+  {
+    "id": 16,
+    "headline": "History is a data structure.",
+    "eyebrow": "A history of version control",
+    "wordmarkRepeats": 4,
+    "dateLine": "29 Aug 2026",
+    "venueLine": "10am to 5pm · AB-2",
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#01050c",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.82)",
+      "accent": "#7fb6ff"
+    },
+    "background": {
+      "kind": "image",
+      "image": "art-glacial.jpg",
+      "overlay": "Photo occupies the top 1420px only (background:url(assets/art-glacial.jpg) center 32%/cover no-repeat), then three stacked washes over a #01050c ground: bottom fade linear-gradient(180deg,rgba(1,5,12,0) 0%,rgba(1,5,12,.72) 52%,#01050c 100%) at top:700px h:900px; top scrim linear-gradient(180deg,rgba(1,5,12,.86) 0%,rgba(1,5,12,0) 100%) h:520px; violet glow radial-gradient(70% 40% at 84% 84%,rgba(86,0,255,.26) 0%,rgba(86,0,255,0) 66%) over the full poster",
+      "css": "linear-gradient(180deg,rgba(1,5,12,0) 0%,rgba(1,5,12,.72) 52%,#01050c 100%); linear-gradient(180deg,rgba(1,5,12,.86) 0%,rgba(1,5,12,0) 100%); radial-gradient(70% 40% at 84% 84%,rgba(86,0,255,.26) 0%,rgba(86,0,255,0) 66%)"
+    },
+    "typography": "Wordmark grid: Objectivity 296px, line-height 1.04, letter-spacing -.015em, #fff, in a 2152x1240 clipped box — 4 rows of 8 glyphs (\"gitty up\"), each row display:flex; justify-content:space-between so the letters justify edge to edge, and every glyph carries its own weight ({{ ch.w }}), giving a mixed thin-to-black shimmer. Eyebrow: JetBrains Mono 500 36px, letter-spacing .26em, uppercase, #7fb6ff. Headline: Objectivity 100 96px, line-height 1.12, letter-spacing -.03em, with \"data structure\" swapped to weight 800. Date: Objectivity 700 72px, tracking -.025em. Venue: Objectivity 300 34px. URL: JetBrains Mono 500 34px.",
+    "summary": "Glacial photo band across the top half fading into near-black, with a four-row edge-justified variable-weight \"gitty up\" grid and a split baseline — thin/black headline left, right-aligned date stack and QR right; a violet radial glow warms the bottom-right corner. No injected instructions in the file, only sc-for/{{ }} templating placeholders."
+  },
+  {
+    "id": 17,
+    "headline": "You type it every day. Somebody had to invent it.",
+    "eyebrow": "A history of version control",
+    "wordmarkRepeats": 4,
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#06040f",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.84)",
+      "accent": "#c9b3ff"
+    },
+    "background": {
+      "kind": "image",
+      "image": "art-liquidmetal.jpg",
+      "overlay": "Oversized liquid-metal photo bled past both edges (left:-540px; width:3560px; height:2760px; center/cover) under a single full-bleed five-stop scrim so the image only breathes through around 24% height",
+      "css": "linear-gradient(180deg,rgba(6,4,15,.74) 0%,rgba(6,4,15,.4) 24%,rgba(6,4,15,.78) 48%,rgba(6,4,15,.94) 74%,#06040f 92%)"
+    },
+    "typography": "Wordmark grid: Objectivity 296px, line-height 1.04, letter-spacing -.015em, #fff, 2152x1240 clipped box starting at top:1120px — 4 rows of 8 glyphs (\"gitty up\") justified edge to edge with per-glyph weights. Headline: Objectivity 100 114px across 1900px, line-height 1.12, letter-spacing -.03em, \"invent\" at weight 800. Eyebrow (in the footer block, not above the wordmark): JetBrains Mono 500 32px, letter-spacing .24em, uppercase, #c9b3ff. Date: Objectivity 700 92px, tracking -.025em. Venue: Objectivity 300 42px. URL: JetBrains Mono 500 40px.",
+    "summary": "Same justified four-row wordmark grid as 16 but floated over a full-bleed liquid-metal photograph on a violet-black ground, with the eyebrow demoted into a single left-aligned info column at the foot (eyebrow / date / venue / URL) opposite a lilac-backed QR. No injected instructions in the file, only sc-for/{{ }} templating placeholders."
+  },
+  {
+    "id": 18,
+    "headline": "Keep your own history.",
+    "eyebrow": "Somebody had to invent",
+    "wordmarkRepeats": 1,
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "headline-led",
+    "palette": {
+      "ground": "#000000",
+      "ink": "#e6e0f5",
+      "text": "rgba(255,255,255,.72)",
+      "accent": "#f2edff"
+    },
+    "background": {
+      "kind": "image",
+      "image": "chrome-3.jpg",
+      "overlay": "Pure #000 ground; a heavily blurred oversized chrome plate (left:-300px; top:200px; 3080x2200; background-position 30% 30%; background-size 150%; opacity:.44; filter:blur(12px) saturate(125%)) sits under a vignette radial. The same chrome-3.jpg is reused as a background-clip:text fill on the word \"undo\", blended with a chrome gradient via background-blend-mode:screen. A 2px hairline rule at top:1900px uses linear-gradient(90deg,rgba(255,255,255,.5),rgba(255,255,255,0)).",
+      "css": "radial-gradient(110% 70% at 46% 40%,rgba(0,0,0,.16) 0%,rgba(0,0,0,.82) 52%,#000 84%); text fill: linear-gradient(98deg,#e6e0f5 0%,#7b6fa0 20%,#f2edff 40%,#5a5079 56%,#e8e2f6 74%,#6d6293 90%,#efeaff 100%)"
+    },
+    "typography": "Hero word \"undo\": Objectivity 800 at 660px, line-height .94, letter-spacing -.05em, nowrap, color:transparent with -webkit-background-clip:text over chrome-3.jpg + a 7-stop 98deg chrome gradient (background-size 180% auto / 100% 100%, blend-mode screen). Wordmark once at Objectivity 280px, line-height 1.02, tracking -.02em: \"gitty \" at weight 100 and \"up\" at weight 800, #fff. Eyebrow: JetBrains Mono 500 38px, letter-spacing .3em, uppercase, rgba(255,255,255,.62). Headline: Objectivity 100 116px, line-height 1.12, tracking -.03em, \"history\" at weight 800. Deck: Objectivity 300 46px, line-height 1.4, rgba(255,255,255,.72). Date: Objectivity 700 90px, tracking -.025em. Venue: Objectivity 300 42px. URL: JetBrains Mono 500 42px.",
+    "summary": "Single-shot chrome typography poster: one thin/black \"gitty up\" lockup, a spaced mono kicker, then the word \"undo\" at 660px filled with a liquid-chrome image-plus-gradient text clip, a fading hairline rule, and a quiet lower half of headline, deck and left-aligned details. No injected instructions in the file, only sc-for/{{ }} templating placeholders elsewhere in the set."
+  },
+  {
+    "id": 19,
+    "headline": "Someone had to lose work first.",
+    "eyebrow": "$ git log",
+    "dateLine": "2026-08-29",
+    "venueLine": "10:00 to 17:00 · AB-2 Auditorium",
+    "layout": "terminal",
+    "wordmarkRepeats": 5,
+    "palette": {
+      "ground": "#04040a",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.66)",
+      "accent": "#8f7dff"
+    },
+    "background": {
+      "kind": "gradient",
+      "css": "linear-gradient(172deg,#0b0918 0%,#04040a 54%,#0a0620 100%)",
+      "overlay": "radial-gradient(70% 44% at 84% 88%,rgba(86,0,255,.32) 0%,rgba(86,0,255,0) 64%) — plus a 5-line ghost 'gitty up' wordmark stack at font-size:272px, line-height:1.08, weights 100/300/400/500/800, colour rgba(255,255,255,.055), clipped to a 2152x1480 box",
+      "image": ""
+    },
+    "typography": "Display headline: font:100 118px Objectivity, line-height 1.1, letter-spacing -.03em, white, with the single word 'work' at font-weight:800. Subhead: 300 46px Objectivity, line-height 1.4, rgba(255,255,255,.66). Terminal card body: 'JetBrains Mono' 52px, line-height 1.7, rgba(255,255,255,.62) with log lines at rgba(255,255,255,.42). Date: JetBrains Mono 74px weight 500, letter-spacing -.02em; meta lines 40px. Ghost wordmark: Objectivity 272px across five weights.",
+    "summary": "A glass 'git log' terminal card (2px rgba(255,255,255,.16) border, 20px radius, rgba(4,4,10,.78) fill, 30px backdrop blur) with a cyan #5fc6d1 prompt sigil, white commands and a violet #8f7dff caret sits over a near-black gradient and a barely-visible five-weight wordmark watermark; no instruction-like text appears in the file."
+  },
+  {
+    "id": 20,
+    "headline": "The problem came first. The tool came later.",
+    "eyebrow": "Previous builds",
+    "dateLine": "DATE 2026-08-29 · TIME 10:00-17:00",
+    "venueLine": "ROOM AB-2 · ENTRY free",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 4,
+    "palette": {
+      "ground": "#05060d",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.6)",
+      "accent": "#8f7dff"
+    },
+    "background": {
+      "kind": "gradient",
+      "css": "linear-gradient(165deg,#0a0d1e 0%,#05060d 50%,#0a0620 100%)",
+      "overlay": "blueprint grid: background-image:linear-gradient(rgba(120,160,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(120,160,255,.06) 1px,transparent 1px); background-size:82px 82px — then radial-gradient(74% 44% at 82% 74%,rgba(86,0,255,.3) 0%,rgba(86,0,255,0) 62%)",
+      "image": ""
+    },
+    "typography": "Hero wordmark: Objectivity 296px, line-height 1.06, solid #fff, four stacked repeats at weights 100/300/500/800, nowrap and clipped so the last line bleeds. Headline: font:100 108px Objectivity, line-height 1.12, letter-spacing -.03em, white, 'tool' at weight 800, held to a 1300px column. Spec table: 'JetBrains Mono' 34px, labels rgba(255,255,255,.6), values #fff, rows separated by 1px rgba(255,255,255,.14) rules. URL: 500 48px JetBrains Mono in #8f7dff. Footer label: 400 28px JetBrains Mono, letter-spacing .2em, uppercase, rgba(255,255,255,.34).",
+    "summary": "Technical-drawing framing — 3px white corner brackets at all four corners, a 1px rule with tick marks at 660px and another at 2100px, an 82px blueprint grid — around a full-bleed four-weight white 'gitty up' stack, with the event details as a right-hand DATE/TIME/ROOM/ENTRY spec table; the 'Previous builds' eyebrow is actually a footer label, and no instruction-like text appears in the file."
+  },
+  {
+    "id": 21,
+    "headline": "Every shortcut you type was once an argument.",
+    "eyebrow": "Some of our events that you might recognise",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 5,
+    "palette": {
+      "ground": "#12003c",
+      "ink": "#f6f1ff",
+      "text": "rgba(255,255,255,.9)",
+      "accent": "#6a12ff"
+    },
+    "background": {
+      "kind": "image",
+      "css": "url(assets/noisy-4.webp) center/cover no-repeat with filter:brightness(.6) contrast(1.1); then linear-gradient(200deg,#6a12ff 0%,#4200c4 36%,#20006e 72%,#0d0026 100%) at mix-blend-mode:color; then linear-gradient(200deg,rgba(106,18,255,.5) 0%,rgba(66,0,196,.4) 36%,rgba(13,0,38,.7) 100%)",
+      "overlay": "halftone screen: opacity:.85; mix-blend-mode:color-burn; background:url(assets/halftone.jpg) center/1800px repeat",
+      "image": "assets/noisy-4.webp"
+    },
+    "typography": "Hero wordmark: Objectivity 296px, line-height 1.04, letter-spacing -.015em, colour #f6f1ff, built as 5 justified rows of ~8 characters each (space-between) with per-character weights, so tracking stretches edge to edge. Headline: font:100 114px Objectivity, line-height 1.12, letter-spacing -.03em, white, 'argument' at weight 800. Date: 700 94px Objectivity, letter-spacing -.025em, line-height 1. Venue: 300 42px Objectivity, rgba(255,255,255,.9). URL: 500 42px 'JetBrains Mono'. Footer label: 500 30px Objectivity, letter-spacing .26em, uppercase, rgba(255,255,255,.62).",
+    "summary": "The most saturated of the three: a noisy photographic ground drowned in a violet 200deg gradient blended in colour mode and screened with a colour-burn halftone, topped by a per-character mixed-weight 'gitty up' letter grid that justifies to the full 2152px width; the wordmark rows are emitted by sc-for templating placeholders ({{ ch.c }}, {{ ch.w }}, {{ row.chars }}, {{ sw5 }}) rather than literal text, and no instruction-like text appears in the file."
+  },
+  {
+    "id": 22,
+    "headline": "Merge conflicts are older than you think.",
+    "eyebrow": "",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 4,
+    "palette": {
+      "ground": "#070313",
+      "ink": "rgba(255,255,255,.94)",
+      "text": "rgba(255,255,255,.74)",
+      "accent": "#5a12d8"
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/noisy-5.webp",
+      "overlay": "Four stacked layers over ground #070313: (1) url(assets/noisy-5.webp) center/cover no-repeat with filter:brightness(.42) contrast(1.25); (2) flat #5a12d8 at mix-blend-mode:color, which is what tints the whole poster violet; (3) linear-gradient(180deg,rgba(7,3,19,.72) 0%,rgba(7,3,19,.3) 36%,rgba(7,3,19,.92) 78%,#070313 100%); (4) scanline pattern repeating-linear-gradient(180deg,rgba(255,255,255,.055) 0px,rgba(255,255,255,.055) 2px,transparent 2px,transparent 8px)",
+      "css": "linear-gradient(180deg,rgba(7,3,19,.72) 0%,rgba(7,3,19,.3) 36%,rgba(7,3,19,.92) 78%,#070313 100%)"
+    },
+    "typography": "Display: four literal 'gitty up' lines in Objectivity at 280px, line-height 1.06, white-space nowrap, no tracking change, colour rgba(255,255,255,.94) — weights climb 100 / 400 / 700 / 800 down the stack, so the same word gets visibly heavier line by line. Headline: Objectivity 114px weight 100, line-height 1.12, letter-spacing -.03em, colour #fff, with the single word 'older' set at weight 800. Sub-line: Objectivity 46px weight 300, line-height 1.4, rgba(255,255,255,.74). Date: Objectivity 92px weight 700, letter-spacing -.025em. Venue: Objectivity 44px weight 300, rgba(255,255,255,.86). URL: 'JetBrains Mono' 42px weight 500.",
+    "summary": "The violet grain poster: a photographic noise texture colour-blended to #5a12d8 under scanlines, with 'gitty up' repeated four times at 280px in escalating weights as the whole visual, and the sub-line 'We all use the solution. Almost nobody knows the problem.' under the headline; no eyebrow, and nothing in the file read as instructions addressed to me."
+  },
+  {
+    "id": 23,
+    "headline": "Somebody had to name the branch.",
+    "eyebrow": "A history of version control",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 3,
+    "palette": {
+      "ground": "#01040c",
+      "ink": "#fff",
+      "text": "rgba(255,255,255,.86)",
+      "accent": "rgba(200,225,255,.09)"
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/art-blue.jpg",
+      "overlay": "Artwork is inset, not full-bleed: url(assets/art-blue.jpg) center/cover no-repeat occupies only the lower 2108px (top:1400px) of the 3508px page over ground #01040c. Two fades blend it in — top edge linear-gradient(180deg,#01040c 0%,rgba(1,4,12,0) 100%) across a 560px band at top:1400px, and bottom linear-gradient(180deg,rgba(1,4,12,0) 0%,rgba(1,4,12,.9) 58%,#01040c 100%) across a 748px band at top:2760px.",
+      "css": "linear-gradient(180deg,rgba(1,4,12,0) 0%,rgba(1,4,12,.9) 58%,#01040c 100%)"
+    },
+    "typography": "Display: 3 rows of the 'gitty up' wordmark, Objectivity 296px, line-height 1.04, letter-spacing -.015em, colour #fff. Each row is a flex row with justify-content:space-between so the 8 characters are letter-spaced edge to edge across the 2152px column, and every character carries its own font-weight (per-glyph weight variation, driven by the template). Eyebrow: 'JetBrains Mono' 38px weight 500, uppercase, letter-spacing .26em, rgba(255,255,255,.55). Headline: Objectivity 92px weight 100, line-height 1.14, letter-spacing -.03em, #fff, right-hand column (left:1300px, width 1016px), with 'branch' at weight 800. Date: Objectivity 90px weight 700, letter-spacing -.025em. Venue: Objectivity 42px weight 300, rgba(255,255,255,.86). URL: 'JetBrains Mono' 40px weight 500.",
+    "summary": "The cold-blue glass poster: artwork covers only the bottom two thirds, the wordmark is justified per-glyph across three 296px rows, the headline sits offset to the right, and the details live in a frosted card (rgba(200,225,255,.09), backdrop-filter blur(60px) saturate(150%), 36px radius, 2px rgba(255,255,255,.2) border, inset white top highlight); nothing in the file read as instructions addressed to me.",
+    "venue": ""
+  },
+  {
+    "id": 24,
+    "headline": "The repo is yours. The server can be too.",
+    "eyebrow": "A history of version control",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 5,
+    "palette": {
+      "ground": "#04030d",
+      "ink": "#fff",
+      "text": "rgba(255,255,255,.86)",
+      "accent": "#f2ecff"
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/art-flow.png",
+      "overlay": "Full-bleed url(assets/art-flow.png) center/cover no-repeat over ground #04030d, darkened by a single slightly-tilted scrim: linear-gradient(178deg,rgba(4,3,13,.8) 0%,rgba(4,3,13,.42) 26%,rgba(4,3,13,.6) 54%,rgba(4,3,13,.92) 84%,#04030d 100%). A 2px hairline rule separates headline from details: linear-gradient(90deg,rgba(255,255,255,.45),rgba(255,255,255,0)).",
+      "css": "linear-gradient(178deg,rgba(4,3,13,.8) 0%,rgba(4,3,13,.42) 26%,rgba(4,3,13,.6) 54%,rgba(4,3,13,.92) 84%,#04030d 100%)"
+    },
+    "typography": "Display: 5 rows of the 'gitty up' wordmark, Objectivity 296px, line-height 1.04, letter-spacing -.015em, #fff, filling a 1560px-tall block. Same construction as poster 23 — each row is justify-content:space-between so glyphs stretch across the full 2152px column, each glyph with its own font-weight. Eyebrow: 'JetBrains Mono' 38px weight 500, uppercase, letter-spacing .26em, rgba(255,255,255,.62). Headline: Objectivity 112px weight 100, line-height 1.12, letter-spacing -.03em, #fff, full width (1900px), with 'server' at weight 800. Date: Objectivity 94px weight 700, letter-spacing -.025em. Venue: Objectivity 44px weight 300, rgba(255,255,255,.86). URL: 'JetBrains Mono' 42px weight 500. Footer caption: Objectivity 30px weight 500, uppercase, letter-spacing .26em, rgba(255,255,255,.55).",
+    "summary": "The tallest wordmark wall — five justified 296px rows over a full-bleed flow artwork with a 178deg scrim — plus a fading hairline rule above the details row and a labelled event-logo footer reading 'Some of our events that you might recognise'; nothing in the file read as instructions addressed to me."
+  },
+  {
+    "id": 25,
+    "headline": "Before the graph, there was only the file.",
+    "eyebrow": "",
+    "dateLine": "29 Aug 2026",
+    "venueLine": "10am to 5pm · AB-2",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 5,
+    "palette": {
+      "ground": "#03020a",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.82)",
+      "accent": ""
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/art-arc.jpg",
+      "css": "background:url(assets/art-arc.jpg) center/cover no-repeat; transform:rotate(-10deg) on an oversized 4200x3000 layer offset left:-760px top:-1000px, transform-origin:50% 50%",
+      "overlay": "linear-gradient(196deg,rgba(3,2,10,.38) 0%,rgba(3,2,10,.16) 20%,rgba(3,2,10,.84) 52%,#03020a 76%)"
+    },
+    "typography": "Display: 5-row justified 'gitty up' character grid, Objectivity, font-size 296px, line-height 1.04, letter-spacing -.015em, per-character mixed weights (templated), colour #fff, in a 2152x1560 clipped box at top 1300px. Headline: Objectivity 100 weight at 92px, line-height 1.14, letter-spacing -.03em, with 'file' bumped to weight 800; width capped at 1360px. Date: Objectivity 700 at 72px, letter-spacing -.025em. Meta line: Objectivity 300 at 34px. URL: JetBrains Mono 500 at 34px. Right-hand info block is right-aligned at left:1620px. Event-history logo strip at bottom, opacity .66.",
+    "summary": "Darkest and most photographic of the three: a rotated arc-art photo bled edge to edge under a steep 196deg fade to near-black, with a five-row white wordmark grid and a right-aligned, right-justified details column; no coloured accent at all, the only chroma comes from the photo. No instruction-like text present in the file."
+  },
+  {
+    "id": 26,
+    "headline": "Somebody had to invent history.",
+    "eyebrow": "",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 4,
+    "palette": {
+      "ground": "#050805",
+      "ink": "#c9ff5e",
+      "text": "rgba(255,255,255,.84)",
+      "accent": "#c9ff5e"
+    },
+    "background": {
+      "kind": "gradient",
+      "image": "",
+      "css": "linear-gradient(158deg,#0a1408 0%,#050805 44%,#03120f 100%) then radial-gradient(80% 46% at 18% 22%,rgba(160,255,80,.24) 0%,rgba(160,255,80,0) 62%) then radial-gradient(70% 40% at 88% 84%,rgba(42,140,151,.34) 0%,rgba(42,140,151,0) 64%)",
+      "overlay": "url(assets/halftone.jpg) center/1500px repeat at opacity:.3 with mix-blend-mode:overlay"
+    },
+    "typography": "Display: 4-row justified 'gitty up' character grid, Objectivity, font-size 452px (largest of the three), line-height 1.04, letter-spacing -.03em, per-character mixed weights (templated), colour #c9ff5e, in a 2152x1892 clipped box at top 660px. Headline: Objectivity 100 at 108px, line-height 1.12, letter-spacing -.03em, 'history' at weight 800, white, width 1900px. A 2px rule in rgba(201,255,94,.4) spans the full 2152px column above the footer. Date: Objectivity 700 at 90px, letter-spacing -.025em, #fff. Meta: Objectivity 300 at 42px. URL: JetBrains Mono 500 at 40px in #c9ff5e. Footer row is a space-between flex with the details left and QR right. Logo strip opacity .62.",
+    "summary": "The only colour-forward poster: acid lime #c9ff5e display type over a layered dark green-to-teal gradient with two radial glows and a halftone overlay, plus a lime hairline rule separating the headline from a baseline-aligned details row."
+  },
+  {
+    "id": 27,
+    "headline": "Nothing about this was inevitable.",
+    "eyebrow": "We all use the solution. Almost nobody knows the problem.",
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "wordmarkRepeats": 4,
+    "palette": {
+      "ground": "#04020c",
+      "ink": "#ffffff",
+      "text": "rgba(255,255,255,.74)",
+      "accent": "rgba(255,255,255,.16)"
+    },
+    "background": {
+      "kind": "image",
+      "image": "assets/chrome-blobs.jpg",
+      "css": "background:url(assets/chrome-blobs.jpg) center/cover no-repeat covering the full 2480x3508 frame",
+      "overlay": "linear-gradient(178deg,rgba(4,2,12,.78) 0%,rgba(4,2,12,.4) 26%,rgba(4,2,12,.62) 56%,rgba(4,2,12,.92) 84%,#04020c 100%)"
+    },
+    "typography": "Display: four literal 'gitty up' lines each in its own frosted-glass pill — padding 20px 46px, border-radius 26px, backdrop-filter blur(44px) saturate(150%), 2px border and an inset 0 2px 0 top highlight. Objectivity 250px, line-height 1.1, letter-spacing -.03em, white, nowrap. Weight ramps 100 -> 300 -> 500 -> 800 down the stack, and each pill steps right by 120px (margin-left 0 / 120 / 240 / 360), with the glass fill and border strengthening in step (background .06/.08/.10/.13, border .16/.18/.20/.24, highlight .26/.28/.30/.34), 26px gap. Headline: Objectivity 100 at 112px, line-height 1.12, letter-spacing -.03em, 'inevitable' at weight 800. Subline: Objectivity 300 at 46px, line-height 1.4, rgba(255,255,255,.74), width 1620px. Date: Objectivity 700 at 94px, letter-spacing -.025em. Meta: Objectivity 300 at 44px. URL: JetBrains Mono 500 at 42px. Logo strip opacity .7 at the largest logo sizes (66/60px).",
+    "summary": "A glassmorphic staircase: four frosted, progressively bolder and further-indented 'gitty up' pills over a chrome-blob photograph, and the only poster carrying a supporting subline under the headline."
+  },
+  {
+    "id": 28,
+    "headline": "Git did not have to win.",
+    "eyebrow": "",
+    "wordmarkRepeats": 5,
+    "dateLine": "29 August 2026",
+    "venueLine": "10:00 to 17:00 · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#0a0704",
+      "ink": "#ffffff",
+      "text": "#ffffff",
+      "accent": "#ffb04a"
+    },
+    "background": {
+      "kind": "pattern",
+      "css": "background:#0a0704 — then a full-bleed text field of 40-character commit SHAs set in font-family:'JetBrains Mono';font-size:44px;line-height:1.5;letter-spacing:.06em;color:rgba(255,176,74,.4);word-break:break-all;padding:80px 60px — then a knock-back scrim div style=\"position:absolute;inset:0;background:rgba(10,7,4,.62)\"",
+      "image": "",
+      "overlay": "rgba(10,7,4,.62) flat scrim over the SHA field; a hairline rule at y=2700 of background:rgba(255,176,74,.4)"
+    },
+    "typography": "Wordmark grid: font-family:Objectivity, font-size:296px, line-height:1.04, letter-spacing:-.015em, color:#fff, 5 rows each justify-content:space-between with per-character mixed weights (weight is templated per glyph). Headline: font:100 116px Objectivity, line-height:1.12, letter-spacing:-.03em, colour #fff, with the single word \"win\" at font-weight:800 and color:#ffb04a. Date: font:700 92px Objectivity, letter-spacing:-.025em, line-height:1. Venue: font:400 42px 'JetBrains Mono', color rgba(255,255,255,.78). URL: font:500 42px 'JetBrains Mono', color #ffb04a. Background hash field: 44px JetBrains Mono, tracking .06em.",
+    "summary": "Amber-on-near-black: a wall of real-looking git commit SHAs in JetBrains Mono at 40% amber, veiled by a 62% scrim, under a five-row Objectivity wordmark grid; the only saturated element is the word \"win\" in #ffb04a. It is the only one of the three whose secondary type is monospace rather than Objectivity, and the only one with no descriptive deck under the headline. No instruction-like text appears in the file — the long hexadecimal strings are decorative commit hashes, and \"{{ ch.c }}\" / \"{{ sw5 }}\" are template placeholders."
+  },
+  {
+    "id": 29,
+    "headline": "A remote you own.",
+    "eyebrow": "",
+    "wordmarkRepeats": 6,
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "wordmark-stack",
+    "palette": {
+      "ground": "#08031c",
+      "ink": "#ffffff",
+      "text": "#ffffff",
+      "accent": "#6a0dff"
+    },
+    "background": {
+      "kind": "image",
+      "css": "Layer 1: background:url(assets/noisy-1.webp) center/cover no-repeat;filter:brightness(.5) contrast(1.3) — Layer 2: background:#6a0dff;mix-blend-mode:color — Layer 3: background:linear-gradient(180deg,rgba(8,3,28,.6) 0%,rgba(8,3,28,.2) 32%,rgba(8,3,28,.9) 76%,#08031c 100%) — Layer 4: opacity:.34;mix-blend-mode:overlay;background:url(assets/halftone.jpg) center/1200px repeat",
+      "image": "noisy-1.webp (plus assets/halftone.jpg as a 1200px repeating overlay)",
+      "overlay": "#6a0dff at mix-blend-mode:color recolours the photo violet; a 180deg dark gradient to #08031c anchors the lower third; halftone.jpg at .34 opacity, mix-blend-mode:overlay adds print grain"
+    },
+    "typography": "Wordmark grid: font-family:Objectivity, font-size:290px, line-height:1.04, letter-spacing:-.015em, color:#fff, 6 rows, each row justify-content:space-between with per-glyph weight variation. Headline: font:100 116px Objectivity, line-height:1.12, letter-spacing:-.03em, #fff, with \"remote\" at font-weight:800 in the same white (no colour shift). Deck: font:300 46px Objectivity, line-height:1.44, rgba(255,255,255,.82), hard <br /> line break. Date: font:700 84px Objectivity, letter-spacing:-.025em. Venue: font:300 40px Objectivity, rgba(255,255,255,.88). URL: font:500 40px 'JetBrains Mono'.",
+    "summary": "The only photographic poster of the three — a noisy image driven through brightness(.5) contrast(1.3), recoloured entirely violet by a #6a0dff color-blend layer, then screened with a repeating halftone; the six-row wordmark is the tallest stack in the set and the headline emphasis is weight-only, never colour. No instruction-like text in the file; only the \"{{ sw6 }}\" / \"{{ ch.c }}\" template placeholders."
+  },
+  {
+    "id": 30,
+    "headline": "Nobody else needs a copy of your history.",
+    "eyebrow": "",
+    "wordmarkRepeats": 4,
+    "dateLine": "29 August 2026",
+    "venueLine": "10am to 5pm · AB-2 Auditorium",
+    "layout": "headline-led",
+    "palette": {
+      "ground": "#020104",
+      "ink": "#ffffff",
+      "text": "#ffffff",
+      "accent": "#5600ff"
+    },
+    "background": {
+      "kind": "gradient",
+      "css": "background:#020104 with a single overlay div: background:radial-gradient(56% 34% at 62% 58%,rgba(86,0,255,.44) 0%,rgba(35,0,90,.14) 46%,rgba(0,0,0,0) 74%)",
+      "image": "",
+      "overlay": "none beyond the radial violet bloom; the wordmark grid itself acts as a texture layer at 17% white"
+    },
+    "typography": "Wordmark grid: font-family:Objectivity, font-size:296px, line-height:1.04, letter-spacing:-.015em, but colour rgba(255,255,255,.17) — ghosted back to texture; 4 rows only, justify-content:space-between with per-glyph weights. Headline is the largest solid type: font:100 126px Objectivity, line-height:1.12, letter-spacing:-.035em (the tightest tracking in the set), #fff, with \"history\" at font-weight:800. Deck: font:300 48px Objectivity, line-height:1.45, rgba(255,255,255,.64), 1500px measure. Date: font:500 84px Objectivity (lighter than the 700 used on 28 and 29), letter-spacing:-.025em, #fff. Venue: font:300 42px Objectivity, rgba(255,255,255,.7). URL: font:500 40px 'JetBrains Mono', rgba(255,255,255,.92). Footer event logos at opacity .42, the faintest of the three.",
+    "summary": "Near-black #020104 lit only by an off-centre violet radial bloom; the wordmark is dropped to rgba(255,255,255,.17) so it reads as background texture and the 126px hairline headline — the longest and most tightly tracked line in the set — carries the poster. No instruction-like text in the file; only the \"{{ sw4 }}\" / \"{{ ch.c }}\" template placeholders."
+  }
+]

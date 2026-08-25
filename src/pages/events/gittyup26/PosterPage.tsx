@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import PosterGround from './PosterGround';
 import { PosterVariant } from './posterTypes';
 import PosterRegisterForm from './PosterRegisterForm';
+import { contrastHalo } from './posterColor';
+import { useFittingRows } from './useFittingRows';
 
 /*
  * One layout, thirty palettes.
@@ -51,6 +53,13 @@ const PosterPage = ({
 }: PosterPageProps) => {
   const [showForm, setShowForm] = useState(false);
 
+  const wordmarkRef = useRef<HTMLDivElement>(null);
+
+  const visibleRows = useFittingRows(
+    wordmarkRef,
+    Math.max(1, variant.rows),
+  );
+
   const { headline, emphasis } = variant;
 
   const emphasisAt =
@@ -91,22 +100,21 @@ const PosterPage = ({
 
         {/* Poster body */}
 
-        <main className="grid flex-1 items-center gap-8 py-6 lg:grid-cols-[1.5fr_1fr] lg:gap-12 lg:py-4">
+        <main className="grid flex-1 content-start items-start gap-8 py-6 lg:grid-cols-[1.5fr_1fr] lg:content-center lg:items-center lg:gap-12 lg:py-4">
 
           <section>
 
             {/* Wordmark stack, clipped to the room it has */}
 
             <div
+              ref={wordmarkRef}
               aria-hidden="true"
               className={`max-h-[36vh] select-none overflow-hidden tracking-[-0.015em] lg:max-h-[46vh] ${WORDMARK_SIZE}`}
+              style={{ filter: contrastHalo(variant.ink) }}
             >
               {Array.from(
                 {
-                  length: Math.max(
-                    1,
-                    variant.rows,
-                  ),
+                  length: visibleRows,
                 },
                 (_, index) => (
                   <div

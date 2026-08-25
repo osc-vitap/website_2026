@@ -21,9 +21,9 @@ export const POSTER_COUNT = 30;
 export const posterVariants: PosterVariant[] = [
 	{
 		"id": 1,
-		"image": "/events/gittyup26/art-glacial.webp",
 		"layout": "wordmark-stack",
 		"ground": "#020610",
+		"image": "/events/gittyup26/art-glacial.webp",
 		"layers": [
 			"radial-gradient(115% 76% at 46% 18%,#9db4c6 0%,#5a7c99 24%,#24405e 54%,#0b1526 78%,#020610 100%)",
 			"radial-gradient(64% 48% at 84% 70%,rgba(126,156,181,.26) 0%,rgba(126,156,181,0) 70%)",
@@ -32,7 +32,7 @@ export const posterVariants: PosterVariant[] = [
 		],
 		"ink": "#ffffff",
 		"text": "rgba(255,255,255,.86)",
-		"accent": "rgba(86,0,255,.3)",
+		"accent": "#8f7dff",
 		"rows": 5,
 		"eyebrow": "A history of version control",
 		"headline": "You inherited a solution. Come meet the problem.",
@@ -42,9 +42,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 2,
-		"image": "/events/gittyup26/chrome-3.webp",
 		"layout": "wordmark-stack",
 		"ground": "#04040a",
+		"image": "/events/gittyup26/chrome-3.webp",
 		"layers": [
 			"linear-gradient(102deg,#3a3550 0%,#6a6486 12%,#2a2740 24%,#7d7699 38%,#232036 52%,#8f88ab 64%,#2c2942 78%,#6f6890 90%,#1e1b2e 100%)",
 			"linear-gradient(78deg,rgba(216,209,236,.5) 0%,rgba(216,209,236,.5) 9%,rgba(40,36,58,.55) 9%,rgba(40,36,58,.55) 17%,rgba(180,172,204,.3) 17%,rgba(180,172,204,.3) 23%,rgba(30,27,45,.6) 23%,rgba(30,27,45,.6) 38%,rgba(230,224,244,.26) 38%,rgba(230,224,244,.26) 44%,rgba(46,42,66,.5) 44%,rgba(46,42,66,.5) 62%,rgba(198,190,222,.28) 62%,rgba(198,190,222,.28) 70%,rgba(26,23,40,.55) 70%,rgba(26,23,40,.55) 100%)",
@@ -54,7 +54,7 @@ export const posterVariants: PosterVariant[] = [
 		"ink": "#cfc6e8",
 		"inkGradient": "linear-gradient(102deg,#cfc6e8 0%,#6f6390 14%,#e6e0f4 30%,#574d76 46%,#d8d1ec 62%,#655a88 80%,#ded7f0 100%)",
 		"text": "rgba(255,255,255,.78)",
-		"accent": "#6f6390",
+		"accent": "#9d92c4",
 		"rows": 5,
 		"eyebrow": "A history of version control",
 		"headline": "Undo is a design decision.",
@@ -64,9 +64,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 3,
-		"image": "/events/gittyup26/noisy-2.webp",
 		"layout": "wordmark-stack",
 		"ground": "#03100f",
+		"image": "/events/gittyup26/noisy-2.webp",
 		"layers": [
 			"radial-gradient(120% 85% at 50% 30%,#0d6b74 0%,#0a4d55 34%,#062e33 64%,#03100f 100%)",
 			"linear-gradient(160deg,rgba(13,107,116,.42) 0%,rgba(3,16,15,.15) 52%,rgba(13,107,116,.28) 100%)",
@@ -88,16 +88,14 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 4,
-		"image": "/events/gittyup26/art-liquidmetal.webp",
 		"layout": "wordmark-stack",
 		"ground": "#050310",
+		"image": "/events/gittyup26/art-liquidmetal.webp",
 		"layers": [
 			"linear-gradient(172deg,#0b0722 0%,#050310 52%,#0a0526 100%)",
 			"repeating-linear-gradient(96deg,#0f0c1d 0px,#3b3550 9px,#15111f 17px,#5b5470 24px,#1b1729 33px,#46405c 41px,#100d1c 52px) 0 68%/100% 18% no-repeat",
 			"linear-gradient(80deg,rgba(255,255,255,0) 0%,rgba(226,220,246,.22) 24%,rgba(255,255,255,0) 40%,rgba(183,157,255,.16) 62%,rgba(255,255,255,0) 84%) 0 68%/100% 18% no-repeat",
-			"linear-gradient(180deg,#050310 0%,rgba(5,3,16,0) 16%,rgba(5,3,16,0) 84%,#050310 100%) 0 68%/100% 18% no-repeat",
-			"linear-gradient(#ffffff,#ffffff) 0 16%/100% 4px no-repeat",
-			"linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)) 0 76%/100% 2px no-repeat"
+			"linear-gradient(180deg,#050310 0%,rgba(5,3,16,0) 16%,rgba(5,3,16,0) 84%,#050310 100%) 0 68%/100% 18% no-repeat"
 		],
 		"ink": "#ffffff",
 		"text": "rgba(255,255,255,.72)",
@@ -110,9 +108,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 5,
-		"image": "/events/gittyup26/halftone.webp",
 		"layout": "wordmark-stack",
 		"ground": "#0b0022",
+		"image": "/events/gittyup26/halftone.webp",
 		"layers": [
 			"linear-gradient(160deg,#5f00ff 0%,#3a00ad 34%,#1a0058 70%,#0b0022 100%)",
 			"radial-gradient(circle at 50% 50%,rgba(11,0,34,.34) 0 26%,rgba(11,0,34,0) 28%) 0 0/16px 16px",
@@ -120,18 +118,18 @@ export const posterVariants: PosterVariant[] = [
 		],
 		"ink": "#ffffff",
 		"text": "rgba(255,255,255,.86)",
-		"accent": "#5f00ff",
+		"accent": "#a78bff",
 		"rows": 10,
 		"headline": "Your remote can live in your room.",
 		"emphasis": "your room",
-		"dateLine": "29 Aug 2026 / 10am to 5pm · AB-2",
+		"dateLine": "29 Aug 2026 / 10am to 5pm",
 		"venueLine": "AB-2"
 	},
 	{
 		"id": 6,
-		"image": "/events/gittyup26/noisy-4.webp",
 		"layout": "wordmark-stack",
 		"ground": "#0d0316",
+		"image": "/events/gittyup26/noisy-4.webp",
 		"layers": [
 			"radial-gradient(115% 75% at 52% 26%,rgba(138,15,158,.5) 0%,rgba(138,15,158,.24) 42%,rgba(13,3,22,0) 76%)",
 			"linear-gradient(196deg,rgba(138,15,158,.34) 0%,rgba(138,15,158,.12) 46%,rgba(13,3,22,0) 82%)",
@@ -141,11 +139,11 @@ export const posterVariants: PosterVariant[] = [
 		"grain": 0.5,
 		"ink": "#ffffff",
 		"text": "rgba(255,255,255,.86)",
-		"accent": "#8a0f9e",
+		"accent": "#cf6ae2",
 		"rows": 5,
 		"headline": "The graph came before the command.",
 		"emphasis": "command",
-		"dateLine": "29 August 2026 / 10am to 5pm · AB-2 Auditorium",
+		"dateLine": "29 August 2026 / 10am to 5pm",
 		"venueLine": "AB-2 Auditorium"
 	},
 	{
@@ -159,7 +157,7 @@ export const posterVariants: PosterVariant[] = [
 		],
 		"ink": "rgba(255,255,255,.2)",
 		"text": "rgba(255,255,255,.82)",
-		"accent": "#5600ff",
+		"accent": "#d6c6ff",
 		"rows": 6,
 		"eyebrow": "A history of version control",
 		"headline": "Somebody had to invent undo.",
@@ -169,9 +167,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 8,
-		"image": "/events/gittyup26/chrome-rings.webp",
 		"layout": "wordmark-stack",
 		"ground": "#000000",
+		"image": "/events/gittyup26/chrome-rings.webp",
 		"layers": [
 			"linear-gradient(104deg,#26242e 0%,#6e6b7c 8%,#171620 14%,#57545f 22%,#100f16 29%,#807d8e 40%,#212028 47%,#4c4a57 57%,#131219 65%,#6d6a7b 77%,#1b1a22 85%,#3f3d49 100%)",
 			"linear-gradient(-16deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 11%,rgba(255,255,255,.11) 19%,rgba(255,255,255,0) 30%,rgba(255,255,255,.15) 43%,rgba(255,255,255,0) 54%,rgba(255,255,255,.08) 67%,rgba(255,255,255,0) 79%,rgba(255,255,255,.12) 92%,rgba(255,255,255,0) 100%)",
@@ -181,7 +179,7 @@ export const posterVariants: PosterVariant[] = [
 		"ink": "#d9d2ee",
 		"inkGradient": "linear-gradient(104deg,#d9d2ee 0%,#6d6190 15%,#efeaf9 31%,#544a72 47%,#ded7ee 63%,#615680 81%,#e8e2f5 100%)",
 		"text": "rgba(255,255,255,.74)",
-		"accent": "rgba(255,255,255,.5)",
+		"accent": "#9a94ac",
 		"rows": 4,
 		"eyebrow": "A history of version control",
 		"headline": "Before git, there was a problem worth solving.",
@@ -209,7 +207,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "Someone had to decide what a version was.",
 		"emphasis": "version",
 		"dateLine": "2026-08-29",
-		"venueLine": "AB-2 Auditorium",
+		"venueLine": "10:00 to 17:00 · AB-2 Auditorium",
 		"specs": [
 			{
 				"label": "DATE",
@@ -235,9 +233,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 10,
-		"image": "/events/gittyup26/art-purple.webp",
 		"layout": "wordmark-stack",
 		"ground": "#05030c",
+		"image": "/events/gittyup26/art-purple.webp",
 		"layers": [
 			"radial-gradient(118% 72% at 50% 26%, rgba(150,96,255,.5) 0%, rgba(96,44,196,.32) 32%, rgba(40,14,96,.16) 58%, rgba(5,3,12,0) 82%)",
 			"radial-gradient(56% 32% at 64% 15%, rgba(240,230,255,.3) 0%, rgba(201,164,255,.13) 42%, rgba(5,3,12,0) 76%)",
@@ -257,9 +255,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 11,
-		"image": "/events/gittyup26/noisy-3.webp",
 		"layout": "wordmark-stack",
 		"ground": "#060210",
+		"image": "/events/gittyup26/noisy-3.webp",
 		"layers": [
 			"linear-gradient(196deg, rgba(75,18,200,.46) 0%, rgba(45,11,124,.5) 44%, rgba(14,4,44,.62) 100%)",
 			"radial-gradient(112% 66% at 46% 30%, rgba(124,64,255,.44) 0%, rgba(62,20,158,.2) 44%, rgba(6,2,16,0) 76%)",
@@ -269,7 +267,7 @@ export const posterVariants: PosterVariant[] = [
 		"grain": 0.5,
 		"ink": "#ffffff",
 		"text": "#ffffff",
-		"accent": "#4b12c8",
+		"accent": "#a07bff",
 		"rows": 4,
 		"headline": "Copies of copies of copies. Then git.",
 		"emphasis": "git",
@@ -278,9 +276,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 12,
-		"image": "/events/gittyup26/chrome-rings.webp",
 		"layout": "wordmark-stack",
 		"ground": "#000000",
+		"image": "/events/gittyup26/chrome-rings.webp",
 		"layers": [
 			"linear-gradient(104deg, #101019 0%, #35304a 8%, #15141d 14%, #5b5474 23%, #1e1b29 30%, #746c92 40%, #272332 47%, #4e4767 57%, #151420 65%, #443d5a 77%, #121118 87%, #2a2639 100%) 0 0 / 100% 56% no-repeat",
 			"linear-gradient(-56deg, rgba(231,225,244,.18) 0%, rgba(231,225,244,0) 11%, rgba(76,67,104,.32) 21%, rgba(0,0,0,0) 32%, rgba(219,212,236,.16) 43%, rgba(0,0,0,0) 54%, rgba(97,86,121,.3) 69%, rgba(0,0,0,0) 83%, rgba(226,220,242,.12) 100%) 0 0 / 100% 56% no-repeat",
@@ -290,7 +288,7 @@ export const posterVariants: PosterVariant[] = [
 		"inkGradient": "linear-gradient(101deg,#cdc5e6 0%,#615679 16%,#e7e1f4 32%,#4c4368 48%,#dbd4ec 64%,#585072 82%,#e2dcf2 100%)",
 		"text": "#ffffff",
 		"accent": "#e7e1f4",
-		"rows": 2,
+		"rows": 3,
 		"eyebrow": "A history of version control",
 		"headline": "Undo was not always free.",
 		"emphasis": "free",
@@ -299,9 +297,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 13,
-		"image": "/events/gittyup26/art-arc.webp",
 		"layout": "wordmark-stack",
 		"ground": "#000000",
+		"image": "/events/gittyup26/art-arc.webp",
 		"layers": [
 			"radial-gradient(120% 78% at 50% 34%,#2a1f3d 0%,#181128 38%,#0a0713 66%,#000000 100%)",
 			"radial-gradient(58% 42% at 50% 66%,rgba(138,105,208,.22) 0%,rgba(60,34,120,.10) 46%,rgba(0,0,0,0) 76%)",
@@ -311,9 +309,9 @@ export const posterVariants: PosterVariant[] = [
 		"grain": 0.2,
 		"ink": "#ffffff",
 		"text": "rgba(255,255,255,.8)",
-		"accent": "rgba(86,0,255,.4)",
+		"accent": "#8f7dff",
 		"rows": 2,
-		"eyebrow": "gitty up · 2026",
+		"eyebrow": "A history of version control",
 		"headline": "Every tool you trust was once a workaround.",
 		"emphasis": "workaround",
 		"dateLine": "29 August 2026",
@@ -330,7 +328,7 @@ export const posterVariants: PosterVariant[] = [
 		],
 		"ink": "#12003c",
 		"text": "#ffffff",
-		"accent": "#8a2bff",
+		"accent": "#ddccff",
 		"rows": 4,
 		"headline": "Your history should answer to you.",
 		"emphasis": "history",
@@ -339,9 +337,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 15,
-		"image": "/events/gittyup26/chrome-blobs.webp",
 		"layout": "headline-led",
 		"ground": "#000000",
+		"image": "/events/gittyup26/chrome-blobs.webp",
 		"layers": [
 			"radial-gradient(56% 50% at 74% 40%,#9fa5b2 0%,#6a707b 30%,#3a3e46 56%,#101216 78%,#000000 100%)",
 			"linear-gradient(118deg,rgba(0,0,0,0) 32%,#787e8a 39%,#d3d8e0 45%,#868c99 49%,#f1f4f9 55%,#474c56 59%,#bcc2cc 65%,#22252b 71%,rgba(0,0,0,0) 86%)",
@@ -362,9 +360,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 16,
-		"image": "/events/gittyup26/art-glacial.webp",
 		"layout": "wordmark-stack",
 		"ground": "#01050c",
+		"image": "/events/gittyup26/art-glacial.webp",
 		"layers": [
 			"linear-gradient(180deg, rgba(150,186,220,.34) 0%, rgba(96,132,172,.22) 18%, rgba(44,68,102,.10) 32%, rgba(1,5,12,0) 44%)",
 			"radial-gradient(120% 58% at 50% 16%, rgba(196,220,240,.40) 0%, rgba(110,150,190,.24) 34%, rgba(28,50,82,.08) 62%, rgba(1,5,12,0) 80%)",
@@ -385,9 +383,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 17,
-		"image": "/events/gittyup26/art-liquidmetal.webp",
 		"layout": "wordmark-stack",
 		"ground": "#06040f",
+		"image": "/events/gittyup26/art-liquidmetal.webp",
 		"layers": [
 			"linear-gradient(102deg, #26272e 0%, #6e7180 8%, #34353e 14%, #9ea1ae 22%, #40414a 29%, #c2c5d0 37%, #2f303a 45%, #8d909d 54%, #292a33 61%, #adb0bc 70%, #383943 78%, #787b88 87%, #2a2b33 100%)",
 			"linear-gradient(168deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 11%, rgba(0,0,0,.36) 21%, rgba(255,255,255,.12) 33%, rgba(0,0,0,.30) 46%, rgba(255,255,255,.18) 60%, rgba(0,0,0,.42) 75%, rgba(255,255,255,.09) 87%, rgba(0,0,0,.32) 100%)",
@@ -407,9 +405,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 18,
-		"image": "/events/gittyup26/chrome-3.webp",
 		"layout": "headline-led",
 		"ground": "#000000",
+		"image": "/events/gittyup26/chrome-3.webp",
 		"layers": [
 			"linear-gradient(100deg, rgba(118,113,140,.30) 0%, rgba(200,195,218,.42) 13%, rgba(68,64,88,.34) 27%, rgba(216,211,232,.38) 43%, rgba(82,77,104,.32) 57%, rgba(180,174,200,.36) 73%, rgba(60,56,78,.30) 100%)",
 			"radial-gradient(80% 48% at 30% 30%, rgba(230,224,245,.32) 0%, rgba(140,132,168,.15) 44%, rgba(0,0,0,0) 78%)",
@@ -420,7 +418,7 @@ export const posterVariants: PosterVariant[] = [
 		"text": "rgba(255,255,255,.72)",
 		"accent": "#f2edff",
 		"rows": 1,
-		"eyebrow": "Somebody had to invent",
+		"eyebrow": "A history of version control",
 		"headline": "Keep your own history.",
 		"emphasis": "history",
 		"dateLine": "29 August 2026",
@@ -434,7 +432,7 @@ export const posterVariants: PosterVariant[] = [
 			"linear-gradient(172deg,#0b0918 0%,#04040a 54%,#0a0620 100%)",
 			"radial-gradient(70% 44% at 84% 88%,rgba(86,0,255,.32) 0%,rgba(86,0,255,0) 64%)"
 		],
-		"ink": "rgba(255,255,255,.055)",
+		"ink": "rgba(255,255,255,.12)",
 		"text": "rgba(255,255,255,.66)",
 		"accent": "#8f7dff",
 		"rows": 5,
@@ -463,10 +461,10 @@ export const posterVariants: PosterVariant[] = [
 			"color": "rgba(120,160,255,.06)"
 		},
 		"ink": "#ffffff",
-		"text": "rgba(255,255,255,.6)",
+		"text": "rgba(255,255,255,.78)",
 		"accent": "#8f7dff",
 		"rows": 4,
-		"eyebrow": "Previous builds",
+		"eyebrow": "A history of version control",
 		"headline": "The problem came first. The tool came later.",
 		"emphasis": "tool",
 		"dateLine": "DATE 2026-08-29 · TIME 10:00-17:00",
@@ -474,9 +472,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 21,
-		"image": "/events/gittyup26/noisy-4.webp",
 		"layout": "wordmark-stack",
 		"ground": "#12003c",
+		"image": "/events/gittyup26/noisy-4.webp",
 		"layers": [
 			"radial-gradient(120% 95% at 28% 10%,#2e0c78 0%,#1a0350 46%,#0a0020 100%)",
 			"linear-gradient(200deg,rgba(106,18,255,.82) 0%,rgba(66,0,196,.82) 36%,rgba(32,0,110,.82) 72%,rgba(13,0,38,.82) 100%)",
@@ -486,9 +484,9 @@ export const posterVariants: PosterVariant[] = [
 		"grain": 0.5,
 		"ink": "#f6f1ff",
 		"text": "rgba(255,255,255,.9)",
-		"accent": "#6a12ff",
+		"accent": "#c4a8ff",
 		"rows": 5,
-		"eyebrow": "Some of our events that you might recognise",
+		"eyebrow": "A history of version control",
 		"headline": "Every shortcut you type was once an argument.",
 		"emphasis": "argument",
 		"dateLine": "29 August 2026",
@@ -496,9 +494,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 22,
-		"image": "/events/gittyup26/noisy-5.webp",
 		"layout": "wordmark-stack",
 		"ground": "#070313",
+		"image": "/events/gittyup26/noisy-5.webp",
 		"layers": [
 			"radial-gradient(135% 105% at 50% 18%, rgba(122,38,255,.42) 0%, rgba(74,18,190,.30) 34%, rgba(30,8,86,.22) 62%, rgba(7,3,19,.10) 88%)",
 			"linear-gradient(180deg, rgba(90,18,216,.22) 0%, rgba(90,18,216,.14) 55%, rgba(90,18,216,.06) 100%)",
@@ -507,8 +505,8 @@ export const posterVariants: PosterVariant[] = [
 		],
 		"grain": 0.5,
 		"ink": "rgba(255,255,255,.94)",
-		"text": "rgba(255,255,255,.74)",
-		"accent": "#5a12d8",
+		"text": "rgba(255,255,255,.9)",
+		"accent": "#a97bff",
 		"rows": 4,
 		"headline": "Merge conflicts are older than you think.",
 		"emphasis": "older",
@@ -517,9 +515,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 23,
-		"image": "/events/gittyup26/art-blue.webp",
 		"layout": "wordmark-stack",
 		"ground": "#01040c",
+		"image": "/events/gittyup26/art-blue.webp",
 		"layers": [
 			"radial-gradient(120% 62% at 50% 84%, rgba(168,203,242,.30) 0%, rgba(96,140,200,.22) 30%, rgba(34,62,116,.15) 56%, rgba(1,4,12,0) 84%)",
 			"radial-gradient(80% 40% at 28% 68%, rgba(122,168,222,.16) 0%, rgba(1,4,12,0) 70%)",
@@ -528,7 +526,7 @@ export const posterVariants: PosterVariant[] = [
 		],
 		"ink": "#fff",
 		"text": "rgba(255,255,255,.86)",
-		"accent": "rgba(200,225,255,.09)",
+		"accent": "#a8cbf2",
 		"rows": 3,
 		"eyebrow": "A history of version control",
 		"headline": "Somebody had to name the branch.",
@@ -538,9 +536,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 24,
-		"image": "/events/gittyup26/art-flow.webp",
 		"layout": "wordmark-stack",
 		"ground": "#04030d",
+		"image": "/events/gittyup26/art-flow.webp",
 		"layers": [
 			"conic-gradient(from 205deg at 40% 44%, rgba(122,74,238,.34) 0deg, rgba(38,20,96,.20) 88deg, rgba(196,162,255,.24) 172deg, rgba(26,14,66,.18) 256deg, rgba(122,74,238,.34) 360deg)",
 			"radial-gradient(95% 68% at 64% 28%, rgba(242,236,255,.20) 0%, rgba(104,58,204,.16) 42%, rgba(4,3,13,0) 80%)",
@@ -558,9 +556,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 25,
-		"image": "/events/gittyup26/art-arc.webp",
 		"layout": "wordmark-stack",
 		"ground": "#03020a",
+		"image": "/events/gittyup26/art-arc.webp",
 		"layers": [
 			"radial-gradient(150% 115% at 14% 4%, rgba(152,134,198,.32) 0%, rgba(74,58,116,.20) 26%, rgba(40,30,66,.10) 48%, rgba(3,2,10,0) 76%)",
 			"conic-gradient(from 196deg at 20% 10%, rgba(128,106,182,.30) 0deg, rgba(24,18,52,.10) 62deg, rgba(186,158,146,.24) 148deg, rgba(10,8,26,0) 236deg, rgba(128,106,182,.26) 360deg)",
@@ -597,9 +595,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 27,
-		"image": "/events/gittyup26/chrome-blobs.webp",
 		"layout": "wordmark-stack",
 		"ground": "#04020c",
+		"image": "/events/gittyup26/chrome-blobs.webp",
 		"layers": [
 			"radial-gradient(125% 92% at 50% 32%, rgba(200,206,224,.30) 0%, rgba(112,118,142,.20) 40%, rgba(46,48,66,.12) 62%, rgba(4,2,12,0) 82%)",
 			"linear-gradient(102deg, rgba(228,232,244,.26) 0 11%, rgba(68,74,94,.20) 11% 19%, rgba(198,206,226,.22) 19% 30%, rgba(26,28,42,.24) 30% 43%, rgba(214,220,238,.18) 43% 55%, rgba(52,56,74,.22) 55% 100%)",
@@ -608,7 +606,7 @@ export const posterVariants: PosterVariant[] = [
 		],
 		"ink": "#ffffff",
 		"text": "rgba(255,255,255,.74)",
-		"accent": "rgba(255,255,255,.16)",
+		"accent": "#c8cee0",
 		"rows": 4,
 		"eyebrow": "We all use the solution. Almost nobody knows the problem.",
 		"headline": "Nothing about this was inevitable.",
@@ -637,9 +635,9 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 29,
-		"image": "/events/gittyup26/noisy-1.webp",
 		"layout": "wordmark-stack",
 		"ground": "#08031c",
+		"image": "/events/gittyup26/noisy-1.webp",
 		"layers": [
 			"radial-gradient(115% 85% at 46% 34%, #4a1fb5 0%, #2b0c7d 30%, #150547 62%, #08031c 100%)",
 			"radial-gradient(60% 45% at 78% 78%, rgba(106,13,255,.35) 0%, rgba(106,13,255,0) 70%)",
@@ -649,7 +647,7 @@ export const posterVariants: PosterVariant[] = [
 		"grain": 0.5,
 		"ink": "#ffffff",
 		"text": "#ffffff",
-		"accent": "#6a0dff",
+		"accent": "#a97dff",
 		"rows": 6,
 		"headline": "A remote you own.",
 		"emphasis": "remote",
@@ -665,7 +663,7 @@ export const posterVariants: PosterVariant[] = [
 		],
 		"ink": "rgba(255,255,255,.17)",
 		"text": "#ffffff",
-		"accent": "#5600ff",
+		"accent": "#a17cff",
 		"rows": 4,
 		"headline": "Nobody else needs a copy of your history.",
 		"emphasis": "history",

@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { RegisterLink } from '../eventPageKit';
 import PosterGround from './PosterGround';
 import { PosterVariant } from './posterTypes';
+import PosterRegisterForm from './PosterRegisterForm';
 
 /*
  * One layout, thirty palettes.
@@ -33,9 +34,23 @@ interface PosterPageProps {
 const WORDMARK_SIZE =
   'text-[clamp(2.5rem,19vw,7rem)] lg:text-[min(12.5vw,13rem)]';
 
+/*
+ * Accent colours arrive as either hex or rgba(). Appending hex alpha to
+ * an rgba() string produces invalid CSS, so the declaration is dropped
+ * and the rule falls back to the browser default — a near-white hairline
+ * on a dark poster. color-mix handles both notations.
+ */
+const withAlpha = (
+  color: string,
+  percent: number,
+) =>
+  `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+
 const PosterPage = ({
   variant,
 }: PosterPageProps) => {
+  const [showForm, setShowForm] = useState(false);
+
   const { headline, emphasis } = variant;
 
   const emphasisAt =
@@ -60,7 +75,7 @@ const PosterPage = ({
 
         {/* Masthead */}
 
-        <header className="flex items-start justify-between gap-4">
+        <header className="poster-fade-up flex items-start justify-between gap-4">
           <img
             src="/events/gittyup26/osc-lockup.webp"
             alt="Open Source Community, campus club at VIT-AP"
@@ -76,7 +91,7 @@ const PosterPage = ({
 
         {/* Poster body */}
 
-        <main className="grid flex-1 items-center gap-10 py-10 lg:grid-cols-[1.5fr_1fr] lg:gap-12 lg:py-6">
+        <main className="grid flex-1 items-center gap-8 py-6 lg:grid-cols-[1.5fr_1fr] lg:gap-12 lg:py-4">
 
           <section>
 
@@ -84,7 +99,7 @@ const PosterPage = ({
 
             <div
               aria-hidden="true"
-              className={`max-h-[42vh] select-none overflow-hidden tracking-[-0.015em] lg:max-h-[54vh] ${WORDMARK_SIZE}`}
+              className={`max-h-[36vh] select-none overflow-hidden tracking-[-0.015em] lg:max-h-[46vh] ${WORDMARK_SIZE}`}
             >
               {Array.from(
                 {
@@ -135,7 +150,8 @@ const PosterPage = ({
 
             {/* Toggle and numeral */}
 
-            <div className="mt-7 flex items-center gap-6 lg:mt-6">
+            <div className="poster-fade-up mt-7 flex items-center gap-6 lg:mt-6"
+              style={{ animationDelay: '0.45s' }}>
               <div
                 aria-hidden="true"
                 className="flex w-[clamp(5rem,12vw,9rem)] items-center justify-end rounded-full border-[3px] p-[0.3rem] md:border-4"
@@ -160,7 +176,7 @@ const PosterPage = ({
             {/* The poster's line */}
 
             <h1
-              className="mt-8 max-w-2xl font-thin leading-snug tracking-[-0.02em] text-[clamp(1.1rem,2.5vw,1.8rem)] lg:mt-7"
+              className="poster-fade-up mt-8 max-w-2xl font-thin leading-snug tracking-[-0.02em] text-[clamp(1.1rem,2.5vw,1.8rem)] lg:mt-7"
               style={{ color: variant.text }}
             >
               {emphasisAt === -1 ? (
@@ -186,12 +202,20 @@ const PosterPage = ({
 
           {/* Details and call to action */}
 
-          <aside className="lg:pb-4">
+          <aside className="poster-slide-in lg:pb-4" style={{ animationDelay: '0.3s' }}>
 
+            {showForm ? (
+              <PosterRegisterForm
+                variant={variant}
+                onClose={() =>
+                  setShowForm(false)
+                }
+              />
+            ) : (
             <div
               className="border-t-2 pt-6"
               style={{
-                borderColor: `${variant.accent}59`,
+                borderColor: withAlpha(variant.accent, 35),
               }}
             >
 
@@ -231,8 +255,14 @@ const PosterPage = ({
                 start from zero.
               </p>
 
-              <RegisterLink
-                registrationSlug="gittyup26"
+              {/*
+                * Registration happens here rather than on a separate
+                * page: someone who scanned a poster should not be
+                * dropped out of the design they scanned into.
+                */}
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
                 className="group mt-7 inline-flex w-full items-center justify-between gap-4 rounded-full px-7 py-4 text-base font-bold transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 sm:w-auto md:text-lg"
                 style={{
                   backgroundColor: variant.accent,
@@ -245,9 +275,10 @@ const PosterPage = ({
                   size={20}
                   className="transition-transform group-hover:translate-x-1"
                 />
-              </RegisterLink>
+              </button>
 
             </div>
+            )}
 
           </aside>
 
@@ -256,9 +287,9 @@ const PosterPage = ({
         {/* Footline */}
 
         <footer
-          className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-5 font-postermono text-[10px] md:text-xs"
+          className="poster-fade-up flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-5 font-postermono text-[10px] md:text-xs"
           style={{
-            borderColor: `${variant.accent}40`,
+            borderColor: withAlpha(variant.accent, 25),
             color: variant.text,
           }}
         >
@@ -284,3 +315,5 @@ const PosterPage = ({
 };
 
 export default PosterPage;
+
+

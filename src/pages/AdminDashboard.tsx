@@ -1035,7 +1035,7 @@ setRegistrations(
                           'team' && (
                           <div className="text-xs text-gray-500 mt-2">
                             {event.min_team_size}
-                            {'â€“'}
+                            {'–'}
                             {event.max_team_size}{' '}
                             members
                           </div>
@@ -2222,7 +2222,7 @@ setRegistrations(
                                           </div>
                                         ) : (
                                           <span className="text-gray-600">
-                                            â€”
+                                            —
                                           </span>
                                         )}
 

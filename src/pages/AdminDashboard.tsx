@@ -53,6 +53,7 @@ interface EventForm {
   description: string;
   venue: string;
   event_date: string;
+  event_end_at: string;
   image: string;
   registration_type: 'solo' | 'team' | 'workshop';
   min_team_size: number;
@@ -87,6 +88,7 @@ const emptyForm: EventForm = {
   description: '',
   venue: '',
   event_date: '',
+  event_end_at: '',
   image: '',
   registration_type: 'solo',
   min_team_size: 2,
@@ -297,6 +299,8 @@ const AdminDashboard = () => {
             venue: form.venue.trim(),
             event_date:
               form.event_date,
+            event_end_at:
+              form.event_end_at || null,
             image:
               form.image.trim(),
             registration_type:
@@ -356,6 +360,8 @@ const AdminDashboard = () => {
       venue: event.venue ?? '',
       event_date:
         event.event_date,
+      event_end_at:
+        event.event_end_at ?? '',
       image: event.image ?? '',
       registration_type:
         event.registration_type,
@@ -623,6 +629,8 @@ setRegistrations(
               manageForm.venue.trim(),
             event_date:
               manageForm.event_date,
+            event_end_at:
+              manageForm.event_end_at || null,
             image:
               manageForm.image.trim(),
             registration_type:
@@ -674,6 +682,8 @@ setRegistrations(
           null,
         event_date:
           manageForm.event_date,
+        event_end_at:
+          manageForm.event_end_at || null,
         image:
           manageForm.image.trim() ||
           null,
@@ -1164,6 +1174,24 @@ setRegistrations(
                 </div>
 
                 <div>
+                  <label className="block text-sm text-gray-300 mb-2">
+                    Event End Date & Time
+                  </label>
+
+                  <input
+                    type="datetime-local"
+                    value={form.event_end_at}
+                    onChange={(e) =>
+                      updateForm(
+                        'event_end_at',
+                        e.target.value,
+                      )
+                    }
+                    className="w-full bg-dark-900/60 border border-dark-700 focus:border-brand-primary rounded-lg px-4 py-3 text-white outline-none transition-colors"
+                  />
+                </div>
+
+                <div>
 
                   <label className="block text-sm text-gray-300 mb-2">
                     Subtitle
@@ -1595,6 +1623,24 @@ setRegistrations(
                       className="w-full bg-dark-900/60 border border-dark-700 focus:border-brand-primary rounded-lg px-4 py-3 text-white outline-none"
                     />
 
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-2">
+                      Event End Date & Time
+                    </label>
+
+                    <input
+                      type="datetime-local"
+                      value={manageForm.event_end_at}
+                      onChange={(e) =>
+                        updateManageForm(
+                          'event_end_at',
+                          e.target.value,
+                        )
+                      }
+                      className="w-full bg-dark-900/60 border border-dark-700 focus:border-brand-primary rounded-lg px-4 py-3 text-white outline-none"
+                    />
                   </div>
 
                   <div>

@@ -189,7 +189,6 @@ const PosterPage = ({
                 style={{
                   borderColor: variant.accent,
                   color: variant.accent,
-                  textShadow: textHalo(variant.accent),
                 }}
               >
                 ODs Provided
@@ -200,7 +199,10 @@ const PosterPage = ({
 
             <h1
               className="poster-fade-up mt-8 max-w-2xl font-thin leading-snug tracking-[-0.02em] text-[clamp(1.1rem,2.5vw,1.8rem)] lg:mt-7"
-              style={{ color: variant.text }}
+              style={{
+                color: variant.text,
+                textShadow: textHalo(variant.text),
+              }}
             >
               {emphasisAt === -1 ? (
                 headline
@@ -210,7 +212,11 @@ const PosterPage = ({
                     0,
                     emphasisAt,
                   )}
-                  <span className="font-extrabold">
+                  {/* Heavy weight carries itself; a halo here only muddies it. */}
+                  <span
+                    className="font-extrabold"
+                    style={{ textShadow: 'none' }}
+                  >
                     {emphasis}
                   </span>
                   {headline.slice(

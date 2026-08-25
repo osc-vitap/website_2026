@@ -1,5 +1,5 @@
 import { env, createExecutionContext, waitOnExecutionContext, SELF } from "cloudflare:test";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import worker from "../src/index";
 
 // For now, you'll need to do something like this to get a correctly-typed
@@ -286,5 +286,116 @@ describe("registration lifecycle", () => {
 			.first<{ is_open: number; archive_status: string }>();
 
 		expect(event).toMatchObject({ is_open: 0, archive_status: "archived" });
+	});
+});
+
+describe("admin access", () => {
+	const SESSION_ID = "test-admin-session";
+
+	const originalAllowList = env.ADMIN_GITHUB_USERS;
+
+	async function seedSession(username: string): Promise<void> {
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+        VALUES (?, ?, ?, datetime('now', '+1 hour'))
+      `,
+		)
+			.bind(SESSION_ID, "1", username)
+			.run();
+	}
+
+	function asAdmin(path: string, init?: RequestInit): Promise<Response> {
+		return fetchWorker(path, {
+			...init,
+			headers: {
+				...(init?.headers ?? {}),
+				Cookie: `osc_admin_session=${SESSION_ID}`,
+			},
+		});
+	}
+
+	afterEach(async () => {
+		env.ADMIN_GITHUB_USERS = originalAllowList;
+
+		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+	});
+
+	it("allows any signed-in admin when the allow list is empty", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("someone-on-the-team");
+
+		const response = await asAdmin("/api/admin/events");
+
+		expect(response.status).toBe(200);
+	});
+
+	it("allows a handle that is on the allow list, case-insensitively", async () => {
+		env.ADMIN_GITHUB_USERS = "Izhaan-Raza, someone-else";
+
+		await seedSession("izhaan-raza");
+
+		const response = await asAdmin("/api/admin/events");
+
+		expect(response.status).toBe(200);
+	});
+
+	it("rejects a handle that is not on the allow list", async () => {
+		env.ADMIN_GITHUB_USERS = "izhaan-raza";
+
+		await seedSession("not-invited");
+
+		const response = await asAdmin("/api/admin/events");
+
+		expect(response.status).toBe(401);
+		expect(await response.json()).toEqual({ error: "Authentication required" });
+	});
+
+	it("revokes an existing session as soon as the handle leaves the allow list", async () => {
+		env.ADMIN_GITHUB_USERS = "leaving-soon";
+
+		await seedSession("leaving-soon");
+
+		expect((await asAdmin("/api/admin/me")).status).toBe(200);
+
+		env.ADMIN_GITHUB_USERS = "someone-else";
+
+		expect((await asAdmin("/api/admin/me")).status).toBe(401);
+	});
+
+	it("deletes an event and reports whether an archive was removed", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+		await seedEvent({ slug: "doomed-event", title: "Doomed Event" });
+
+		const response = await asAdmin("/api/admin/events/doomed-event", { method: "DELETE" });
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({
+			success: true,
+			message: "Event deleted",
+			archive_deleted: false,
+		});
+
+		const remaining = await env.DB.prepare(`SELECT COUNT(*) AS n FROM events`).first<{ n: number }>();
+
+		expect(remaining?.n).toBe(0);
+	});
+
+	it("does not treat a nested admin path as a delete", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+		await seedEvent({ slug: "safe-event", title: "Safe Event" });
+
+		const response = await asAdmin("/api/admin/events/safe-event/registrations", { method: "DELETE" });
+
+		expect(response.status).toBe(404);
+
+		const remaining = await env.DB.prepare(`SELECT COUNT(*) AS n FROM events`).first<{ n: number }>();
+
+		expect(remaining?.n).toBe(1);
 	});
 });

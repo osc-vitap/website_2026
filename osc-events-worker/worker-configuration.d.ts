@@ -3,6 +3,7 @@
 // Runtime types generated with workerd@1.20260820.1 2026-08-20 
 interface __BaseEnv_Env {
 	ALLOWED_ORIGINS: string;
+	ADMIN_GITHUB_USERS: string;
 	osc_events_archives: R2Bucket;
 	DB: D1Database;
 	GITHUB_CLIENT_ID: string;

@@ -42,6 +42,24 @@ function json(data: unknown, status = 200, request?: Request, env?: Env): Respon
 	});
 }
 
+/*
+ * Optional allow list of GitHub handles, on top of the
+ * osc-technical-department team check. An empty ADMIN_GITHUB_USERS
+ * means "anyone on the team", which is the original behaviour.
+ */
+function adminGithubUsers(env?: Env): string[] {
+	return (env?.ADMIN_GITHUB_USERS ?? '')
+		.split(',')
+		.map((user) => user.trim().toLowerCase())
+		.filter(Boolean);
+}
+
+function isAllowedAdmin(username: string, env?: Env): boolean {
+	const allowList = adminGithubUsers(env);
+
+	return allowList.length === 0 || allowList.includes(username.toLowerCase());
+}
+
 function randomToken(): string {
 	return crypto.randomUUID() + crypto.randomUUID();
 }
@@ -109,7 +127,20 @@ async function getAdminSession(request: Request, env: Env) {
 			expires_at: string;
 		}>();
 
-	return session ?? null;
+	if (!session) {
+		return null;
+	}
+
+	/*
+	 * The allow list is enforced on every request, not only at login,
+	 * so removing a handle takes effect immediately instead of when
+	 * their eight hour session happens to expire.
+	 */
+	if (!isAllowedAdmin(session.github_username, env)) {
+		return null;
+	}
+
+	return session;
 }
 
 async function requireAdmin(
@@ -645,6 +676,28 @@ export default {
 					id: number;
 					login: string;
 				};
+
+				/*
+				 * ==========================================================
+				 * ADMIN ALLOW LIST
+				 * ==========================================================
+				 *
+				 * Checked before the team lookup so a handle that is not
+				 * allowed is rejected without a second GitHub call.
+				 */
+
+				if (!isAllowedAdmin(githubUser.login, env)) {
+					console.log('Admin allow list rejected:', githubUser.login);
+
+					return json(
+						{
+							error: 'Access denied. This GitHub account is not on the events admin allow list.',
+						},
+						403,
+						request,
+						env,
+					);
+				}
 
 				/*
 				 * ==========================================================
@@ -1536,25 +1589,34 @@ export default {
 			 * Delete event
 			 */
 
-			if (request.method === 'DELETE' && url.pathname.startsWith('/api/admin/events/')) {
+			const adminEventMatch = url.pathname.match(/^\/api\/admin\/events\/([^/]+)$/);
+
+			if (request.method === 'DELETE' && adminEventMatch) {
 				const auth = await requireAdmin(request, env);
 
 				if (!auth.authorized) {
 					return auth.response;
 				}
 
-				const slug = url.pathname.split('/')[4];
+				const slug = adminEventMatch[1];
 
-				if (!slug) {
-					return json(
-						{
-							error: 'Event slug is required',
-						},
-						400,
-						request,
-						env,
-					);
-				}
+				/*
+				 * Look the event up first so its R2 archive can be removed
+				 * too. Deleting only the D1 row would leave the archived CSV
+				 * in the bucket with nothing pointing at it.
+				 */
+				const existingEvent = await env.DB.prepare(
+					`
+	            SELECT slug, archive_key
+	            FROM events
+	            WHERE slug = ?
+	          `,
+				)
+					.bind(slug)
+					.first<{
+						slug: string;
+						archive_key: string | null;
+					}>();
 
 				const result = await env.DB.prepare(
 					`
@@ -1576,10 +1638,27 @@ export default {
 					);
 				}
 
+				/*
+				 * The D1 row is gone, so a failure here only leaves an
+				 * unreferenced object in R2. Log it and still report success.
+				 */
+				let archiveDeleted = false;
+
+				if (existingEvent?.archive_key) {
+					try {
+						await env.osc_events_archives.delete(existingEvent.archive_key);
+
+						archiveDeleted = true;
+					} catch (error) {
+						console.error('Archive delete failed for event:', slug, error);
+					}
+				}
+
 				return json(
 					{
 						success: true,
 						message: 'Event deleted',
+						archive_deleted: archiveDeleted,
 						deleted_by: auth.session.github_username,
 					},
 					200,

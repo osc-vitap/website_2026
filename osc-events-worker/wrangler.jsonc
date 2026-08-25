@@ -29,7 +29,14 @@
 	 * always allowed in addition to these.
 	 */
 	"vars": {
-		"ALLOWED_ORIGINS": "https://www.oscvitap.com,https://oscvitap.com"
+		"ALLOWED_ORIGINS": "https://www.oscvitap.com,https://oscvitap.com",
+
+		/**
+		 * Comma-separated GitHub handles allowed into the admin
+		 * dashboard, on top of the osc-technical-department team check.
+		 * Leave empty to allow anyone on that team.
+		 */
+		"ADMIN_GITHUB_USERS": ""
 	},
 
 	"secrets": {

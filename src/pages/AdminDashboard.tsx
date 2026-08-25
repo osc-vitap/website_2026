@@ -13,6 +13,8 @@ import {
   User,
   Github,
   Mail,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 const API_BASE_URL =
@@ -131,6 +133,15 @@ const AdminDashboard = () => {
 
   const [manageError, setManageError] =
     useState('');
+
+  const [confirmDelete, setConfirmDelete] =
+    useState(false);
+
+  const [deleteConfirmText, setDeleteConfirmText] =
+    useState('');
+
+  const [deleting, setDeleting] =
+    useState(false);
 
   const [manageSuccess, setManageSuccess] =
     useState('');
@@ -360,9 +371,66 @@ const AdminDashboard = () => {
     setManageSuccess('');
     setRegistrations([]);
     setRegistrationsError('');
+    setConfirmDelete(false);
+    setDeleteConfirmText('');
     setShowManageModal(true);
 
     await loadRegistrations(event.slug);
+  };
+
+  /*
+   * Deleting an event cascades to its registrations and removes the
+   * archived CSV from R2, so the slug has to be typed to confirm.
+   */
+  const deleteEvent = async () => {
+    if (!selectedEvent) return;
+
+    setManageError('');
+    setManageSuccess('');
+
+    try {
+      setDeleting(true);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/admin/events/${encodeURIComponent(selectedEvent.slug)}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        },
+      );
+
+      if (response.status === 401) {
+        window.location.href =
+          `${API_BASE_URL}/auth/github`;
+        return;
+      }
+
+      const data = await response
+        .json()
+        .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            'Unable to delete event.',
+        );
+      }
+
+      setShowManageModal(false);
+      setSelectedEvent(null);
+      setConfirmDelete(false);
+      setDeleteConfirmText('');
+
+      await loadDashboard();
+    } catch (err) {
+      setManageError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to delete event.',
+      );
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const loadRegistrations = async (
@@ -1394,7 +1462,7 @@ setRegistrations(
             <div
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => {
-                if (!manageSaving) {
+                if (!manageSaving && !deleting) {
                   setShowManageModal(false);
                 }
               }}
@@ -1433,11 +1501,11 @@ setRegistrations(
                 </div>
 
                 <button
-                  disabled={manageSaving}
+                  disabled={manageSaving || deleting}
                   onClick={() =>
                     setShowManageModal(false)
                   }
-                  className="text-gray-500 hover:text-white transition-colors"
+                  className="text-gray-500 hover:text-white transition-colors disabled:opacity-50"
                 >
                   <X size={22} />
                 </button>
@@ -2111,6 +2179,136 @@ setRegistrations(
 
               </div>
 
+              {/* Danger zone */}
+
+              <div className="border-t border-dark-700 mt-8 pt-6">
+
+                {!confirmDelete ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+                    <div>
+                      <h4 className="text-sm font-semibold text-white mb-1">
+                        Delete this event
+                      </h4>
+
+                      <p className="text-xs text-gray-500">
+                        Removes the event and its{' '}
+                        {registrations.length}{' '}
+                        {registrations.length === 1
+                          ? 'registration'
+                          : 'registrations'}
+                        {selectedEvent.archive_status ===
+                        'archived'
+                          ? ', including the archived CSV'
+                          : ''}
+                        . This cannot be undone.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() =>
+                        setConfirmDelete(true)
+                      }
+                      disabled={
+                        manageSaving || deleting
+                      }
+                      className="shrink-0 px-5 py-2.5 rounded-lg border border-red-500/40 text-red-300 hover:text-white hover:bg-red-500/20 hover:border-red-500 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Trash2 size={16} />
+                      Delete Event
+                    </button>
+
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-5">
+
+                    <div className="flex items-start gap-3 mb-4">
+
+                      <AlertTriangle
+                        size={20}
+                        className="text-red-400 shrink-0 mt-0.5"
+                      />
+
+                      <div>
+                        <h4 className="text-sm font-semibold text-red-200 mb-1">
+                          Permanently delete "
+                          {selectedEvent.title}"?
+                        </h4>
+
+                        <p className="text-xs text-red-300/80">
+                          {registrations.length}{' '}
+                          {registrations.length === 1
+                            ? 'registration'
+                            : 'registrations'}{' '}
+                          will be deleted with it
+                          {selectedEvent.archive_status ===
+                          'archived'
+                            ? ', along with the archived CSV in R2'
+                            : ''}
+                          . Download the CSV first if
+                          you still need it.
+                        </p>
+                      </div>
+
+                    </div>
+
+                    <label className="block text-xs text-gray-400 mb-2">
+                      Type{' '}
+                      <span className="font-mono text-red-300">
+                        {selectedEvent.slug}
+                      </span>{' '}
+                      to confirm
+                    </label>
+
+                    <input
+                      value={deleteConfirmText}
+                      onChange={(e) =>
+                        setDeleteConfirmText(
+                          e.target.value,
+                        )
+                      }
+                      autoFocus
+                      placeholder={
+                        selectedEvent.slug
+                      }
+                      className="w-full bg-dark-900/60 border border-dark-700 rounded-lg px-4 py-2.5 text-white font-mono text-sm outline-none focus:border-red-500 transition-colors mb-4"
+                    />
+
+                    <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+
+                      <button
+                        onClick={() => {
+                          setConfirmDelete(false);
+                          setDeleteConfirmText('');
+                        }}
+                        disabled={deleting}
+                        className="px-5 py-2.5 rounded-lg border border-dark-600 text-gray-300 hover:text-white hover:border-gray-500 disabled:opacity-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        onClick={deleteEvent}
+                        disabled={
+                          deleting ||
+                          deleteConfirmText.trim() !==
+                            selectedEvent.slug
+                        }
+                        className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:hover:bg-red-600 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Trash2 size={16} />
+                        {deleting
+                          ? 'Deleting...'
+                          : 'Delete Event'}
+                      </button>
+
+                    </div>
+
+                  </div>
+                )}
+
+              </div>
+
               {/* Footer actions */}
 
               <div className="border-t border-dark-700 mt-8 pt-6 flex justify-end">
@@ -2119,7 +2317,7 @@ setRegistrations(
                   onClick={() =>
                     setShowManageModal(false)
                   }
-                  disabled={manageSaving}
+                  disabled={manageSaving || deleting}
                   className="px-5 py-2.5 rounded-lg border border-dark-600 text-gray-300 hover:text-white hover:border-gray-500 transition-colors flex items-center gap-2"
                 >
                   <ArrowLeft

@@ -42,10 +42,12 @@ function json(data: unknown, status = 200, request?: Request, env?: Env): Respon
 	});
 }
 
+const GITHUB_ORG = 'osc-vitap';
+
 /*
- * Optional allow list of GitHub handles, on top of the
- * osc-technical-department team check. An empty ADMIN_GITHUB_USERS
- * means "anyone on the team", which is the original behaviour.
+ * Optional allow list of GitHub handles, on top of the osc-vitap
+ * organisation membership check. An empty ADMIN_GITHUB_USERS means
+ * "anyone in the organisation".
  */
 function adminGithubUsers(env?: Env): string[] {
 	return (env?.ADMIN_GITHUB_USERS ?? '')
@@ -701,30 +703,32 @@ export default {
 
 				/*
 				 * ==========================================================
-				 * OSC TECHNICAL DEPARTMENT AUTHORIZATION
+				 * OSC VIT-AP ORGANISATION AUTHORIZATION
 				 * ==========================================================
+				 *
+				 * Membership of the osc-vitap organisation is the gate.
+				 * This reads the signed-in user's own membership, so it
+				 * works for private members too, which listing the
+				 * organisation's members would not.
 				 */
 
-				const membershipResponse = await fetch(
-					`https://api.github.com/orgs/osc-vitap/teams/osc-technical-department/memberships/${encodeURIComponent(githubUser.login)}`,
-					{
-						headers: {
-							Authorization: `Bearer ${accessToken}`,
-							Accept: 'application/vnd.github+json',
-							'X-GitHub-Api-Version': '2022-11-28',
-							'User-Agent': 'OSC-VITAP-Events-Admin',
-						},
+				const membershipResponse = await fetch(`https://api.github.com/user/memberships/orgs/${GITHUB_ORG}`, {
+					headers: {
+						Authorization: `Bearer ${accessToken}`,
+						Accept: 'application/vnd.github+json',
+						'X-GitHub-Api-Version': '2022-11-28',
+						'User-Agent': 'OSC-VITAP-Events-Admin',
 					},
-				);
+				});
 
 				if (!membershipResponse.ok) {
 					const githubError = await membershipResponse.text();
 
-					console.log('GitHub team membership check:', membershipResponse.status, githubError);
+					console.log('GitHub org membership check:', githubUser.login, membershipResponse.status, githubError);
 
 					return json(
 						{
-							error: 'Access denied. You are not a member of the OSC technical department.',
+							error: 'Access denied. You are not a member of the OSC VIT-AP GitHub organisation.',
 						},
 						403,
 						request,
@@ -737,10 +741,14 @@ export default {
 					role?: string;
 				};
 
+				/*
+				 * An invitation that has not been accepted yet comes back
+				 * as 'pending'.
+				 */
 				if (membership.state !== 'active') {
 					return json(
 						{
-							error: 'Your OSC technical department membership is not active.',
+							error: 'Your OSC VIT-AP organisation membership is not active yet. Accept the invitation on GitHub and try again.',
 						},
 						403,
 						request,
@@ -816,7 +824,7 @@ export default {
 					{
 						authenticated: true,
 						github_username: session.github_username,
-						role: 'osc-technical-department',
+						role: `${GITHUB_ORG}-member`,
 						expires_at: session.expires_at,
 					},
 					200,

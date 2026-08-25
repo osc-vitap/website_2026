@@ -33,8 +33,8 @@
 
 		/**
 		 * Comma-separated GitHub handles allowed into the admin
-		 * dashboard, on top of the osc-technical-department team check.
-		 * Leave empty to allow anyone on that team.
+		 * dashboard, on top of the osc-vitap organisation membership
+		 * check. Leave empty to allow anyone in the organisation.
 		 */
 		"ADMIN_GITHUB_USERS": ""
 	},

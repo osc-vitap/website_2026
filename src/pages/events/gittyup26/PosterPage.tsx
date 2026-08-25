@@ -110,7 +110,6 @@ const PosterPage = ({
               ref={wordmarkRef}
               aria-hidden="true"
               className={`max-h-[36vh] select-none overflow-hidden tracking-[-0.015em] lg:max-h-[46vh] ${WORDMARK_SIZE}`}
-              style={{ filter: contrastHalo(variant.ink) }}
             >
               {Array.from(
                 {
@@ -121,6 +120,12 @@ const PosterPage = ({
                     key={index}
                     className={`overflow-hidden ${index > 0 ? '-mt-[0.26em]' : ''}`}
                   >
+                    {/*
+                      * Only the thin weight carries a halo. The black
+                      * weight has enough mass to hold its own against a
+                      * bright background, and shadowing it just made the
+                      * display type look grubby.
+                      */}
                     <div
                       className="poster-rise flex whitespace-nowrap leading-[1.2]"
                       style={{
@@ -134,6 +139,11 @@ const PosterPage = ({
                             ? 'font-thin'
                             : 'font-black'
                         }
+                        style={
+                          index % 2 === 0
+                            ? { filter: contrastHalo(variant.ink) }
+                            : undefined
+                        }
                       >
                         gitty
                       </span>
@@ -146,6 +156,10 @@ const PosterPage = ({
                         }
                         style={{
                           marginLeft: '0.36em',
+                          filter:
+                            index % 2 === 0
+                              ? undefined
+                              : contrastHalo(variant.ink),
                         }}
                       >
                         up
@@ -179,6 +193,22 @@ const PosterPage = ({
               >
                 26
               </div>
+
+              {/*
+                * Sits with the numeral rather than down in the details,
+                * so it is on the first screen at any viewport — on a
+                * phone the details block starts below the fold.
+                */}
+              <span
+                className="rounded-full border-2 px-3.5 py-1.5 font-postermono text-[11px] font-bold tracking-[0.1em] md:px-4 md:text-sm"
+                style={{
+                  borderColor: variant.accent,
+                  color: variant.accent,
+                  textShadow: textHalo(variant.accent),
+                }}
+              >
+                ODs Provided
+              </span>
             </div>
 
             {/* The poster's line */}

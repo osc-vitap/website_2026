@@ -101,9 +101,10 @@ export const posterVariants: PosterVariant[] = [
 		"text": "rgba(255,255,255,.72)",
 		"accent": "#b79dff",
 		"rows": 4,
+		"eyebrow": "A history of version control",
 		"headline": "First they lost the work. Then they built git.",
 		"emphasis": "git",
-		"dateLine": "29 August 2026 / 10am to 5pm",
+		"dateLine": "29 Aug 2026 / 10am to 5pm",
 		"venueLine": "AB-2 Auditorium"
 	},
 	{
@@ -120,10 +121,11 @@ export const posterVariants: PosterVariant[] = [
 		"text": "rgba(255,255,255,.86)",
 		"accent": "#a78bff",
 		"rows": 10,
+		"eyebrow": "A history of version control",
 		"headline": "Your remote can live in your room.",
 		"emphasis": "your room",
-		"dateLine": "29 Aug 2026 / 10am to 5pm",
-		"venueLine": "AB-2"
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
 		"id": 6,
@@ -143,8 +145,8 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 5,
 		"headline": "The graph came before the command.",
 		"emphasis": "command",
-		"dateLine": "29 August 2026 / 10am to 5pm",
-		"venueLine": "AB-2 Auditorium"
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
 		"id": 7,
@@ -182,8 +184,8 @@ export const posterVariants: PosterVariant[] = [
 		"accent": "#9a94ac",
 		"rows": 4,
 		"eyebrow": "A history of version control",
-		"headline": "Before git, there was a problem worth solving.",
-		"emphasis": "git",
+		"headline": "Your history should answer to you.",
+		"emphasis": "history",
 		"dateLine": "29 . 08 . 26",
 		"venueLine": "10:00 to 17:00 · AB-2 Auditorium"
 	},
@@ -311,7 +313,7 @@ export const posterVariants: PosterVariant[] = [
 		"text": "rgba(255,255,255,.8)",
 		"accent": "#8f7dff",
 		"rows": 2,
-		"eyebrow": "A history of version control",
+		"eyebrow": "We all use the solution. Almost nobody knows the problem.",
 		"headline": "Every tool you trust was once a workaround.",
 		"emphasis": "workaround",
 		"dateLine": "29 August 2026",
@@ -330,8 +332,8 @@ export const posterVariants: PosterVariant[] = [
 		"text": "#ffffff",
 		"accent": "#ddccff",
 		"rows": 4,
-		"headline": "Your history should answer to you.",
-		"emphasis": "history",
+		"headline": "Before git, there was a problem worth solving.",
+		"emphasis": "git",
 		"dateLine": "29 August 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
@@ -378,8 +380,8 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "History is a data structure.",
 		"emphasis": "data structure",
-		"dateLine": "29 Aug 2026",
-		"venueLine": "10am to 5pm · AB-2"
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
 		"id": 17,
@@ -418,9 +420,8 @@ export const posterVariants: PosterVariant[] = [
 		"text": "rgba(255,255,255,.72)",
 		"accent": "#f2edff",
 		"rows": 1,
-		"eyebrow": "A history of version control",
-		"headline": "Keep your own history.",
-		"emphasis": "history",
+		"headline": "Somebody had to invent undo.",
+		"emphasis": "undo",
 		"dateLine": "29 August 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
@@ -464,7 +465,6 @@ export const posterVariants: PosterVariant[] = [
 		"text": "rgba(255,255,255,.78)",
 		"accent": "#8f7dff",
 		"rows": 4,
-		"eyebrow": "A history of version control",
 		"headline": "The problem came first. The tool came later.",
 		"emphasis": "tool",
 		"dateLine": "DATE 2026-08-29 · TIME 10:00-17:00",
@@ -486,7 +486,6 @@ export const posterVariants: PosterVariant[] = [
 		"text": "rgba(255,255,255,.9)",
 		"accent": "#c4a8ff",
 		"rows": 5,
-		"eyebrow": "A history of version control",
 		"headline": "Every shortcut you type was once an argument.",
 		"emphasis": "argument",
 		"dateLine": "29 August 2026",
@@ -609,8 +608,8 @@ export const posterVariants: PosterVariant[] = [
 		"accent": "#c8cee0",
 		"rows": 4,
 		"eyebrow": "We all use the solution. Almost nobody knows the problem.",
-		"headline": "Nothing about this was inevitable.",
-		"emphasis": "inevitable",
+		"headline": "The workaround came first.",
+		"emphasis": "workaround",
 		"dateLine": "29 August 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
@@ -628,8 +627,8 @@ export const posterVariants: PosterVariant[] = [
 		"text": "#ffffff",
 		"accent": "#ffb04a",
 		"rows": 5,
-		"headline": "Git did not have to win.",
-		"emphasis": "win",
+		"headline": "Git won. But why?",
+		"emphasis": "why",
 		"dateLine": "29 August 2026",
 		"venueLine": "10:00 to 17:00 · AB-2 Auditorium"
 	},
@@ -649,6 +648,7 @@ export const posterVariants: PosterVariant[] = [
 		"text": "#ffffff",
 		"accent": "#a97dff",
 		"rows": 6,
+		"eyebrow": "A history of version control, and why you should be hosting your own git.",
 		"headline": "A remote you own.",
 		"emphasis": "remote",
 		"dateLine": "29 August 2026",
@@ -665,8 +665,8 @@ export const posterVariants: PosterVariant[] = [
 		"text": "#ffffff",
 		"accent": "#a17cff",
 		"rows": 4,
-		"headline": "Nobody else needs a copy of your history.",
-		"emphasis": "history",
+		"headline": "The fix is famous. The problem is not.",
+		"emphasis": "problem",
 		"dateLine": "29 August 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},

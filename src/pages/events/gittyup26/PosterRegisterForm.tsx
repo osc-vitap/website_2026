@@ -22,13 +22,15 @@ const FIELDS = [
     label: 'Full name',
     type: 'text',
     autoComplete: 'name',
+    placeholder: '',
     required: true,
   },
   {
     name: 'college_registration_number',
-    label: 'Registration number',
+    label: 'University registration number',
     type: 'text',
     autoComplete: 'off',
+    placeholder: '22BCE1234',
     required: true,
   },
   {
@@ -36,6 +38,7 @@ const FIELDS = [
     label: 'Year of study',
     type: 'text',
     autoComplete: 'off',
+    placeholder: '',
     required: true,
   },
   {
@@ -43,6 +46,7 @@ const FIELDS = [
     label: 'Email',
     type: 'email',
     autoComplete: 'email',
+    placeholder: '',
     required: true,
   },
   {
@@ -50,6 +54,7 @@ const FIELDS = [
     label: 'GitHub (optional)',
     type: 'text',
     autoComplete: 'off',
+    placeholder: '',
     required: false,
   },
 ] as const;
@@ -232,6 +237,7 @@ const PosterRegisterForm = ({
               type={field.type}
               required={field.required}
               autoComplete={field.autoComplete}
+              placeholder={field.placeholder}
               value={values[field.name]}
               onChange={(e) =>
                 set(field.name, e.target.value)

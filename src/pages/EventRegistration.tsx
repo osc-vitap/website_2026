@@ -422,7 +422,8 @@ const EventRegistration = () => {
                         />
 
                         <Field
-                          label="College Registration Number"
+                          label="University Registration Number"
+                          placeholder="22BCE1234"
                           value={
                             member.college_registration_number
                           }

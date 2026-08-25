@@ -1,32 +1,39 @@
+import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { EventPageFrame } from './eventPageKit';
 import { useEventPageMeta } from './useEventPageMeta';
-import PosterGround from './gittyup26/PosterGround';
-import { LAYOUTS } from './gittyup26/PosterLayouts';
+import { useFontsReady } from './gittyup26/useFontsReady';
+import PosterPage from './gittyup26/PosterPage';
 import { variantFromParam } from './gittyup26/posterVariants';
 
 /*
  * GITTYUP 26 — 29 August 2026, AB-2 Auditorium.
  *
  * Thirty posters go up around campus, each carrying a QR code for
- * ?pg=1 … ?pg=30. Scanning one lands here on a page built from that
- * poster's own palette, wordmark and line, so the screen matches the
- * paper in the reader's hand. An absent or out-of-range value falls
- * back to the first poster, so a smudged code still lands somewhere.
+ * ?pg=1 … ?pg=30. Scanning one lands here on that poster's colours,
+ * line and wordmark, so the screen matches the paper in the reader's
+ * hand.
  *
- * The variants live in ./gittyup26/posterVariants.ts, derived from the
- * print artwork. See src/data/gittyUp26Posters.json for the specs they
- * were read from.
+ * Without a ?pg the page picks a poster at random, so the bare URL
+ * shows a different one on each visit.
  */
 
 const GittyUp26 = () => {
   const [searchParams] = useSearchParams();
 
-  const variant = variantFromParam(
-    searchParams.get('pg'),
+  const pg = searchParams.get('pg');
+
+  /*
+   * Resolved once per pg value rather than per render — the random
+   * branch would otherwise pick a new poster every time React
+   * re-rendered the page.
+   */
+  const variant = useMemo(
+    () => variantFromParam(pg),
+    [pg],
   );
 
-  const Layout = LAYOUTS[variant.layout];
+  const fontsReady = useFontsReady();
 
   useEventPageMeta(
     'GITTYUP 26 · Open Source Community, VIT-AP',
@@ -38,11 +45,29 @@ const GittyUp26 = () => {
       className="font-poster"
       key={variant.id}
     >
-      <PosterGround variant={variant} />
+      <PosterPage variant={variant} />
 
-      <div className="relative z-10 lg:h-full">
-        <Layout variant={variant} />
-      </div>
+      {/*
+        * Held over the poster until the typefaces land, so the wordmark
+        * never renders in a fallback face first. Fades out rather than
+        * cutting, and is removed from the tree once it has.
+        */}
+      {!fontsReady && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: variant.ground }}
+          role="status"
+          aria-label="Loading"
+        >
+          <div
+            className="h-9 w-9 animate-spin rounded-full border-2 border-transparent"
+            style={{
+              borderTopColor: variant.accent,
+              borderRightColor: variant.accent,
+            }}
+          />
+        </div>
+      )}
     </EventPageFrame>
   );
 };

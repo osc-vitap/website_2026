@@ -1,0 +1,286 @@
+import { ArrowRight } from 'lucide-react';
+import { RegisterLink } from '../eventPageKit';
+import PosterGround from './PosterGround';
+import { PosterVariant } from './posterTypes';
+
+/*
+ * One layout, thirty palettes.
+ *
+ * Every poster page uses this composition: the wordmark stack, the
+ * toggle and the numeral on the left, the details and the call to
+ * action on the right, the poster's line beneath. Only the colours,
+ * the background, the row count and the copy change between the
+ * thirty, which keeps the spacing predictable — a per-poster layout
+ * left half the page empty at some viewport or other.
+ *
+ * It is one screen from `lg` up and flows on smaller screens, so the
+ * call to action can never be clipped off a phone.
+ */
+
+interface PosterPageProps {
+  variant: PosterVariant;
+}
+
+/*
+ * The wordmark is sized to fill its column, not to fit its row count.
+ *
+ * Sizing by row count made the ten-row posters set tiny type and left
+ * the page mostly empty. The printed posters instead run the stack at
+ * one size and let it bleed off the page, so the stack here is clipped
+ * to the space it has: every poster gets the same weight of type, and
+ * a tall stack simply runs past the edge as it does in print.
+ */
+const WORDMARK_SIZE =
+  'text-[clamp(2.5rem,19vw,7rem)] lg:text-[min(12.5vw,13rem)]';
+
+const PosterPage = ({
+  variant,
+}: PosterPageProps) => {
+  const { headline, emphasis } = variant;
+
+  const emphasisAt =
+    emphasis && headline.includes(emphasis)
+      ? headline.indexOf(emphasis)
+      : -1;
+
+  const wordmarkFill = variant.inkGradient
+    ? {
+        backgroundImage: variant.inkGradient,
+        WebkitBackgroundClip: 'text' as const,
+        backgroundClip: 'text' as const,
+        color: 'transparent',
+      }
+    : { color: variant.ink };
+
+  return (
+    <>
+      <PosterGround variant={variant} />
+
+      <div className="relative z-10 flex min-h-[100dvh] flex-col px-6 py-7 md:px-12 md:py-9 lg:h-full">
+
+        {/* Masthead */}
+
+        <header className="flex items-start justify-between gap-4">
+          <img
+            src="/events/gittyup26/osc-lockup.webp"
+            alt="Open Source Community, campus club at VIT-AP"
+            className="h-8 w-auto drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)] md:h-11"
+          />
+
+          <img
+            src="/events/gittyup26/vitap-logo.webp"
+            alt="VIT-AP University"
+            className="h-7 w-auto opacity-95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)] md:h-10"
+          />
+        </header>
+
+        {/* Poster body */}
+
+        <main className="grid flex-1 items-center gap-10 py-10 lg:grid-cols-[1.5fr_1fr] lg:gap-12 lg:py-6">
+
+          <section>
+
+            {/* Wordmark stack, clipped to the room it has */}
+
+            <div
+              aria-hidden="true"
+              className={`max-h-[42vh] select-none overflow-hidden tracking-[-0.015em] lg:max-h-[54vh] ${WORDMARK_SIZE}`}
+            >
+              {Array.from(
+                {
+                  length: Math.max(
+                    1,
+                    variant.rows,
+                  ),
+                },
+                (_, index) => (
+                  <div
+                    key={index}
+                    className={`overflow-hidden ${index > 0 ? '-mt-[0.26em]' : ''}`}
+                  >
+                    <div
+                      className="poster-rise flex whitespace-nowrap leading-[1.2]"
+                      style={{
+                        ...wordmarkFill,
+                        animationDelay: `${index * 0.07}s`,
+                      }}
+                    >
+                      <span
+                        className={
+                          index % 2 === 0
+                            ? 'font-thin'
+                            : 'font-black'
+                        }
+                      >
+                        gitty
+                      </span>
+
+                      <span
+                        className={
+                          index % 2 === 0
+                            ? 'font-black'
+                            : 'font-thin'
+                        }
+                        style={{
+                          marginLeft: '0.36em',
+                        }}
+                      >
+                        up
+                      </span>
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+
+            {/* Toggle and numeral */}
+
+            <div className="mt-7 flex items-center gap-6 lg:mt-6">
+              <div
+                aria-hidden="true"
+                className="flex w-[clamp(5rem,12vw,9rem)] items-center justify-end rounded-full border-[3px] p-[0.3rem] md:border-4"
+                style={{ borderColor: variant.ink }}
+              >
+                <div
+                  className="aspect-square w-[clamp(1.2rem,3vw,2.2rem)] rounded-full"
+                  style={{
+                    backgroundColor: variant.ink,
+                  }}
+                />
+              </div>
+
+              <div
+                className="font-black leading-none text-[clamp(2.5rem,8vw,5.5rem)] lg:text-[min(5.5vw,8vh)]"
+                style={{ color: variant.ink }}
+              >
+                26
+              </div>
+            </div>
+
+            {/* The poster's line */}
+
+            <h1
+              className="mt-8 max-w-2xl font-thin leading-snug tracking-[-0.02em] text-[clamp(1.1rem,2.5vw,1.8rem)] lg:mt-7"
+              style={{ color: variant.text }}
+            >
+              {emphasisAt === -1 ? (
+                headline
+              ) : (
+                <>
+                  {headline.slice(
+                    0,
+                    emphasisAt,
+                  )}
+                  <span className="font-extrabold">
+                    {emphasis}
+                  </span>
+                  {headline.slice(
+                    emphasisAt +
+                      (emphasis?.length ?? 0),
+                  )}
+                </>
+              )}
+            </h1>
+
+          </section>
+
+          {/* Details and call to action */}
+
+          <aside className="lg:pb-4">
+
+            <div
+              className="border-t-2 pt-6"
+              style={{
+                borderColor: `${variant.accent}59`,
+              }}
+            >
+
+              {variant.eyebrow && (
+                <div
+                  className="font-postermono text-[10px] font-medium uppercase tracking-[0.26em] md:text-xs"
+                  style={{
+                    color: variant.accent,
+                  }}
+                >
+                  {variant.eyebrow}
+                </div>
+              )}
+
+              <div
+                className="mt-4 text-[clamp(1.5rem,3.6vw,2.4rem)] font-bold leading-none tracking-[-0.02em]"
+                style={{ color: variant.text }}
+              >
+                {variant.dateLine}
+              </div>
+
+              {variant.venueLine && (
+                <div
+                  className="mt-3 font-postermono text-xs opacity-80 md:text-sm"
+                  style={{ color: variant.text }}
+                >
+                  {variant.venueLine}
+                </div>
+              )}
+
+              <p
+                className="mt-6 max-w-md text-xs font-light leading-relaxed opacity-75 md:text-sm"
+                style={{ color: variant.text }}
+              >
+                Mandatory for all first years. No prior
+                knowledge of Git or GitHub needed —
+                start from zero.
+              </p>
+
+              <RegisterLink
+                registrationSlug="gittyup26"
+                className="group mt-7 inline-flex w-full items-center justify-between gap-4 rounded-full px-7 py-4 text-base font-bold transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 sm:w-auto md:text-lg"
+                style={{
+                  backgroundColor: variant.accent,
+                  color: variant.ground,
+                  outlineColor: variant.accent,
+                }}
+              >
+                Register Now
+                <ArrowRight
+                  size={20}
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              </RegisterLink>
+
+            </div>
+
+          </aside>
+
+        </main>
+
+        {/* Footline */}
+
+        <footer
+          className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-5 font-postermono text-[10px] md:text-xs"
+          style={{
+            borderColor: `${variant.accent}40`,
+            color: variant.text,
+          }}
+        >
+          <span style={{ color: variant.accent }}>
+            oscvitap.com/gittyup26
+          </span>
+
+          <span className="opacity-70">
+            Open Source Community · VIT-AP University
+          </span>
+
+          <span
+            className="tabular-nums opacity-40"
+            title={`Poster ${variant.id} of 30`}
+          >
+            {String(variant.id).padStart(2, '0')}/30
+          </span>
+        </footer>
+
+      </div>
+    </>
+  );
+};
+
+export default PosterPage;

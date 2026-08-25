@@ -21,6 +21,7 @@ export const POSTER_COUNT = 30;
 export const posterVariants: PosterVariant[] = [
 	{
 		"id": 1,
+		"image": "/events/gittyup26/art-glacial.webp",
 		"layout": "wordmark-stack",
 		"ground": "#020610",
 		"layers": [
@@ -41,6 +42,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 2,
+		"image": "/events/gittyup26/chrome-3.webp",
 		"layout": "wordmark-stack",
 		"ground": "#04040a",
 		"layers": [
@@ -62,6 +64,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 3,
+		"image": "/events/gittyup26/noisy-2.webp",
 		"layout": "wordmark-stack",
 		"ground": "#03100f",
 		"layers": [
@@ -85,6 +88,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 4,
+		"image": "/events/gittyup26/art-liquidmetal.webp",
 		"layout": "wordmark-stack",
 		"ground": "#050310",
 		"layers": [
@@ -106,6 +110,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 5,
+		"image": "/events/gittyup26/halftone.webp",
 		"layout": "wordmark-stack",
 		"ground": "#0b0022",
 		"layers": [
@@ -124,6 +129,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 6,
+		"image": "/events/gittyup26/noisy-4.webp",
 		"layout": "wordmark-stack",
 		"ground": "#0d0316",
 		"layers": [
@@ -163,6 +169,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 8,
+		"image": "/events/gittyup26/chrome-rings.webp",
 		"layout": "wordmark-stack",
 		"ground": "#000000",
 		"layers": [
@@ -228,6 +235,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 10,
+		"image": "/events/gittyup26/art-purple.webp",
 		"layout": "wordmark-stack",
 		"ground": "#05030c",
 		"layers": [
@@ -249,6 +257,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 11,
+		"image": "/events/gittyup26/noisy-3.webp",
 		"layout": "wordmark-stack",
 		"ground": "#060210",
 		"layers": [
@@ -269,6 +278,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 12,
+		"image": "/events/gittyup26/chrome-rings.webp",
 		"layout": "wordmark-stack",
 		"ground": "#000000",
 		"layers": [
@@ -289,6 +299,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 13,
+		"image": "/events/gittyup26/art-arc.webp",
 		"layout": "wordmark-stack",
 		"ground": "#000000",
 		"layers": [
@@ -328,6 +339,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 15,
+		"image": "/events/gittyup26/chrome-blobs.webp",
 		"layout": "headline-led",
 		"ground": "#000000",
 		"layers": [
@@ -350,6 +362,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 16,
+		"image": "/events/gittyup26/art-glacial.webp",
 		"layout": "wordmark-stack",
 		"ground": "#01050c",
 		"layers": [
@@ -372,6 +385,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 17,
+		"image": "/events/gittyup26/art-liquidmetal.webp",
 		"layout": "wordmark-stack",
 		"ground": "#06040f",
 		"layers": [
@@ -393,6 +407,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 18,
+		"image": "/events/gittyup26/chrome-3.webp",
 		"layout": "headline-led",
 		"ground": "#000000",
 		"layers": [
@@ -459,6 +474,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 21,
+		"image": "/events/gittyup26/noisy-4.webp",
 		"layout": "wordmark-stack",
 		"ground": "#12003c",
 		"layers": [
@@ -480,6 +496,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 22,
+		"image": "/events/gittyup26/noisy-5.webp",
 		"layout": "wordmark-stack",
 		"ground": "#070313",
 		"layers": [
@@ -500,6 +517,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 23,
+		"image": "/events/gittyup26/art-blue.webp",
 		"layout": "wordmark-stack",
 		"ground": "#01040c",
 		"layers": [
@@ -520,6 +538,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 24,
+		"image": "/events/gittyup26/art-flow.webp",
 		"layout": "wordmark-stack",
 		"ground": "#04030d",
 		"layers": [
@@ -539,6 +558,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 25,
+		"image": "/events/gittyup26/art-arc.webp",
 		"layout": "wordmark-stack",
 		"ground": "#03020a",
 		"layers": [
@@ -577,6 +597,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 27,
+		"image": "/events/gittyup26/chrome-blobs.webp",
 		"layout": "wordmark-stack",
 		"ground": "#04020c",
 		"layers": [
@@ -616,6 +637,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 29,
+		"image": "/events/gittyup26/noisy-1.webp",
 		"layout": "wordmark-stack",
 		"ground": "#08031c",
 		"layers": [
@@ -653,8 +675,12 @@ export const posterVariants: PosterVariant[] = [
 ];
 
 /*
- * Reads ?pg= and falls back to the first poster for anything missing or
- * out of range, so a smudged or mistyped QR code still lands somewhere.
+ * Reads ?pg= and resolves it to a poster.
+ *
+ * A valid number selects that poster, which is what the printed QR
+ * codes rely on. Anything else — no query, a mistyped one, a smudged
+ * code — picks at random, so the bare URL shows a different poster on
+ * each visit rather than always the first.
  */
 export const variantFromParam = (
 	value: string | null,
@@ -662,9 +688,15 @@ export const variantFromParam = (
 	const page = Number(value);
 
 	const valid =
+		value !== null &&
+		value.trim() !== '' &&
 		Number.isInteger(page) &&
 		page >= 1 &&
 		page <= posterVariants.length;
 
-	return posterVariants[valid ? page - 1 : 0];
+	if (valid) return posterVariants[page - 1];
+
+	return posterVariants[
+		Math.floor(Math.random() * posterVariants.length)
+	];
 };

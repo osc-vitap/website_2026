@@ -30,6 +30,16 @@ const PosterGround = ({
       style={{ background: variant.ground }}
     />
 
+    {variant.image && (
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url(${variant.image})`,
+        }}
+      />
+    )}
+
     {variant.layers.map((layer, index) => (
       <div
         key={index}

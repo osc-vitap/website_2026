@@ -27,6 +27,13 @@ export interface PosterVariant {
   ground: string;
 
   /**
+   * The poster's own photographic texture, optimised for the web.
+   * Sits directly on the ground, under everything in `layers`, which
+   * are the scrims and tints the print design put over it.
+   */
+  image?: string;
+
+  /**
    * CSS background values painted over the ground, first entry
    * closest to the ground. Taken from the poster's own overlays,
    * plus a replacement for the photograph where there was one.

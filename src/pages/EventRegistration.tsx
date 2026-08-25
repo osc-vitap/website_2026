@@ -17,11 +17,13 @@ interface Event {
   description?: string;
   venue?: string;
   event_date: string;
+  event_end_at?: string | null;
   image?: string;
   is_open: number;
   registration_type: RegistrationType;
   min_team_size: number;
   max_team_size: number;
+  archive_status?: string;
 }
 
 interface Member {

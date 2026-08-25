@@ -23,6 +23,15 @@
 		}
 	],
 
+	/**
+	 * Comma-separated list of browser origins allowed to call this
+	 * Worker. http://localhost:5173 and http://127.0.0.1:5173 are
+	 * always allowed in addition to these.
+	 */
+	"vars": {
+		"ALLOWED_ORIGINS": "https://www.oscvitap.com,https://oscvitap.com"
+	},
+
 	"secrets": {
 		"required": [
 			"GITHUB_CLIENT_ID",

@@ -16,11 +16,13 @@ interface ApiEvent {
   description: string | null;
   venue: string | null;
   event_date: string;
+  event_end_at: string | null;
   image: string | null;
   is_open: number;
   registration_type: string;
   min_team_size: number;
   max_team_size: number;
+  archive_status: string;
 }
 
 const createSlug = (title: string) =>
@@ -29,6 +31,34 @@ const createSlug = (title: string) =>
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+
+/*
+ * event_end_at is the real end of the event, so it decides
+ * whether an event is still upcoming. Events created before
+ * that column existed fall back to their start date, which
+ * keeps an event listed for the whole day it runs on.
+ */
+const isEventUpcoming = (event: ApiEvent): boolean => {
+  const endsAt = event.event_end_at
+    ? Date.parse(event.event_end_at)
+    : Number.NaN;
+
+  if (!Number.isNaN(endsAt)) {
+    return endsAt >= Date.now();
+  }
+
+  const startsAt = Date.parse(event.event_date);
+
+  if (Number.isNaN(startsAt)) {
+    return false;
+  }
+
+  const startOfToday = Date.parse(
+    new Date().toISOString().split('T')[0],
+  );
+
+  return startsAt >= startOfToday;
+};
 
 const Events = () => {
   const [activeTab, setActiveTab] =
@@ -57,11 +87,6 @@ const Events = () => {
           events: ApiEvent[];
         } = await response.json();
 
-        const today =
-          new Date()
-            .toISOString()
-            .split('T')[0];
-
         /*
          * Convert D1 events into the same structure
          * already used by the existing Events page.
@@ -81,7 +106,7 @@ const Events = () => {
               event.image ?? '',
             url: `/events/${event.slug}/register`,
             isUpcoming:
-              event.event_date >= today,
+              isEventUpcoming(event),
             description:
               event.description ?? '',
           }));
@@ -131,8 +156,7 @@ const Events = () => {
                 localEvent.carouselImage,
               url: `/events/${apiEvent.slug}/register`,
               isUpcoming:
-                apiEvent.event_date >=
-                today,
+                isEventUpcoming(apiEvent),
               description:
                 apiEvent.description ??
                 localEvent.description,

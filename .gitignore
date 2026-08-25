@@ -26,3 +26,6 @@ dist-ssr/
 
 # Generated poster QR codes — regenerate with scripts/make-poster-qr.mjs
 /qr/*.png
+
+# Archives of the generated QR codes, for handing to the design tool
+*.zip

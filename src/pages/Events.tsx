@@ -26,6 +26,15 @@ interface ApiEvent {
   archive_status: string;
 }
 
+/*
+ * The admin form saves cleared fields as empty strings rather than
+ * null, so `??` alone would hand an empty src to <img>.
+ */
+const orFallback = (
+  value: string | null | undefined,
+  fallback: string,
+) => (value?.trim() ? value : fallback);
+
 const createSlug = (title: string) =>
   title
     .toLowerCase()
@@ -96,15 +105,23 @@ const Events = () => {
           data.events.map((event) => ({
             id: event.id,
             title: event.title,
-            sub_title:
-              event.sub_title ?? '',
-            venue: event.venue ?? '',
+            sub_title: orFallback(
+              event.sub_title,
+              '',
+            ),
+            venue: orFallback(
+              event.venue,
+              '',
+            ),
             date: event.event_date,
-            image:
-              event.image ??
+            image: orFallback(
+              event.image,
               'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
-            carouselImage:
-              event.image ?? '',
+            ),
+            carouselImage: orFallback(
+              event.image,
+              '',
+            ),
             url: `/events/${event.slug}/register`,
             eventPageUrl:
               eventPageForRegistration(
@@ -147,20 +164,24 @@ const Events = () => {
             return {
               id: apiEvent.id,
               title: apiEvent.title,
-              sub_title:
-                apiEvent.sub_title ??
+              sub_title: orFallback(
+                apiEvent.sub_title,
                 localEvent.sub_title,
-              venue:
-                apiEvent.venue ??
+              ),
+              venue: orFallback(
+                apiEvent.venue,
                 localEvent.venue,
+              ),
               date:
                 apiEvent.event_date,
-              image:
-                apiEvent.image ??
+              image: orFallback(
+                apiEvent.image,
                 localEvent.image,
-              carouselImage:
-                apiEvent.image ??
+              ),
+              carouselImage: orFallback(
+                apiEvent.image,
                 localEvent.carouselImage,
+              ),
               url: `/events/${apiEvent.slug}/register`,
               eventPageUrl:
                 eventPageForRegistration(
@@ -170,9 +191,10 @@ const Events = () => {
                   : undefined,
               isUpcoming:
                 isEventUpcoming(apiEvent),
-              description:
-                apiEvent.description ??
+              description: orFallback(
+                apiEvent.description,
                 localEvent.description,
+              ),
             };
           });
 

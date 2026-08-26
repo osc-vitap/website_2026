@@ -4,13 +4,13 @@ import { config, isConfigured } from '../data/config';
 
 const Footer = () => {
   return (
-    <footer className="border-t border-dark-600/50 bg-dark-900/80 backdrop-blur-md pt-16 pb-8 mt-20 relative z-10">
+    <footer className="relative z-10 mt-16 border-t border-dark-600/50 bg-dark-900/80 pb-8 pt-14 backdrop-blur-md sm:mt-20 sm:pt-16">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+        <div className="mb-12 grid grid-cols-1 gap-10 md:grid-cols-4 md:gap-12">
           
           {/* Brand Col */}
           <div className="md:col-span-2">
-            <Link to="/" className="flex items-center gap-2 group mb-4">
+            <Link to="/" className="group mb-4 flex items-center gap-2">
               <div className="p-2 bg-dark-800 rounded-lg border border-dark-600">
                 <Terminal className="text-brand-primary" size={24} />
               </div>
@@ -31,16 +31,16 @@ const Footer = () => {
               */}
             <div className="flex flex-wrap gap-3 sm:gap-4">
               {isConfigured(config.socials.discord) && (
-                <a href={config.socials.discord} target="_blank" rel="noreferrer" className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-semibold min-h-[44px] py-2 px-4 transition-colors inline-flex items-center gap-2">
+                <a href={config.socials.discord} target="_blank" rel="noreferrer" className="inline-flex min-h-[44px] items-center gap-2 bg-[#5865F2] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4752C4]">
                   Join Discord
                 </a>
               )}
               {isConfigured(config.socials.whatsapp) && (
-                <a href={config.socials.whatsapp} target="_blank" rel="noreferrer" className="bg-[#25D366] hover:bg-[#1DA851] text-white text-sm font-semibold min-h-[44px] py-2 px-4 transition-colors inline-flex items-center gap-2">
+                <a href={config.socials.whatsapp} target="_blank" rel="noreferrer" className="inline-flex min-h-[44px] items-center gap-2 bg-[#25D366] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1DA851]">
                   WhatsApp
                 </a>
               )}
-              <a href={config.socials.github} target="_blank" rel="noreferrer" className="bg-dark-700 hover:bg-dark-600 border border-dark-600 text-white text-sm font-semibold min-h-[44px] py-2 px-4 transition-colors inline-flex items-center gap-2">
+              <a href={config.socials.github} target="_blank" rel="noreferrer" className="inline-flex min-h-[44px] items-center gap-2 border border-dark-600 bg-dark-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-dark-600">
                 GitHub
               </a>
             </div>

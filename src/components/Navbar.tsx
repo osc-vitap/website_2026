@@ -52,11 +52,11 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'glass py-3' : 'bg-transparent py-5'}`}>
-        <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
+      <nav className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'glass py-3' : 'bg-transparent py-4 sm:py-5'}`}>
+        <div className="container mx-auto flex items-center justify-between gap-3 px-4 md:px-6">
           
           {/* Logo */}
-            <Link to="/" className="flex items-center gap-3 select-none hover:opacity-90 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-accent">
+            <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3 select-none transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-accent">
               {/* Static Photo Logo */}
               <img
                 src="/events/favicon.png"
@@ -67,7 +67,7 @@ const Navbar = () => {
               />
 
               {/* Typography */}
-              <span className="font-bebas text-3xl tracking-wider uppercase font-bold text-white">
+              <span className="truncate font-bebas text-2xl font-bold uppercase tracking-[0.18em] text-white sm:text-3xl sm:tracking-wider">
                 OSC<span className="text-[#7c3aed]">VIT-AP</span>
               </span>
             </Link>
@@ -101,7 +101,7 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Toggle */}
-          <div className="lg:hidden flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1 lg:hidden">
             <button
               onClick={() => setIsSearchOpen(true)}
               aria-label="Open search"
@@ -126,7 +126,7 @@ const Navbar = () => {
         {isOpen && (
           <div
             id="mobile-nav"
-            className="lg:hidden absolute top-full left-0 w-full max-h-[calc(100vh-6rem)] overflow-y-auto bg-dark-900 border-b border-dark-600 flex flex-col items-start p-4 gap-2 shadow-2xl"
+            className="absolute left-0 top-full flex max-h-[calc(100vh-6rem)] w-full flex-col items-start gap-2 overflow-y-auto border-b border-dark-600 bg-dark-900 p-4 shadow-2xl lg:hidden"
           >
             {navLinks.map((link) => (
               <Link

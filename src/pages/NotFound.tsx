@@ -21,7 +21,7 @@ const NotFound = () => {
   const { pathname } = useLocation();
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-20 md:py-28 font-sans">
+    <div className="container mx-auto px-4 py-16 sm:py-20 md:px-6 md:py-28 font-sans">
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -35,7 +35,7 @@ const NotFound = () => {
         </div>
 
         <h1
-          className="glitch-text font-bebas text-7xl md:text-9xl text-white leading-none tracking-wider mb-6"
+          className="glitch-text mb-6 font-bebas text-6xl leading-none tracking-wider text-white sm:text-7xl md:text-9xl"
           data-text="404"
         >
           404

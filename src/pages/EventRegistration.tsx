@@ -284,7 +284,7 @@ const EventRegistration = () => {
     event.registration_type === 'team';
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-12 max-w-5xl">
+    <div className="container mx-auto max-w-5xl px-4 py-10 sm:py-12 md:px-6">
 
       <Link
         to="/events"
@@ -326,7 +326,7 @@ const EventRegistration = () => {
             </div>
           )}
 
-          <div className="p-6 md:p-10">
+          <div className="p-5 sm:p-6 md:p-10">
 
             <div className="text-brand-accent text-xs font-bold uppercase tracking-widest mb-2">
               {event.sub_title ||
@@ -340,7 +340,7 @@ const EventRegistration = () => {
               </span>
             </h1>
 
-            <p className="text-gray-400 mb-8">
+            <p className="mb-8 break-words text-gray-400">
               {event.description}
             </p>
 

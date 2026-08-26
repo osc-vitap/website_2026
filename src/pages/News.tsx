@@ -41,9 +41,9 @@ const getCategoryColor = (cat: string) => {
 
 const News = () => {
   return (
-    <div className="container mx-auto px-4 md:px-6 py-12">
+    <div className="container mx-auto px-4 py-10 sm:py-12 md:px-6">
       
-      <div className="text-center max-w-2xl mx-auto mb-16">
+      <div className="mx-auto mb-14 max-w-2xl text-center sm:mb-16">
         <h1 className="text-4xl md:text-5xl font-bold mb-4">News & <span className="text-gradient">Announcements</span></h1>
         <p className="text-gray-400">
           Stay updated with the latest happenings, recruitment drives, and releases from OSC.
@@ -51,7 +51,7 @@ const News = () => {
       </div>
 
       <div className="max-w-4xl mx-auto">
-        <div className="relative border-l border-dark-600 ml-4 md:ml-0">
+        <div className="relative ml-2 border-l border-dark-600 sm:ml-4 md:ml-0">
           {newsData.map((news, i) => (
             <motion.div 
               key={news.id}
@@ -59,12 +59,12 @@ const News = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="mb-12 last:mb-0 ml-8 md:ml-12 relative"
+              className="relative ml-6 mb-10 last:mb-0 sm:ml-8 md:ml-12 md:mb-12"
             >
               {/* Timeline dot */}
-              <div className="absolute -left-[41px] md:-left-[57px] top-1.5 w-4 h-4 rounded-full bg-brand-primary border-4 border-dark-900 shadow-[0_0_10px_rgba(109,40,217,0.8)]"></div>
+              <div className="absolute -left-[33px] top-1.5 h-4 w-4 rounded-full border-4 border-dark-900 bg-brand-primary shadow-[0_0_10px_rgba(109,40,217,0.8)] sm:-left-[41px] md:-left-[57px]"></div>
               
-              <div className="glass-card p-6 hover:-translate-y-1 transition-transform">
+              <div className="glass-card p-5 transition-transform hover:-translate-y-1 sm:p-6">
                 <div className="flex flex-wrap items-center gap-3 mb-3">
                   <span className={`text-xs font-semibold px-2 py-1 rounded border ${getCategoryColor(news.category)}`}>
                     {news.category}

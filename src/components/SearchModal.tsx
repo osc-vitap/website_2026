@@ -48,15 +48,15 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20 px-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center px-3 pt-14 sm:px-4 sm:pt-20">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-dark-900/80 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div role="dialog" aria-modal="true" aria-label="Search the site" className="relative w-full max-w-2xl bg-dark-800 border border-dark-600 shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-6rem)] sm:max-h-[80vh]">
+      <div role="dialog" aria-modal="true" aria-label="Search the site" className="relative flex max-h-[calc(100vh-5rem)] w-full max-w-2xl flex-col overflow-hidden border border-dark-600 bg-dark-800 shadow-2xl sm:max-h-[80vh]">
 
         {/* Search Input */}
-        <div className="flex items-center pl-4 pr-2 py-2 border-b border-dark-600 focus-within:border-brand-primary transition-colors">
+        <div className="flex items-center border-b border-dark-600 py-2 pl-3 pr-2 transition-colors focus-within:border-brand-primary sm:pl-4">
           <Search className="text-gray-400 mr-3 shrink-0" size={20} />
           <input
             autoFocus
@@ -91,9 +91,9 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                 <div className="mb-4">
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">Events</h3>
                   {filteredEvents.map(e => (
-                    <button key={e.id} onClick={() => handleNavigate('/events')} className="w-full min-h-[44px] gap-3 text-left px-3 py-2 hover:bg-dark-700 focus-visible:bg-dark-700 transition-colors flex justify-between items-center">
-                      <span className="text-gray-200 font-medium truncate min-w-0">{e.title}</span>
-                      <span className="text-xs text-brand-accent shrink-0">{e.date}</span>
+                    <button key={e.id} onClick={() => handleNavigate('/events')} className="flex min-h-[44px] w-full flex-col items-start gap-1 px-3 py-2 text-left transition-colors hover:bg-dark-700 focus-visible:bg-dark-700 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                      <span className="min-w-0 truncate text-gray-200 font-medium">{e.title}</span>
+                      <span className="text-xs text-brand-accent sm:shrink-0">{e.date}</span>
                     </button>
                   ))}
                 </div>
@@ -102,9 +102,9 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                 <div className="mb-4">
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">Team</h3>
                   {filteredTeam.map(t => (
-                    <button key={t.id} onClick={() => handleNavigate('/team')} className="w-full min-h-[44px] gap-3 text-left px-3 py-2 hover:bg-dark-700 focus-visible:bg-dark-700 transition-colors flex justify-between items-center">
-                      <span className="text-gray-200 font-medium truncate min-w-0">{t.name}</span>
-                      <span className="text-xs text-gray-400 truncate shrink-0 max-w-[45%]">{t.role}</span>
+                    <button key={t.id} onClick={() => handleNavigate('/team')} className="flex min-h-[44px] w-full flex-col items-start gap-1 px-3 py-2 text-left transition-colors hover:bg-dark-700 focus-visible:bg-dark-700 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                      <span className="min-w-0 truncate text-gray-200 font-medium">{t.name}</span>
+                      <span className="max-w-full text-xs text-gray-400 sm:max-w-[45%] sm:truncate sm:shrink-0">{t.role}</span>
                     </button>
                   ))}
                 </div>
@@ -142,7 +142,7 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
         </div>
 
         {/* Footer */}
-        <div className="bg-dark-900 border-t border-dark-600 px-4 py-3 flex justify-between items-center text-xs text-gray-400">
+        <div className="flex flex-col gap-2 border-t border-dark-600 bg-dark-900 px-4 py-3 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             <span><kbd className="bg-dark-700 px-1.5 py-0.5 text-gray-200 font-mono">TAB</kbd> to move through results</span>
             <span><kbd className="bg-dark-700 px-1.5 py-0.5 text-gray-200 font-mono">ESC</kbd> to close</span>

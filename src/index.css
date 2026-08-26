@@ -181,6 +181,64 @@
   }
 
   /*
+   * A highlight that sweeps across the call to action.
+   *
+   * The button is the one thing on a poster page that has to be found,
+   * and the pages are otherwise still — so it catches the eye without
+   * anything moving out of place. Every few seconds rather than
+   * continuously; a permanent shimmer reads as a loading state.
+   *
+   * The sweep is a child pseudo-element clipped by the button, so the
+   * button's own background colour is untouched and the effect works on
+   * all thirty palettes.
+   */
+  @keyframes poster-shine {
+    0% {
+      transform: translateX(-140%) skewX(-20deg);
+    }
+    /* Crosses in the first fifth, then waits out the rest of the cycle. */
+    22%,
+    100% {
+      transform: translateX(320%) skewX(-20deg);
+    }
+  }
+
+  .poster-shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .poster-shine::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.55) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    animation: poster-shine 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /*
+   * Nothing on the button should move for someone who asked for less
+   * motion; the button is still perfectly findable without it.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .poster-shine::after {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  /*
    * Cursor light on the dotted poster grounds.
    *
    * The layer repaints the poster's own dot lattice — the same gradient

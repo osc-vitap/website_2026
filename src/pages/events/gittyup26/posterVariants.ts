@@ -1,7 +1,7 @@
 import { PosterVariant } from './posterTypes';
 
 /*
- * The twenty-three GITTYUP 26 posters, as data.
+ * The thirty GITTYUP 26 posters, as data.
  *
  * Generated from the print artwork in the Claude Design project: the
  * design specs were read off each poster into
@@ -16,7 +16,7 @@ import { PosterVariant } from './posterTypes';
  * photograph contributed. Edit a variant here to retune one poster.
  */
 
-export const POSTER_COUNT = 23;
+export const POSTER_COUNT = 30;
 
 export const posterVariants: PosterVariant[] = [
 	{
@@ -557,6 +557,145 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "Somebody had to name the branch.",
 		"emphasis": "branch",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium"
+	},
+	{
+		"id": 24,
+		"layout": "wordmark-stack",
+		"ground": "#04030d",
+		"image": "/events/gittyup26/glass-fan.webp",
+		"layers": [
+			"conic-gradient(from 205deg at 40% 44%, rgba(122,74,238,.34) 0deg, rgba(38,20,96,.20) 88deg, rgba(196,162,255,.24) 172deg, rgba(26,14,66,.18) 256deg, rgba(122,74,238,.34) 360deg)",
+			"radial-gradient(95% 68% at 64% 28%, rgba(242,236,255,.20) 0%, rgba(104,58,204,.16) 42%, rgba(4,3,13,0) 80%)",
+			"linear-gradient(178deg,rgba(4,3,13,.8) 0%,rgba(4,3,13,.42) 26%,rgba(4,3,13,.6) 54%,rgba(4,3,13,.92) 84%,#04030d 100%)"
+		],
+		"ink": "#fff",
+		"text": "rgba(255,255,255,.86)",
+		"accent": "#f2ecff",
+		"rows": 5,
+		"eyebrow": "A history of version control",
+		"headline": "The repo is yours. The server can be too.",
+		"emphasis": "server",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium"
+	},
+	{
+		"id": 25,
+		"layout": "wordmark-stack",
+		"ground": "#03020a",
+		"image": "/events/gittyup26/art-arc.webp",
+		"layers": [
+			"radial-gradient(150% 115% at 14% 4%, rgba(152,134,198,.32) 0%, rgba(74,58,116,.20) 26%, rgba(40,30,66,.10) 48%, rgba(3,2,10,0) 76%)",
+			"conic-gradient(from 196deg at 20% 10%, rgba(128,106,182,.30) 0deg, rgba(24,18,52,.10) 62deg, rgba(186,158,146,.24) 148deg, rgba(10,8,26,0) 236deg, rgba(128,106,182,.26) 360deg)",
+			"linear-gradient(196deg,rgba(3,2,10,.38) 0%,rgba(3,2,10,.16) 20%,rgba(3,2,10,.84) 52%,#03020a 76%)"
+		],
+		"grain": 0.2,
+		"ink": "#ffffff",
+		"text": "rgba(255,255,255,.82)",
+		"accent": "#ffffff",
+		"rows": 5,
+		"headline": "Before the graph, there was only the file.",
+		"emphasis": "file",
+		"dateLine": "29 Aug 2026",
+		"venueLine": "10am to 5pm · AB-2"
+	},
+	{
+		"id": 26,
+		"layout": "wordmark-stack",
+		"ground": "#050805",
+		"layers": [
+			"linear-gradient(158deg,#0a1408 0%,#050805 44%,#03120f 100%)",
+			"radial-gradient(80% 46% at 18% 22%,rgba(160,255,80,.24) 0%,rgba(160,255,80,0) 62%)",
+			"radial-gradient(70% 40% at 88% 84%,rgba(42,140,151,.34) 0%,rgba(42,140,151,0) 64%)",
+			"radial-gradient(circle at 50% 50%, rgba(255,255,255,.10) 0 1.2px, rgba(255,255,255,0) 1.6px) 0 0 / 9px 9px repeat"
+		],
+		"ink": "#c9ff5e",
+		"text": "rgba(255,255,255,.84)",
+		"accent": "#c9ff5e",
+		"rows": 4,
+		"headline": "Somebody had to invent history.",
+		"emphasis": "history",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium"
+	},
+	{
+		"id": 27,
+		"layout": "wordmark-stack",
+		"ground": "#04020c",
+		"image": "/events/gittyup26/chrome-blobs.webp",
+		"layers": [
+			"radial-gradient(125% 92% at 50% 32%, rgba(200,206,224,.30) 0%, rgba(112,118,142,.20) 40%, rgba(46,48,66,.12) 62%, rgba(4,2,12,0) 82%)",
+			"linear-gradient(102deg, rgba(228,232,244,.26) 0 11%, rgba(68,74,94,.20) 11% 19%, rgba(198,206,226,.22) 19% 30%, rgba(26,28,42,.24) 30% 43%, rgba(214,220,238,.18) 43% 55%, rgba(52,56,74,.22) 55% 100%)",
+			"linear-gradient(-24deg, rgba(12,12,22,.30) 0 17%, rgba(188,196,216,.18) 17% 25%, rgba(38,40,56,.26) 25% 46%, rgba(232,236,248,.16) 46% 54%, rgba(20,20,32,.28) 54% 100%)",
+			"linear-gradient(178deg,rgba(4,2,12,.78) 0%,rgba(4,2,12,.4) 26%,rgba(4,2,12,.62) 56%,rgba(4,2,12,.92) 84%,#04020c 100%)"
+		],
+		"ink": "#ffffff",
+		"text": "rgba(255,255,255,.74)",
+		"accent": "#c8cee0",
+		"rows": 4,
+		"eyebrow": "We all use the solution. Almost nobody knows the problem.",
+		"headline": "The workaround came first.",
+		"emphasis": "workaround",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium"
+	},
+	{
+		"id": 28,
+		"layout": "wordmark-stack",
+		"ground": "#03090c",
+		"layers": [
+			"repeating-linear-gradient(90deg, rgba(255,176,74,.4) 0 10px, rgba(255,176,74,0) 10px 16px)",
+			"repeating-linear-gradient(180deg, rgba(10,7,4,0) 0 15px, #0a0704 15px 24px)",
+			"linear-gradient(rgba(10,7,4,.62), rgba(10,7,4,.62))",
+			"linear-gradient(rgba(255,176,74,.4), rgba(255,176,74,.4)) 0 77% / 100% 1px no-repeat"
+		],
+		"ink": "#ffffff",
+		"text": "#ffffff",
+		"accent": "#2ee6d6",
+		"rows": 5,
+		"headline": "Git won. But why?",
+		"emphasis": "why",
+		"dateLine": "29 August 2026",
+		"venueLine": "10:00 to 17:00 · AB-2 Auditorium"
+	},
+	{
+		"id": 29,
+		"layout": "wordmark-stack",
+		"ground": "#4a1fb5",
+		"image": "/events/gittyup26/noisy-1.webp",
+		"imageBlend": "luminosity",
+		"layers": [
+			"radial-gradient(60% 45% at 78% 78%, rgba(106,13,255,.35) 0%, rgba(106,13,255,0) 70%)",
+			"linear-gradient(180deg,rgba(8,3,28,.6) 0%,rgba(8,3,28,.2) 32%,rgba(8,3,28,.9) 76%,#08031c 100%)",
+			"radial-gradient(circle at center, rgba(255,255,255,.07) 0 1.2px, rgba(255,255,255,0) 1.5px) 0 0 / 6px 6px"
+		],
+		"grain": 0.5,
+		"ink": "#ffffff",
+		"text": "#ffffff",
+		"accent": "#a97dff",
+		"rows": 6,
+		"eyebrow": "A history of version control, and why you should be hosting your own git.",
+		"headline": "A remote you own.",
+		"emphasis": "remote",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium"
+	},
+	{
+		"id": 30,
+		"layout": "headline-led",
+		"ground": "#020104",
+		"image": "/events/gittyup26/glass-stack.webp",
+		"layers": [
+			"radial-gradient(56% 34% at 62% 58%,rgba(86,0,255,.44) 0%,rgba(35,0,90,.14) 46%,rgba(0,0,0,0) 74%)",
+			"linear-gradient(rgba(2,1,4,.46), rgba(2,1,4,.46))"
+		],
+		"ink": "rgba(255,255,255,.62)",
+		"text": "#ffffff",
+		"accent": "#a17cff",
+		"rows": 4,
+		"headline": "The fix is famous. The problem is not.",
+		"emphasis": "problem",
 		"dateLine": "29 August 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},

@@ -363,7 +363,7 @@ const Events = () => {
                 ) : event.isUpcoming ? (
                   <Link
                     to={event.url}
-                    className="mt-auto w-full py-2.5 rounded-lg font-semibold text-center transition-all flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary/90 text-white"
+                    className="poster-shine mt-auto w-full py-2.5 rounded-lg font-semibold text-center transition-all flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary/90 text-white"
                   >
                     Register Now
                   </Link>

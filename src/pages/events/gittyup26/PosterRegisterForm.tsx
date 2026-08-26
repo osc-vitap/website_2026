@@ -1,7 +1,11 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check } from 'lucide-react';
 import { API_BASE_URL } from '../../../data/eventsApi';
-import { registrationNumberError } from '../../../data/registrationNumber';
+import {
+  registrationNumberError,
+  universityEmailError,
+} from '../../../data/registrationNumber';
 import { PosterVariant } from './posterTypes';
 
 /*
@@ -17,13 +21,20 @@ import { PosterVariant } from './posterTypes';
  * as errors, and are shown as sent rather than reworded.
  */
 
+/*
+ * Every field carries an example, because the server is strict about
+ * two of them and silent about the shape it wants until you submit.
+ * A registration number in the wrong shape and a non-university email
+ * are both rejected, so the format is shown up front rather than
+ * discovered by failing.
+ */
 const FIELDS = [
   {
     name: 'name',
     label: 'Full name',
     type: 'text',
     autoComplete: 'name',
-    placeholder: '',
+    placeholder: 'Ada Lovelace',
     required: true,
   },
   {
@@ -39,15 +50,15 @@ const FIELDS = [
     label: 'Year of study',
     type: 'text',
     autoComplete: 'off',
-    placeholder: '',
+    placeholder: '2',
     required: true,
   },
   {
     name: 'email',
-    label: 'Email',
+    label: 'University email',
     type: 'email',
     autoComplete: 'email',
-    placeholder: '',
+    placeholder: 'ada.22bce1234@vitapstudent.ac.in',
     required: true,
   },
   {
@@ -55,7 +66,7 @@ const FIELDS = [
     label: 'GitHub (optional)',
     type: 'text',
     autoComplete: 'off',
-    placeholder: '',
+    placeholder: 'adalovelace',
     required: false,
   },
 ] as const;
@@ -89,6 +100,26 @@ const PosterRegisterForm = ({
 
   const [done, setDone] = useState(false);
 
+  const navigate = useNavigate();
+
+  /*
+   * A registration is the end of what this page is for, so it hands the
+   * visitor on to the rest of the site rather than leaving them on a
+   * poster with nothing further to do.
+   *
+   * Three seconds: long enough to read the confirmation, short enough
+   * not to feel stuck. The timer is cleared on unmount so navigating
+   * away sooner — the mark in the masthead goes home too — cannot fire
+   * a redirect from a page that is no longer on screen.
+   */
+  useEffect(() => {
+    if (!done) return;
+
+    const timer = window.setTimeout(() => navigate('/'), 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [done, navigate]);
+
   const set = (
     field: FieldName,
     value: string,
@@ -115,6 +146,15 @@ const PosterRegisterForm = ({
 
     if (regNoError) {
       setError(regNoError);
+      return;
+    }
+
+    const emailError = universityEmailError(
+      values.email,
+    );
+
+    if (emailError) {
+      setError(emailError);
       return;
     }
 
@@ -205,6 +245,20 @@ const PosterRegisterForm = ({
           See you on 29 August at the AB-2 Auditorium.
           Bring a laptop if you have one.
         </p>
+
+        {/*
+          * Says what is about to happen rather than moving the page
+          * under someone mid-sentence, and gives them a way to go now.
+          */}
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="mt-6 inline-flex items-center gap-2 font-postermono text-[10px] uppercase tracking-[0.2em] underline-offset-4 hover:underline md:text-xs"
+          style={{ color: variant.accent }}
+        >
+          Taking you to oscvitap.com
+          <ArrowRight size={14} />
+        </button>
       </div>
     );
   }

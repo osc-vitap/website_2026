@@ -98,3 +98,29 @@ export const fetchEvents = async (): Promise<
 
   return data.events ?? [];
 };
+
+/*
+ * One event, or null if it cannot be read.
+ *
+ * Used by the poster pages to decide whether registration is open
+ * before offering a form. A network failure is a null rather than a
+ * throw: the caller's job is to choose a safe default, not to handle an
+ * exception on every render.
+ */
+export const fetchEvent = async (
+  slug: string,
+): Promise<ApiEvent | null> => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/events/${encodeURIComponent(slug)}`,
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+
+    return (data?.event as ApiEvent) ?? null;
+  } catch {
+    return null;
+  }
+};

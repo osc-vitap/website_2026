@@ -1,5 +1,6 @@
-import { CSSProperties, useRef, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { CSSProperties, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Clock } from 'lucide-react';
 import PosterGround from './PosterGround';
 import PosterWordmark from './PosterWordmark';
 import { gridFontSize } from './posterGrid';
@@ -8,9 +9,13 @@ import { POSTER_COUNT } from './posterVariants';
 import PosterRegisterForm from './PosterRegisterForm';
 import { textHalo } from './posterColor';
 import { rowMetrics, useFittingRows } from './useFittingRows';
+import { fetchEvent } from '../../../data/eventsApi';
+
+/* The D1 event these poster pages register for. */
+const REGISTRATION_SLUG = 'gittyup26';
 
 /*
- * A handful of layouts, twenty-three palettes.
+ * A handful of layouts, thirty palettes.
  *
  * Every poster page uses this composition: the wordmark stack, the
  * toggle and the numeral on the left, the details and the call to
@@ -82,6 +87,32 @@ const PosterPage = ({
 }: PosterPageProps) => {
   const [showForm, setShowForm] = useState(false);
 
+  /*
+   * Whether the event is taking registrations, read from the event
+   * itself rather than hardcoded here.
+   *
+   * Starts closed on purpose. Offering a form for a closed event wastes
+   * someone's time and ends in a rejection from the Worker, while
+   * showing "opening soon" for a second longer than necessary costs
+   * nothing — so an unread or unreachable API keeps the safe answer.
+   */
+  const [registrationOpen, setRegistrationOpen] =
+    useState(false);
+
+  useEffect(() => {
+    let live = true;
+
+    fetchEvent(REGISTRATION_SLUG).then((event) => {
+      if (live && event?.is_open) {
+        setRegistrationOpen(true);
+      }
+    });
+
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const wordmarkRef = useRef<HTMLDivElement>(null);
 
   const visibleRows = useFittingRows(
@@ -118,11 +149,23 @@ const PosterPage = ({
         {/* Masthead */}
 
         <header className="poster-fade-up flex items-start justify-between gap-4">
-          <img
-            src="/events/gittyup26/osc-lockup.webp"
-            alt="Open Source Community, campus club at VIT-AP"
-            className="h-8 w-auto drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)] md:h-11"
-          />
+          {/*
+            * The poster page is reached by scanning a printed sheet, so
+            * for most visitors it is the whole site — there was no way
+            * out of it at all. The mark is the way back.
+            */}
+          <Link
+            to="/"
+            aria-label="Open Source Community — go to the OSC home page"
+            className="inline-block rounded-sm transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+            style={{ outlineColor: variant.accent }}
+          >
+            <img
+              src="/events/gittyup26/osc-lockup.webp"
+              alt="Open Source Community, campus club at VIT-AP"
+              className="h-8 w-auto drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)] md:h-11"
+            />
+          </Link>
 
           <img
             src="/events/gittyup26/vitap-logo.webp"
@@ -419,22 +462,45 @@ const PosterPage = ({
                 * page: someone who scanned a poster should not be
                 * dropped out of the design they scanned into.
                 */}
-              <button
-                type="button"
-                onClick={() => setShowForm(true)}
-                className="group mt-7 inline-flex w-full items-center justify-between gap-4 rounded-full px-7 py-4 text-base font-bold transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 sm:w-auto md:text-lg"
-                style={{
-                  backgroundColor: variant.accent,
-                  color: variant.ground,
-                  outlineColor: variant.accent,
-                }}
-              >
-                Register Now
-                <ArrowRight
-                  size={20}
-                  className="transition-transform group-hover:translate-x-1"
-                />
-              </button>
+              {registrationOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setShowForm(true)}
+                  className="poster-shine group mt-7 inline-flex w-full items-center justify-between gap-4 rounded-full px-7 py-4 text-base font-bold transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 sm:w-auto md:text-lg"
+                  style={{
+                    backgroundColor: variant.accent,
+                    color: variant.ground,
+                    outlineColor: variant.accent,
+                  }}
+                >
+                  Register Now
+                  <ArrowRight
+                    size={20}
+                    className="transition-transform group-hover:translate-x-1"
+                  />
+                </button>
+              ) : (
+                /*
+                  * Registration is closed on the event, so the form is
+                  * not offered. It used to be: someone scanned a poster,
+                  * filled in every field, and only then got "Registration
+                  * is closed" back from the Worker.
+                  *
+                  * This follows the event's is_open flag, so opening
+                  * registration in the admin dashboard turns the button
+                  * back on without a deploy.
+                  */
+                <div
+                  className="mt-7 inline-flex w-full items-center justify-center gap-3 rounded-full border-2 px-7 py-4 text-base font-bold sm:w-auto md:text-lg"
+                  style={{
+                    borderColor: withAlpha(variant.accent, 55),
+                    color: variant.accent,
+                  }}
+                >
+                  <Clock size={18} />
+                  Registration opening soon
+                </div>
+              )}
 
             </div>
             )}

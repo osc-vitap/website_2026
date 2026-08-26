@@ -267,7 +267,7 @@ describe("registration lifecycle", () => {
 		name: "Test User",
 		year_of_study: "2",
 		college_registration_number: "22BCE0001",
-		email: "test@example.com",
+		email: "test@vitapstudent.ac.in",
 	};
 
 	it("rejects registration for an event that has already ended", async () => {
@@ -375,7 +375,7 @@ describe("registration identity", () => {
 		name: "Test Student",
 		year_of_study: "2",
 		college_registration_number: registrationNumber,
-		email: "student@example.com",
+		email: "student@vitapstudent.ac.in",
 		...overrides,
 	});
 
@@ -385,7 +385,7 @@ describe("registration identity", () => {
 		expect((await register("identity-event", [student("22BCE7001")])).status).toBe(201);
 
 		const response = await register("identity-event", [
-			student("22BCE7001", { name: "Different Name", email: "other@example.com" }),
+			student("22BCE7001", { name: "Different Name", email: "other@vitapstudent.ac.in" }),
 		]);
 
 		expect(response.status).toBe(409);
@@ -436,12 +436,41 @@ describe("registration identity", () => {
 
 		const response = await register(
 			"team-dupe-event",
-			[student("22BCE7005"), student("22bce7005", { email: "twin@example.com" })],
+			[student("22BCE7005"), student("22bce7005", { email: "twin@vitapstudent.ac.in" })],
 			{ team_name: "The Twins" },
 		);
 
 		expect(response.status).toBe(400);
 		expect(((await response.json()) as { error: string }).error).toContain("22BCE7005");
+	});
+
+	/*
+	 * Registration is for VIT-AP, so the address has to be a university
+	 * one. Enforced server-side because the form is only a convenience —
+	 * anyone can post to this endpoint directly.
+	 */
+	it.each([
+		"ada@gmail.com",
+		"ada@vitap.ac.in.attacker.com",
+		"ada@notvitap.ac.in",
+		"ada@student.vitap.ac.in",
+	])("rejects %s", async (email) => {
+		const slug = `domain-${email.replace(/[^a-z0-9]/gi, "-").toLowerCase()}`;
+
+		await seedEvent({ slug, title: "Domain Event" });
+
+		const response = await register(slug, [student("22BCE9101", { email })]);
+
+		expect(response.status).toBe(400);
+		expect(((await response.json()) as { error: string }).error).toContain("university email");
+	});
+
+	it.each(["ada.22bce1234@vitapstudent.ac.in", "STAFF@VITAP.AC.IN"])("accepts %s", async (email) => {
+		const slug = `ok-${email.replace(/[^a-z0-9]/gi, "-").toLowerCase()}`;
+
+		await seedEvent({ slug, title: "Domain Event" });
+
+		expect((await register(slug, [student("22BCE9102", { email })])).status).toBe(201);
 	});
 
 	it("rejects an email address that cannot receive mail", async () => {
@@ -588,10 +617,10 @@ describe("registration archive", () => {
 		await seedEvent({ slug: "clash-2-0", title: "Clash Dash", ...ENDED });
 
 		await seedRegistration("clash-2.0", [
-			{ name: "Dot Person", college_registration_number: "22BCE5001", email: "dot@example.com" },
+			{ name: "Dot Person", college_registration_number: "22BCE5001", email: "dot@vitapstudent.ac.in" },
 		]);
 		await seedRegistration("clash-2-0", [
-			{ name: "Dash Person", college_registration_number: "22BCE5002", email: "dash@example.com" },
+			{ name: "Dash Person", college_registration_number: "22BCE5002", email: "dash@vitapstudent.ac.in" },
 		]);
 
 		const dotId = await eventIdFor("clash-2.0");
@@ -612,7 +641,7 @@ describe("registration archive", () => {
 	it("records archive_key before deleting the rows it replaces", async () => {
 		await seedEvent({ slug: "keyed-event", title: "Keyed Event", ...ENDED });
 		await seedRegistration("keyed-event", [
-			{ name: "Someone", college_registration_number: "22BCE5003", email: "someone@example.com" },
+			{ name: "Someone", college_registration_number: "22BCE5003", email: "someone@vitapstudent.ac.in" },
 		]);
 
 		const id = await eventIdFor("keyed-event");
@@ -655,7 +684,7 @@ describe("registration archive", () => {
 		 */
 		await seedEvent({ slug: "purged-event", title: "Purged Event", ...ENDED });
 		await seedRegistration("purged-event", [
-			{ name: "Archived Soul", college_registration_number: "22BCE5004", email: "soul@example.com" },
+			{ name: "Archived Soul", college_registration_number: "22BCE5004", email: "soul@vitapstudent.ac.in" },
 		]);
 
 		const id = await eventIdFor("purged-event");
@@ -681,7 +710,7 @@ describe("registration archive", () => {
 	it("refuses to overwrite an archived event without an explicit opt-in", async () => {
 		await seedEvent({ slug: "guarded-event", title: "Guarded Event" });
 		await seedRegistration("guarded-event", [
-			{ name: "Still Here", college_registration_number: "22BCE5005", email: "here@example.com" },
+			{ name: "Still Here", college_registration_number: "22BCE5005", email: "here@vitapstudent.ac.in" },
 		]);
 
 		await env.DB.prepare(`UPDATE events SET archive_status = 'archived' WHERE slug = ?`)
@@ -711,7 +740,7 @@ describe("registration archive", () => {
 		 */
 		await seedEvent({ slug: "live-event", title: "Live Event" });
 		await seedRegistration("live-event", [
-			{ name: "Early Bird", college_registration_number: "22BCE5006", email: "early@example.com" },
+			{ name: "Early Bird", college_registration_number: "22BCE5006", email: "early@vitapstudent.ac.in" },
 		]);
 
 		const response = await asArchiveAdmin("/api/admin/events/live-event/registrations/archive", {
@@ -743,7 +772,7 @@ describe("registration archive", () => {
 		 */
 		await seedEvent({ slug: "old-name", title: "Old Name", ...ENDED });
 		await seedRegistration("old-name", [
-			{ name: "Renamed", college_registration_number: "22BCE5007", email: "renamed@example.com" },
+			{ name: "Renamed", college_registration_number: "22BCE5007", email: "renamed@vitapstudent.ac.in" },
 		]);
 
 		await runCron();
@@ -759,7 +788,7 @@ describe("registration archive", () => {
 	it("archives an event exactly once even if the cron runs again", async () => {
 		await seedEvent({ slug: "twice-event", title: "Twice Event", ...ENDED });
 		await seedRegistration("twice-event", [
-			{ name: "Only Once", college_registration_number: "22BCE5008", email: "once@example.com" },
+			{ name: "Only Once", college_registration_number: "22BCE5008", email: "once@vitapstudent.ac.in" },
 		]);
 
 		const id = await eventIdFor("twice-event");
@@ -894,7 +923,7 @@ describe("CSV export safety", () => {
 			{
 				name: "=cmd|'/c calc'!A1",
 				college_registration_number: "22BCE4321",
-				email: "formula@example.com",
+				email: "formula@vitapstudent.ac.in",
 			},
 		]);
 
@@ -932,7 +961,7 @@ describe("rate limiting", () => {
 						name: "Rate Test",
 						year_of_study: "2",
 						college_registration_number: registrationNumber,
-						email: "rate@example.com",
+						email: "rate@vitapstudent.ac.in",
 					},
 				],
 			}),
@@ -1216,17 +1245,17 @@ describe("admin access", () => {
 
 		// One registration, three people on the team.
 		await seedRegistration("team-event", [
-			{ name: "Captain", college_registration_number: "22BCE0001", email: "captain@example.com" },
-			{ name: "Second", college_registration_number: "22BCE0002", email: "second@example.com" },
-			{ name: "Third", college_registration_number: "22BCE0003", email: "third@example.com" },
+			{ name: "Captain", college_registration_number: "22BCE0001", email: "captain@vitapstudent.ac.in" },
+			{ name: "Second", college_registration_number: "22BCE0002", email: "second@vitapstudent.ac.in" },
+			{ name: "Third", college_registration_number: "22BCE0003", email: "third@vitapstudent.ac.in" },
 		]);
 
 		// Two registrations of one person each.
 		await seedRegistration("solo-event", [
-			{ name: "Alone", college_registration_number: "22BCE0004", email: "alone@example.com" },
+			{ name: "Alone", college_registration_number: "22BCE0004", email: "alone@vitapstudent.ac.in" },
 		]);
 		await seedRegistration("solo-event", [
-			{ name: "Also Alone", college_registration_number: "22BCE0005", email: "also@example.com" },
+			{ name: "Also Alone", college_registration_number: "22BCE0005", email: "also@vitapstudent.ac.in" },
 		]);
 
 		const events = await listEvents();
@@ -1318,7 +1347,7 @@ describe("admin access", () => {
 		 * key for any event that had a single registration.
 		 */
 		await seedRegistration("doomed-event", [
-			{ name: "Attendee", college_registration_number: "22BCE0009", email: "attendee@example.com" },
+			{ name: "Attendee", college_registration_number: "22BCE0009", email: "attendee@vitapstudent.ac.in" },
 		]);
 
 		const response = await asAdmin("/api/admin/events/doomed-event", { method: "DELETE" });

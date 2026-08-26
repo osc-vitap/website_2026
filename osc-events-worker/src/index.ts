@@ -135,6 +135,30 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /*
+ * Registration is for VIT-AP, so the address has to be a university
+ * one. Students are @vitapstudent.ac.in and staff @vitap.ac.in.
+ *
+ * Enforced here rather than only in the form: the form is a
+ * convenience, and anyone can post to this endpoint directly.
+ */
+const ALLOWED_EMAIL_DOMAINS = ['vitapstudent.ac.in', 'vitap.ac.in'];
+
+function hasAllowedEmailDomain(email: string): boolean {
+	const at = email.lastIndexOf('@');
+
+	if (at === -1) return false;
+
+	const domain = email.slice(at + 1);
+
+	/*
+	 * Exact match only. A suffix test would accept
+	 * "vitap.ac.in.attacker.com", and a contains test would accept
+	 * anything with the string in it.
+	 */
+	return ALLOWED_EMAIL_DOMAINS.includes(domain);
+}
+
+/*
  * Field length ceilings. These are resource limits, not format
  * validation: without them a single request can park megabytes of
  * garbage in D1 and in every CSV export after it.
@@ -2625,6 +2649,17 @@ export default {
 						return json(
 							{
 								error: `Email address for member ${index + 1} looks invalid`,
+							},
+							400,
+							request,
+							env,
+						);
+					}
+
+					if (!hasAllowedEmailDomain(email)) {
+						return json(
+							{
+								error: `Use your university email for member ${index + 1} — ${ALLOWED_EMAIL_DOMAINS.map((d) => `@${d}`).join(' or ')}.`,
 							},
 							400,
 							request,

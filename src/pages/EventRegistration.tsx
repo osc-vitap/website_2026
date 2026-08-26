@@ -2,7 +2,10 @@ import { FormEvent, useEffect, useId, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Github, Mail, User, Users } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import { registrationNumberError } from '../data/registrationNumber';
+import {
+  registrationNumberError,
+  universityEmailError,
+} from '../data/registrationNumber';
 
 const API_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -171,6 +174,19 @@ const EventRegistration = () => {
           members.length > 1
             ? `Member ${index + 1}: ${regNoError}`
             : regNoError,
+        );
+        return;
+      }
+
+      const emailError = universityEmailError(
+        member.email,
+      );
+
+      if (emailError) {
+        setMessage(
+          members.length > 1
+            ? `Member ${index + 1}: ${emailError}`
+            : emailError,
         );
         return;
       }
@@ -375,7 +391,7 @@ const EventRegistration = () => {
                       onChange={(e) =>
                         setTeamName(e.target.value)
                       }
-                      placeholder="Enter your team name"
+                      placeholder="Null Pointers"
                       className="w-full bg-dark-900/60 border border-dark-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-brand-primary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
                     />
 
@@ -445,6 +461,7 @@ const EventRegistration = () => {
                         <Field
                           icon={<User size={16} />}
                           label="Name"
+                          placeholder="Ada Lovelace"
                           value={member.name}
                           onChange={(value) =>
                             updateMember(
@@ -468,7 +485,7 @@ const EventRegistration = () => {
                               value,
                             )
                           }
-                          placeholder="e.g. 2"
+                          placeholder="2"
                           required
                         />
 
@@ -501,7 +518,7 @@ const EventRegistration = () => {
                               value,
                             )
                           }
-                          placeholder="github.com/username"
+                          placeholder="adalovelace"
                         />
 
                         <div className="md:col-span-2">
@@ -509,8 +526,9 @@ const EventRegistration = () => {
                             icon={
                               <Mail size={16} />
                             }
-                            label="Email"
+                            label="University Email"
                             type="email"
+                            placeholder="ada.22bce1234@vitapstudent.ac.in"
                             value={member.email}
                             onChange={(value) =>
                               updateMember(

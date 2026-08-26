@@ -29,3 +29,45 @@ export const registrationNumberError = (value: string): string => {
     ? ''
     : `${REGISTRATION_NUMBER_HINT} — "${normalized}" does not look like one.`;
 };
+
+/*
+ * Registration is for VIT-AP, so the address has to be a university
+ * one — students are @vitapstudent.ac.in, staff @vitap.ac.in.
+ *
+ * Mirrors the check in osc-events-worker/src/index.ts. The server is
+ * the one that decides; this only saves a round trip and says the rule
+ * out loud before someone submits.
+ */
+export const ALLOWED_EMAIL_DOMAINS = [
+  'vitapstudent.ac.in',
+  'vitap.ac.in',
+];
+
+export const EMAIL_DOMAIN_HINT = `Use your university email — ${ALLOWED_EMAIL_DOMAINS.map(
+  (domain) => `@${domain}`,
+).join(' or ')}`;
+
+/** Empty string when acceptable; a message to show the user when not. */
+export const universityEmailError = (
+  value: string,
+): string => {
+  const email = value.trim().toLowerCase();
+
+  if (!email) {
+    return 'Email is required';
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return 'That email address does not look valid';
+  }
+
+  /*
+   * Exact domain match. Anything looser would accept
+   * "vitap.ac.in.example.com".
+   */
+  const domain = email.slice(email.lastIndexOf('@') + 1);
+
+  return ALLOWED_EMAIL_DOMAINS.includes(domain)
+    ? ''
+    : `${EMAIL_DOMAIN_HINT}.`;
+};

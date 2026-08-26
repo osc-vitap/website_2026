@@ -2087,6 +2087,37 @@ describe("admin outside the organisation", () => {
 	});
 
 	/*
+	 * The secret is set with `wrangler secret put NAME < file`, which
+	 * keeps whatever the file ended with. A stored pepper of "P\n" has
+	 * to still reproduce a digest computed under "P", or the exempt
+	 * account is locked out by a trailing newline nobody can see.
+	 */
+	it("matches a pepper stored with a trailing newline", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_HANDLE_PEPPER = `${PEPPER}\n`;
+		env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
+
+		await seedSession(EXEMPT_HANDLE);
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(200);
+	});
+
+	/*
+	 * The same trim must not turn a secret that is nothing but
+	 * whitespace into a usable key — that is an unset secret written
+	 * clumsily, and it closes the hole like any other unset one.
+	 */
+	it("exempts nobody when the pepper is only whitespace", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
+		env.ADMIN_HANDLE_PEPPER = "  \n\t ";
+
+		await seedSession(EXEMPT_HANDLE);
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+
+	/*
 	 * A typo in a committed digest must be an entry that never matches,
 	 * not a 500 that takes the whole admin API down with it.
 	 */

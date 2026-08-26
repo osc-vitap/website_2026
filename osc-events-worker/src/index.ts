@@ -366,9 +366,12 @@ function normalizeSource(raw: unknown): RegistrationSource | null {
  * actually guarantees an @everyone in a name cannot ping anyone.
  *
  * The line breaks and the "·" separator are flattened here as well as
- * at ingest, because this encoder also renders the event title and the
- * team name, which an admin can set through PATCH /api/admin/events
- * without ever passing the registration validator.
+ * at ingest, because the event title never meets the validator that
+ * does it: PATCH /api/admin/events/:id stores body.title.trim(), so a
+ * newline in a title splits the embed heading in two and a "·" in one
+ * reads as a roster separator. Participant fields and the team name
+ * are flattened at ingest already — the title is the one string this
+ * encoder renders that arrives raw.
  */
 function escapeDiscord(value: string): string {
 	return value

@@ -68,7 +68,7 @@
 		 *   node -e "const c=require('crypto');console.log(c.createHmac('sha256',process.env.P).update(process.argv[1].trim()).digest('hex'))" <id>
 		 * with P set to the same pepper the Worker holds.
 		 */
-		"ADMIN_OUTSIDER_ID_HASHES": "c2fe56dc94af7a992d2484b462bcfc794b6f9fb9d31b57c589deac20d440eec9"
+		"ADMIN_OUTSIDER_ID_HASHES": "11e443787d6cfb8c0a4cb5ab8d6cfd6c6243296de58337f7fc4817304ca41492"
 	},
 
 	/**
@@ -100,9 +100,18 @@
 			 * With it unset nobody is exempt from the organisation check —
 			 * the hole closes rather than opens.
 			 *
-			 * Rotated when the exemption moved from handles to ids:
-			 * secrets are write-only, so the old value could not be read
-			 * back to recompute the digests under.
+			 * Rotated when the exemption moved from handles to ids, and
+			 * again when two reviews reached opposite conclusions about
+			 * whether the deployed pepper still matched the digest above.
+			 * Secrets are write-only, so neither could be checked and no
+			 * amount of reading settles it. Regenerating the pepper and
+			 * the digest together is what makes them agree; if they ever
+			 * look doubtful again, redo that rather than reason about it.
+			 * Always set it from a file — an argument lands in the shell
+			 * history:
+			 *   npx wrangler secret put ADMIN_HANDLE_PEPPER < pepper.txt
+			 * then recompute every digest above under the new value, or
+			 * the people listed there are locked out.
 			 */
 			"ADMIN_HANDLE_PEPPER"
 		]

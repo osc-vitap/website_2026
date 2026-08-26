@@ -1,19 +1,22 @@
-import { useRef, useState } from 'react';
+import { CSSProperties, useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import PosterGround from './PosterGround';
+import PosterWordmark from './PosterWordmark';
+import { gridFontSize } from './posterGrid';
 import { PosterVariant } from './posterTypes';
+import { POSTER_COUNT } from './posterVariants';
 import PosterRegisterForm from './PosterRegisterForm';
 import { textHalo } from './posterColor';
-import { useFittingRows } from './useFittingRows';
+import { rowMetrics, useFittingRows } from './useFittingRows';
 
 /*
- * One layout, thirty palettes.
+ * A handful of layouts, twenty-three palettes.
  *
  * Every poster page uses this composition: the wordmark stack, the
  * toggle and the numeral on the left, the details and the call to
  * action on the right, the poster's line beneath. Only the colours,
  * the background, the row count and the copy change between the
- * thirty, which keeps the spacing predictable — a per-poster layout
+ * set, which keeps the spacing predictable — a per-poster layout
  * left half the page empty at some viewport or other.
  *
  * It is one screen from `lg` up and flows on smaller screens, so the
@@ -37,6 +40,21 @@ const WORDMARK_SIZE =
   'text-[clamp(2.5rem,19vw,7rem)] lg:text-[min(12.5vw,13rem)]';
 
 /*
+ * On a hero-word poster the single wordmark row is the kicker, not the
+ * headline, so it sets smaller and leaves the hero the weight.
+ */
+const HERO_ROW_SIZE =
+  'text-[clamp(1.8rem,11vw,3.5rem)] lg:text-[min(6vw,6rem)]';
+
+/*
+ * The letter grid's size depends on its row count, which Tailwind cannot
+ * see at build time, so the value arrives as a custom property and these
+ * two static classes read it.
+ */
+const GRID_SIZE =
+  'text-[length:var(--wm-sm)] lg:text-[length:var(--wm-lg)]';
+
+/*
  * Accent colours arrive as either hex or rgba(). Appending hex alpha to
  * an rgba() string produces invalid CSS, so the declaration is dropped
  * and the rule falls back to the browser default — a near-white hairline
@@ -48,6 +66,17 @@ const withAlpha = (
 ) =>
   `color-mix(in srgb, ${color} ${percent}%, transparent)`;
 
+/*
+ * The row of past-event marks every printed poster carries along its
+ * bottom edge, under a label that changes from sheet to sheet.
+ */
+const PREVIOUS_BUILDS = [
+  { src: '/events/gittyup26/ev-techeden.webp', alt: 'Tech Eden' },
+  { src: '/events/gittyup26/ev-sff.webp', alt: 'Software Freedom Fest' },
+  { src: '/events/gittyup26/ev-reactbootcamp.webp', alt: 'React Bootcamp' },
+  { src: '/events/gittyup26/ev-gittyup.webp', alt: 'Gitty Up' },
+];
+
 const PosterPage = ({
   variant,
 }: PosterPageProps) => {
@@ -57,7 +86,11 @@ const PosterPage = ({
 
   const visibleRows = useFittingRows(
     wordmarkRef,
-    Math.max(1, variant.rows),
+    /* The hero-word posters print a single row over the hero. */
+    variant.layout === 'hero-word'
+      ? 1
+      : Math.max(1, variant.rows),
+    rowMetrics(variant.layout),
   );
 
   const { headline, emphasis } = variant;
@@ -106,54 +139,54 @@ const PosterPage = ({
 
             {/* Wordmark stack, clipped to the room it has */}
 
-            <div
-              ref={wordmarkRef}
-              aria-hidden="true"
-              className={`max-h-[36vh] select-none overflow-hidden tracking-[-0.015em] lg:max-h-[46vh] ${WORDMARK_SIZE}`}
-            >
-              {Array.from(
-                {
-                  length: visibleRows,
-                },
-                (_, index) => (
-                  <div
-                    key={index}
-                    className={`overflow-hidden ${index > 0 ? '-mt-[0.26em]' : ''}`}
-                  >
-                    <div
-                      className="poster-rise flex whitespace-nowrap leading-[1.2]"
-                      style={{
-                        ...wordmarkFill,
-                        animationDelay: `${index * 0.07}s`,
-                      }}
-                    >
-                      <span
-                        className={
-                          index % 2 === 0
-                            ? 'font-thin'
-                            : 'font-black'
-                        }
-                      >
-                        gitty
-                      </span>
+            <PosterWordmark
+              variant={variant}
+              rows={visibleRows}
+              fill={wordmarkFill}
+              containerRef={wordmarkRef}
+              /*
+                * The terminal poster spends most of its height on the
+                * git log, so its stack is held well back — in print the
+                * wordmark is a ghost behind the box rather than the
+                * thing you read first.
+                */
+              className={`${
+                variant.terminal
+                  ? 'max-h-[18vh] lg:max-h-[24vh]'
+                  : 'max-h-[36vh] lg:max-h-[46vh]'
+              } select-none overflow-hidden tracking-[-0.015em] ${
+                variant.layout === 'letter-grid'
+                  ? GRID_SIZE
+                  : variant.layout === 'hero-word'
+                    ? HERO_ROW_SIZE
+                    : WORDMARK_SIZE
+              }`}
+              style={
+                variant.layout === 'letter-grid'
+                  ? ({
+                      '--wm-sm': gridFontSize(variant.rows, 36, 10.5),
+                      '--wm-lg': gridFontSize(variant.rows, 46, 7.5),
+                    } as CSSProperties)
+                  : undefined
+              }
+            />
 
-                      <span
-                        className={
-                          index % 2 === 0
-                            ? 'font-black'
-                            : 'font-thin'
-                        }
-                        style={{
-                          marginLeft: '0.36em',
-                        }}
-                      >
-                        up
-                      </span>
-                    </div>
-                  </div>
-                ),
-              )}
-            </div>
+            {/*
+              * On the hero-word posters the emphasis is the artwork: one
+              * quiet wordmark row, then the word itself at full width.
+              */}
+            {variant.layout === 'hero-word' && (
+              <div
+                aria-hidden="true"
+                className="poster-rise select-none font-black leading-[0.9] tracking-[-0.03em] text-[clamp(3.5rem,22vw,9rem)] lg:text-[min(15vw,15rem)]"
+                style={{
+                  ...wordmarkFill,
+                  animationDelay: '0.12s',
+                }}
+              >
+                {variant.heroWord ?? variant.emphasis}
+              </div>
+            )}
 
             {/* Toggle and numeral */}
 
@@ -227,6 +260,60 @@ const PosterPage = ({
               )}
             </h1>
 
+            {/* The quieter line the printed sheet sets under the headline */}
+
+            {variant.subline && (
+              <p
+                className="poster-fade-up mt-5 max-w-xl text-[clamp(0.85rem,1.6vw,1rem)] leading-relaxed opacity-75"
+                style={{
+                  color: variant.text,
+                  textShadow: textHalo(variant.text),
+                  animationDelay: '0.5s',
+                }}
+              >
+                {variant.subline}
+              </p>
+            )}
+
+            {/*
+              * The terminal poster prints its own git log. The prompt
+              * lines take the accent, the output stays quiet.
+              */}
+            {variant.terminal && (
+              <div
+                className="poster-fade-up mt-7 max-w-xl rounded-2xl border p-5 font-postermono text-[clamp(0.7rem,1.5vw,0.9rem)] leading-relaxed md:p-6"
+                style={{
+                  borderColor: withAlpha(variant.accent, 30),
+                  backgroundColor: withAlpha(variant.ground, 55),
+                  animationDelay: '0.5s',
+                }}
+              >
+                {variant.terminal.map((line, index) => {
+                  const isPrompt =
+                    index === 0 ||
+                    index === (variant.terminal?.length ?? 0) - 1;
+
+                  return (
+                    <div
+                      key={index}
+                      className={isPrompt ? 'font-bold' : 'opacity-70'}
+                      style={{
+                        color: isPrompt
+                          ? variant.accent
+                          : variant.text,
+                        marginTop: index === 0 ? 0 : '0.4em',
+                      }}
+                    >
+                      {isPrompt && (
+                        <span className="mr-2 opacity-60">$</span>
+                      )}
+                      {line}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
           </section>
 
           {/* Details and call to action */}
@@ -242,9 +329,25 @@ const PosterPage = ({
               />
             ) : (
             <div
-              className="border-t-2 pt-6"
+              /*
+                * On a poster with a photographic ground the details sit
+                * over whatever the artwork happens to be doing at that
+                * point, and the mono lines are the smallest type on the
+                * page. Several of the printed sheets set this block on
+                * its own panel for the same reason; the scrim is that
+                * panel, and it only appears where there is artwork to
+                * read against.
+                */
+              className={
+                variant.image
+                  ? 'rounded-2xl border-t-2 p-5 backdrop-blur-[2px] md:p-6'
+                  : 'border-t-2 pt-6'
+              }
               style={{
                 borderColor: withAlpha(variant.accent, 35),
+                backgroundColor: variant.image
+                  ? withAlpha(variant.ground, 62)
+                  : undefined,
               }}
             >
 
@@ -259,20 +362,56 @@ const PosterPage = ({
                 </div>
               )}
 
-              <div
-                className="mt-4 text-[clamp(1.5rem,3.6vw,2.4rem)] font-bold leading-none tracking-[-0.02em]"
-                style={{ color: variant.text }}
-              >
-                {variant.dateLine}
-              </div>
+              {/*
+                * Two posters set their details as a labelled table
+                * rather than a date and a venue line. Where one is
+                * given it replaces both, so the same facts are not
+                * printed twice.
+                */}
+              {variant.specs ? (
+                <dl className="mt-4 font-postermono text-xs md:text-sm">
+                  {variant.specs.map((spec) => (
+                    <div
+                      key={spec.label}
+                      className="flex items-baseline justify-between gap-4 border-b py-2.5"
+                      style={{
+                        borderColor: withAlpha(variant.accent, 18),
+                      }}
+                    >
+                      <dt
+                        className="uppercase tracking-[0.22em]"
+                        style={{ color: variant.accent }}
+                      >
+                        {spec.label}
+                      </dt>
 
-              {variant.venueLine && (
-                <div
-                  className="mt-3 font-postermono text-xs opacity-80 md:text-sm"
-                  style={{ color: variant.text }}
-                >
-                  {variant.venueLine}
-                </div>
+                      <dd
+                        className="text-right font-bold"
+                        style={{ color: variant.text }}
+                      >
+                        {spec.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <>
+                  <div
+                    className="mt-4 text-[clamp(1.5rem,3.6vw,2.4rem)] font-bold leading-none tracking-[-0.02em]"
+                    style={{ color: variant.text }}
+                  >
+                    {variant.dateLine}
+                  </div>
+
+                  {variant.venueLine && (
+                    <div
+                      className="mt-3 font-postermono text-xs opacity-80 md:text-sm"
+                      style={{ color: variant.text }}
+                    >
+                      {variant.venueLine}
+                    </div>
+                  )}
+                </>
               )}
 
               {/*
@@ -304,6 +443,39 @@ const PosterPage = ({
 
         </main>
 
+        {/*
+          * Previous builds. Every printed sheet carries this row of past
+          * event marks along its bottom edge — it is how the poster says
+          * who is running the session without spending a line of copy on
+          * it, so the page carries it too.
+          */}
+
+        <div
+          className="poster-fade-up mb-3 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 md:gap-x-9"
+          style={{ animationDelay: '0.6s' }}
+        >
+          <span
+            className="font-postermono text-[8px] uppercase tracking-[0.22em] opacity-40 md:text-[9px]"
+            style={{ color: variant.text }}
+          >
+            Some of our events that you might recognise
+          </span>
+
+          {PREVIOUS_BUILDS.map((build) => (
+            <img
+              key={build.src}
+              src={build.src}
+              alt={build.alt}
+              /*
+               * The marks are white artwork of differing weights; in
+               * print they sit back from the poster rather than
+               * competing with it.
+               */
+              className="h-4 w-auto opacity-50 md:h-[18px]"
+            />
+          ))}
+        </div>
+
         {/* Footline */}
 
         <footer
@@ -330,9 +502,9 @@ const PosterPage = ({
 
           <span
             className="tabular-nums opacity-60"
-            title={`Poster ${variant.id} of 30`}
+            title={`Poster ${variant.id} of ${POSTER_COUNT}`}
           >
-            {String(variant.id).padStart(2, '0')}/30
+            {String(variant.id).padStart(2, '0')}/{POSTER_COUNT}
           </span>
         </footer>
 

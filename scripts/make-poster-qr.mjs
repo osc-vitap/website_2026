@@ -25,7 +25,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
-const [countArg = '30', outArg = 'qr'] = process.argv.slice(2);
+const [countArg = '23', outArg = 'qr'] = process.argv.slice(2);
 
 const COUNT = Number(countArg);
 const SIZE = 1024;

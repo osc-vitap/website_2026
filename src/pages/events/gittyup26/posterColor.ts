@@ -5,7 +5,7 @@
  * varies across the page, so it needs a shadow that lifts it off
  * whatever is behind it. Which shadow depends on the text colour: light
  * copy needs a dark halo, dark copy needs a light one. That has to be
- * derived from the colour rather than hardcoded, because the thirty
+ * derived from the colour rather than hardcoded, because the twenty-three
  * posters run from #ffffff to near-black.
  *
  * The display wordmark deliberately gets none of this — at that size a

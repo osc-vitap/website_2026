@@ -74,12 +74,19 @@ const PosterGround = ({
       style={{ background: variant.ground }}
     />
 
-    {variant.image && !variant.imageBlend && (
+    {/*
+      * A luminosity texture recolours itself against the flat ground, so
+      * it sits in the usual place and the poster's own tints and scrims
+      * still run over the top of it.
+      */}
+    {variant.image && variant.imageBlend !== 'multiply' && (
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0 bg-cover"
         style={{
           backgroundImage: `url(${variant.image})`,
+          backgroundPosition: variant.imagePosition ?? 'center',
+          mixBlendMode: variant.imageBlend,
         }}
       />
     )}
@@ -94,17 +101,18 @@ const PosterGround = ({
     ))}
 
     {/*
-      * A blended texture rides above the tints rather than under them.
-      * Below them it would have nothing to blend with — the layers would
-      * just paint over the result.
+      * The halftone screen rides above the tints rather than under them.
+      * Below them it would have nothing to print onto — the layers would
+      * simply paint over the result.
       */}
-    {variant.image && variant.imageBlend && (
+    {variant.image && variant.imageBlend === 'multiply' && (
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0 bg-cover"
         style={{
           backgroundImage: `url(${variant.image})`,
-          mixBlendMode: variant.imageBlend,
+          backgroundPosition: variant.imagePosition ?? 'center',
+          mixBlendMode: 'multiply',
         }}
       />
     )}

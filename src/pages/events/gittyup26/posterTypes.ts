@@ -15,7 +15,15 @@ export type PosterLayout =
   | 'wordmark-stack'
   | 'headline-led'
   | 'terminal'
-  | 'data-block';
+  | 'data-block'
+  /**
+   * The wordmark spread one letter per column, with the heavy weight
+   * running diagonally down through the grid so the stack reads as a
+   * wave rather than a list.
+   */
+  | 'letter-grid'
+  /** A single wordmark row over the emphasis word set as the hero. */
+  | 'hero-word';
 
 export interface PosterVariant {
   /** 1-based, matches ?pg= and the poster's position in the print run. */
@@ -34,16 +42,29 @@ export interface PosterVariant {
   image?: string;
 
   /**
-   * Blend mode for `image`. Setting one also lifts the image above
-   * `layers` — a texture that is meant to blend has to reach the tints
-   * it blends with.
+   * Blend mode for `image`, for the two textures that are not meant to
+   * be laid down flat.
    *
-   * This is how the halftone posters work: the screen is a white sheet
-   * with black dots, so `multiply` drops the white away and prints the
-   * dots onto the colour underneath, the way the press does. Laid flat
-   * it would simply cover the poster in white.
+   * `multiply` is the halftone screen: a white sheet with black dots, so
+   * multiplying drops the white away and prints the dots onto the colour
+   * underneath the way the press does. It has to reach the finished
+   * colour, so it paints above `layers`.
+   *
+   * `luminosity` recolours a texture that ships in the wrong hue. The
+   * source set is generic — green heads, yellow shapes, teal cubes — and
+   * the printed posters tint each one to its own palette. Taking the
+   * texture's lightness and the ground's colour does the same thing, so
+   * it paints in its usual place and lets the tints run over it.
    */
-  imageBlend?: 'multiply' | 'screen' | 'overlay' | 'soft-light';
+  imageBlend?: 'multiply' | 'luminosity';
+
+  /**
+   * Where `image` is anchored, as a CSS background-position. Defaults to
+   * centre. The textures are portrait crops of wider artwork, so a
+   * poster whose subject sits off to one side loses it entirely when a
+   * landscape screen crops to the middle.
+   */
+  imagePosition?: string;
 
   /**
    * CSS background values painted over the ground, first entry
@@ -87,6 +108,19 @@ export interface PosterVariant {
    * Must appear in `headline` verbatim; the renderer splits on it.
    */
   emphasis?: string;
+
+  /**
+   * The word set as the hero on a `hero-word` poster. Defaults to
+   * `emphasis` when it is not given.
+   */
+  heroWord?: string;
+
+  /**
+   * The quieter line printed under the headline, explaining what the
+   * session is. Distinct from `eyebrow`, which is the mono kicker in
+   * the details column.
+   */
+  subline?: string;
 
   dateLine: string;
 

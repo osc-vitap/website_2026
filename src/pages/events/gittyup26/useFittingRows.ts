@@ -20,9 +20,18 @@ import {
 const ROW_ADVANCE = 0.94;
 const FIRST_ROW = 1.2;
 
+/*
+ * The letter-grid posters do not overlap their rows — each letter has
+ * to keep its own line box for the columns to line up — so a row there
+ * costs its full line height. Shared with the sizing helper so the two
+ * cannot drift apart.
+ */
+import { GRID_ROW } from './posterGrid';
+
 export const useFittingRows = (
   ref: RefObject<HTMLElement>,
   requested: number,
+  { advance = ROW_ADVANCE, first = FIRST_ROW } = {},
 ) => {
   const [rows, setRows] = useState(requested);
 
@@ -55,8 +64,8 @@ export const useFittingRows = (
       const fits =
         1 +
         Math.floor(
-          (maxHeight - FIRST_ROW * fontSize) /
-            (ROW_ADVANCE * fontSize),
+          (maxHeight - first * fontSize) /
+            (advance * fontSize),
         );
 
       setRows(
@@ -86,7 +95,13 @@ export const useFittingRows = (
         measure,
       );
     };
-  }, [ref, requested]);
+  }, [ref, requested, advance, first]);
 
   return rows;
 };
+
+/* Row metrics for a poster's layout, for callers of useFittingRows. */
+export const rowMetrics = (layout: string) =>
+  layout === 'letter-grid'
+    ? { advance: GRID_ROW, first: GRID_ROW }
+    : { advance: ROW_ADVANCE, first: FIRST_ROW };

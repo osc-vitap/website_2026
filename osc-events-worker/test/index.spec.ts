@@ -2087,9 +2087,10 @@ describe("admin outside the organisation", () => {
 	});
 
 	/*
-	 * The secret is set with `wrangler secret put NAME < file`, which
-	 * keeps whatever the file ended with. A stored pepper of "P\n" has
-	 * to still reproduce a digest computed under "P", or the exempt
+	 * `wrangler secret put` strips trailing whitespace for you, but the
+	 * dashboard's secret editor stores the value as pasted, and that is
+	 * where a pepper gets pasted in a hurry. A stored "P\n" has to
+	 * reproduce a digest computed under "P" anyway, or the exempt
 	 * account is locked out by a trailing newline nobody can see.
 	 */
 	it("matches a pepper stored with a trailing newline", async () => {

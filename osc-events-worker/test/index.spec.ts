@@ -131,6 +131,20 @@ async function fetchWorker(path: string, init?: RequestInit): Promise<Response> 
 	return response;
 }
 
+/*
+ * The tests below replace globalThis.fetch, so their stubs are typed
+ * against the real signature — the first argument is the full
+ * RequestInfo | URL union even though the Worker only ever passes a
+ * string to the endpoints being stubbed.
+ */
+function stubbedUrl(input: RequestInfo | URL): string {
+	if (typeof input === "string") {
+		return input;
+	}
+
+	return input instanceof URL ? input.href : input.url;
+}
+
 describe("CORS", () => {
 	it("reflects an allowed production origin on GET /api/events", async () => {
 		const response = await fetchWorker("/api/events", {
@@ -1567,6 +1581,32 @@ describe("admin access", () => {
 	});
 });
 
+/*
+ * The shape the Worker posts to Discord, declared rather than read off
+ * an `any`: what these tests are actually asserting is the STRUCTURE of
+ * that payload, so a field losing its name or moving out of the embed
+ * should fail here.
+ */
+interface DiscordEmbedField {
+	name: string;
+	value: string;
+}
+
+interface DiscordEmbed {
+	title: string;
+	url: string;
+	color: number;
+	fields: DiscordEmbedField[];
+	footer: { text: string };
+	timestamp: string;
+}
+
+interface DiscordPayload {
+	username: string;
+	allowed_mentions: { parse: string[] };
+	embeds: DiscordEmbed[];
+}
+
 describe("Discord registration webhook", () => {
 	const HOOK = "https://discord.com/api/webhooks/test/token";
 
@@ -1574,7 +1614,7 @@ describe("Discord registration webhook", () => {
 	const realFetch = globalThis.fetch;
 
 	/** Every outbound call the Worker made, so the test can read the payload. */
-	let sent: { url: string; body: any }[] = [];
+	let sent: { url: string; body: DiscordPayload }[] = [];
 
 	let respondWith: () => Promise<Response> = async () => new Response("", { status: 204 });
 
@@ -1583,8 +1623,8 @@ describe("Discord registration webhook", () => {
 		env.DISCORD_WEBHOOK_URL = HOOK;
 		respondWith = async () => new Response("", { status: 204 });
 
-		globalThis.fetch = (async (input: any, init?: RequestInit) => {
-			const url = typeof input === "string" ? input : input.url;
+		globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = stubbedUrl(input);
 
 			if (url.startsWith("https://discord.com/")) {
 				sent.push({ url, body: JSON.parse(String(init?.body ?? "{}")) });
@@ -1634,12 +1674,12 @@ describe("Discord registration webhook", () => {
 
 		expect(embed.title).toBe("New registration — GITTY UP");
 
-		const from = embed.fields.find((f: any) => f.name === "Registered from");
+		const from = embed.fields.find((f: DiscordEmbedField) => f.name === "Registered from");
 
 		expect(from.value).toContain("/gittyup26");
 		expect(from.value).toContain("poster 13");
 
-		const who = embed.fields.find((f: any) => f.name === "Participant");
+		const who = embed.fields.find((f: DiscordEmbedField) => f.name === "Participant");
 
 		expect(who.value).toContain("Ada Lovelace");
 		expect(who.value).toContain("22BCE0777");
@@ -1653,7 +1693,7 @@ describe("Discord registration webhook", () => {
 			members: [member],
 		});
 
-		const from = sent[0].body.embeds[0].fields.find((f: any) => f.name === "Registered from");
+		const from = sent[0].body.embeds[0].fields.find((f: DiscordEmbedField) => f.name === "Registered from");
 
 		expect(from.value).toContain("/events/hook-plain/register");
 		expect(from.value).not.toContain("poster");
@@ -1679,7 +1719,7 @@ describe("Discord registration webhook", () => {
 
 		await register(slug, { source, members: [member] });
 
-		const from = sent[0].body.embeds[0].fields.find((f: any) => f.name === "Registered from");
+		const from = sent[0].body.embeds[0].fields.find((f: DiscordEmbedField) => f.name === "Registered from");
 
 		expect(from.value).toBe("Unknown page");
 	});
@@ -1692,7 +1732,7 @@ describe("Discord registration webhook", () => {
 			members: [member],
 		});
 
-		const from = sent[0].body.embeds[0].fields.find((f: any) => f.name === "Registered from");
+		const from = sent[0].body.embeds[0].fields.find((f: DiscordEmbedField) => f.name === "Registered from");
 
 		expect(from.value).toBe("/gittyup26");
 	});
@@ -1719,7 +1759,7 @@ describe("Discord registration webhook", () => {
 
 		expect(payload.allowed_mentions).toEqual({ parse: [] });
 
-		const who = payload.embeds[0].fields.find((f: any) => f.name === "Participant");
+		const who = payload.embeds[0].fields.find((f: DiscordEmbedField) => f.name === "Participant");
 
 		/*
 		 * The escaped form still contains the literal characters, so the
@@ -1729,6 +1769,101 @@ describe("Discord registration webhook", () => {
 		expect(who.value).not.toMatch(/(^|[^\\])@/);
 		expect(who.value).toContain("\\@everyone");
 		expect(who.value).toContain("\\[link\\]");
+	});
+
+	/*
+	 * The roster puts one participant on each line and joins that
+	 * participant's own fields with " · ", so both characters are
+	 * structural. A name carrying a newline used to render as three
+	 * roster rows — the last of them "Admin Override" — under a header
+	 * that still read "Participant", singular.
+	 *
+	 * Whitespace is collapsed at ingest rather than at the encoder, so
+	 * the D1 row the CSV export later reads is one line too.
+	 */
+	it("cannot forge extra roster rows with a newline in a name", async () => {
+		await seedEvent({ slug: "hook-newline", title: "Newline" });
+
+		const response = await register("hook-newline", {
+			source: { page: "/gittyup26", poster: 6 },
+			members: [
+				{
+					...member,
+					name: "Riya Menon\nRohit Sharma 22BCE0001 year 4\r\nAdmin Override",
+				},
+			],
+		});
+
+		expect(response.status).toBe(201);
+
+		const who = sent[0].body.embeds[0].fields.find((f: DiscordEmbedField) => f.name === "Participant");
+
+		expect(who.value.split("\n")).toHaveLength(1);
+
+		const stored = await env.DB.prepare(`SELECT name FROM registration_members`).first<{ name: string }>();
+
+		expect(stored?.name).toBe("Riya Menon Rohit Sharma 22BCE0001 year 4 Admin Override");
+	});
+
+	/*
+	 * The same forgery within a single line. "·" separates a
+	 * participant's own fields, so it cannot be part of one — and unlike
+	 * a newline there is no benign reading to collapse it to.
+	 */
+	it("refuses the roster separator inside a year of study", async () => {
+		await seedEvent({ slug: "hook-separator", title: "Separator" });
+
+		const response = await register("hook-separator", {
+			source: { page: "/gittyup26", poster: 7 },
+			members: [{ ...member, year_of_study: "2 · Admin Override" }],
+		});
+
+		expect(response.status).toBe(400);
+		expect(sent).toHaveLength(0);
+
+		const stored = await env.DB.prepare(`SELECT COUNT(*) AS n FROM registration_members`).first<{ n: number }>();
+
+		expect(stored?.n).toBe(0);
+	});
+
+	it("refuses the roster separator in a team name", async () => {
+		await seedEvent({ slug: "hook-team-separator", title: "Team Separator" });
+
+		const response = await register("hook-team-separator", {
+			source: { page: "/gittyup26", poster: 8 },
+			team_name: "The Twins · 22BCE0003 · year 4",
+			members: [member],
+		});
+
+		expect(response.status).toBe(400);
+		expect(sent).toHaveLength(0);
+	});
+
+	/*
+	 * The title is the one string in the embed that never meets the
+	 * registration validator — the admin write paths only trim it — so
+	 * the encoder is the only place it can be flattened. Left raw, a
+	 * title with a newline in it renders as a second line above the
+	 * fields, and the "·" reads as a roster separator.
+	 */
+	it("flattens an event title an admin left a newline in", async () => {
+		await seedEvent({
+			slug: "hook-title",
+			title: "Hack\n@everyone **bold** · forged",
+		});
+
+		const response = await register("hook-title", {
+			source: { page: "/gittyup26", poster: 9 },
+			members: [member],
+		});
+
+		expect(response.status).toBe(201);
+
+		const title = sent[0].body.embeds[0].title;
+
+		expect(title.split("\n")).toHaveLength(1);
+		expect(title).not.toContain("·");
+		expect(title).not.toMatch(/(^|[^\\])@/);
 	});
 
 	it("sends nothing when no webhook is configured", async () => {
@@ -1799,43 +1934,49 @@ describe("admin outside the organisation", () => {
 	 */
 	const PEPPER = "test-pepper-0123456789abcdef";
 
+	/*
+	 * The exemption is keyed on the numeric GitHub id. The handle is
+	 * carried alongside it only so the two can be varied independently
+	 * below — nothing is allowed to turn on it.
+	 */
+	const EXEMPT_ID = "4242";
 	const EXEMPT_HANDLE = "an-outsider";
 
 	const originalAllowList = env.ADMIN_GITHUB_USERS;
-	const originalHashes = env.ADMIN_OUTSIDER_HASHES;
+	const originalHashes = env.ADMIN_OUTSIDER_ID_HASHES;
 	const originalPepper = env.ADMIN_HANDLE_PEPPER;
 
 	/*
-	 * Mirrors adminHandleDigest in the Worker. Written out rather than
+	 * Mirrors adminIdDigest in the Worker. Written out rather than
 	 * imported so a change to the hashing there fails these tests
 	 * instead of being silently agreed with.
 	 */
-	async function digestOf(handle: string, pepper: string): Promise<string> {
+	async function digestOf(githubUserId: string, pepper: string): Promise<string> {
 		const encoder = new TextEncoder();
 
 		const key = await crypto.subtle.importKey("raw", encoder.encode(pepper), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
 
-		const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(handle.trim().toLowerCase()));
+		const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(githubUserId.trim()));
 
 		return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 	}
 
 	afterEach(async () => {
 		env.ADMIN_GITHUB_USERS = originalAllowList;
-		env.ADMIN_OUTSIDER_HASHES = originalHashes;
+		env.ADMIN_OUTSIDER_ID_HASHES = originalHashes;
 		env.ADMIN_HANDLE_PEPPER = originalPepper;
 
 		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
 	});
 
-	async function seedSession(username: string): Promise<void> {
+	async function seedSession(username: string, githubUserId = EXEMPT_ID): Promise<void> {
 		await env.DB.prepare(
 			`
         INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
         VALUES (?, ?, ?, ?)
       `,
 		)
-			.bind(SESSION_ID, "9", username, new Date(Date.now() + 3600_000).toISOString())
+			.bind(SESSION_ID, githubUserId, username, new Date(Date.now() + 3600_000).toISOString())
 			.run();
 	}
 
@@ -1850,32 +1991,63 @@ describe("admin outside the organisation", () => {
 	 * only thing that can produce a 200 is the exemption itself — an
 	 * empty allow list would let these pass without it being tested.
 	 */
-	it("lets an exempt handle in even when the allow list names other people", async () => {
+	it("lets an exempt id in even when the allow list names other people", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
 		env.ADMIN_HANDLE_PEPPER = PEPPER;
-		env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+		env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
 
 		await seedSession(EXEMPT_HANDLE);
 
 		expect((await asAdmin("/api/admin/events")).status).toBe(200);
 	});
 
-	it("matches the handle whatever case or spacing it arrives in", async () => {
-		env.ADMIN_GITHUB_USERS = "someone-else";
+	/*
+	 * The two halves of the reason this is keyed on the id at all.
+	 *
+	 * GitHub logins are mutable and are NOT reserved when released. When
+	 * the exemption hashed the handle, renaming the exempt account locked
+	 * its owner out and — far worse — handed the exemption to whoever
+	 * claimed the abandoned username, who then skipped the organisation
+	 * check entirely. The id survives the rename and does not follow the
+	 * name to its next owner.
+	 */
+	it("still exempts the account after GitHub renames it", async () => {
+		env.ADMIN_GITHUB_USERS = "";
 		env.ADMIN_HANDLE_PEPPER = PEPPER;
-		env.ADMIN_OUTSIDER_HASHES = ` ${(await digestOf(EXEMPT_HANDLE, PEPPER)).toUpperCase()} `;
+		env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
 
-		await seedSession(" An-Outsider ");
+		await seedSession("renamed-since", EXEMPT_ID);
 
 		expect((await asAdmin("/api/admin/events")).status).toBe(200);
 	});
 
-	it("still refuses a handle that is on neither list", async () => {
+	it("does not exempt whoever claims the released handle", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
 		env.ADMIN_HANDLE_PEPPER = PEPPER;
-		env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+		env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
 
-		await seedSession("a-stranger");
+		/* Same name, different account. */
+		await seedSession(EXEMPT_HANDLE, "99999999");
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+
+	it("matches a digest whatever case or spacing the list arrives in", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_HANDLE_PEPPER = PEPPER;
+		env.ADMIN_OUTSIDER_ID_HASHES = ` ${(await digestOf(EXEMPT_ID, PEPPER)).toUpperCase()} `;
+
+		await seedSession(EXEMPT_HANDLE);
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(200);
+	});
+
+	it("still refuses an account that is on neither list", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_HANDLE_PEPPER = PEPPER;
+		env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
+
+		await seedSession("a-stranger", "77");
 
 		expect((await asAdmin("/api/admin/events")).status).toBe(401);
 	});
@@ -1883,7 +2055,7 @@ describe("admin outside the organisation", () => {
 	it("an empty hash list exempts nobody", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
 		env.ADMIN_HANDLE_PEPPER = PEPPER;
-		env.ADMIN_OUTSIDER_HASHES = "";
+		env.ADMIN_OUTSIDER_ID_HASHES = "";
 
 		await seedSession(EXEMPT_HANDLE);
 
@@ -1896,7 +2068,7 @@ describe("admin outside the organisation", () => {
 	 */
 	it("exempts nobody when no pepper is configured", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
-		env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+		env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
 		env.ADMIN_HANDLE_PEPPER = "";
 
 		await seedSession(EXEMPT_HANDLE);
@@ -1906,7 +2078,7 @@ describe("admin outside the organisation", () => {
 
 	it("exempts nobody when the pepper is wrong", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
-		env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+		env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
 		env.ADMIN_HANDLE_PEPPER = `${PEPPER}-rotated`;
 
 		await seedSession(EXEMPT_HANDLE);
@@ -1921,7 +2093,7 @@ describe("admin outside the organisation", () => {
 	it("survives a malformed hex entry", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
 		env.ADMIN_HANDLE_PEPPER = PEPPER;
-		env.ADMIN_OUTSIDER_HASHES = `not-a-digest,${await digestOf(EXEMPT_HANDLE, PEPPER)}`;
+		env.ADMIN_OUTSIDER_ID_HASHES = `not-a-digest,${await digestOf(EXEMPT_ID, PEPPER)}`;
 
 		await seedSession(EXEMPT_HANDLE);
 
@@ -1929,7 +2101,7 @@ describe("admin outside the organisation", () => {
 
 		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
 
-		env.ADMIN_OUTSIDER_HASHES = "zzzz,,   ,not-a-digest";
+		env.ADMIN_OUTSIDER_ID_HASHES = "zzzz,,   ,not-a-digest";
 
 		await seedSession(EXEMPT_HANDLE);
 
@@ -1941,10 +2113,10 @@ describe("admin outside the organisation", () => {
 	 * starts with it — the comparison is over the whole digest, so a
 	 * prefix is simply a different length and never matches.
 	 */
-	it("refuses a handle whose digest merely starts a listed one", async () => {
+	it("refuses an account whose digest merely starts a listed one", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
 		env.ADMIN_HANDLE_PEPPER = PEPPER;
-		env.ADMIN_OUTSIDER_HASHES = (await digestOf(EXEMPT_HANDLE, PEPPER)).slice(0, 32);
+		env.ADMIN_OUTSIDER_ID_HASHES = (await digestOf(EXEMPT_ID, PEPPER)).slice(0, 32);
 
 		await seedSession(EXEMPT_HANDLE);
 
@@ -1954,12 +2126,14 @@ describe("admin outside the organisation", () => {
 	/*
 	 * Everything above reads a session that already exists. The sign-in
 	 * callback is the only place that decides whether the osc-vitap
-	 * membership call happens at all, and both of its checks became
-	 * async when the exemption moved to hashed handles. A dropped await
-	 * there leaves a pending promise, which is truthy — so the
-	 * organisation gate is skipped and an eight-hour session is handed
-	 * to any GitHub account that reaches the callback. Nothing else in
-	 * this file touches that route, so these are its only guard.
+	 * membership call happens at all, and both of its checks are async.
+	 * A dropped await there leaves a pending promise, which is truthy —
+	 * so the organisation gate is skipped and an eight-hour session is
+	 * handed to any GitHub account that reaches the callback. TypeScript
+	 * cannot see it, because `if (promise)` and `if (!promise)` are both
+	 * legal, and with the deployed ADMIN_GITHUB_USERS of "" there is
+	 * nothing else in the way. Nothing else in this file touches that
+	 * route, so these are its only guard.
 	 */
 	describe("signing in", () => {
 		const STATE = "callback-state";
@@ -1970,16 +2144,18 @@ describe("admin outside the organisation", () => {
 		let called: string[] = [];
 
 		/** What GitHub answers with, set per test before signing in. */
+		let userId = 0;
 		let login = "";
 		let inOrg = false;
 
 		beforeEach(async () => {
 			called = [];
+			userId = Number(EXEMPT_ID);
 			login = "";
 			inOrg = false;
 
-			globalThis.fetch = (async (input: any, init?: RequestInit) => {
-				const url = typeof input === "string" ? input : input.url;
+			globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+				const url = stubbedUrl(input);
 
 				called.push(url);
 
@@ -1988,7 +2164,7 @@ describe("admin outside the organisation", () => {
 				}
 
 				if (url === "https://api.github.com/user") {
-					return Response.json({ id: 4242, login });
+					return Response.json({ id: userId, login });
 				}
 
 				if (url.startsWith("https://api.github.com/user/memberships/orgs/")) {
@@ -2033,11 +2209,12 @@ describe("admin outside the organisation", () => {
 		 * everyone past, so organisation membership is the whole gate —
 		 * the exact configuration this has to hold under.
 		 */
-		it("turns away a handle the organisation does not know and stores no session", async () => {
+		it("turns away an account the organisation does not know and stores no session", async () => {
 			env.ADMIN_GITHUB_USERS = "";
 			env.ADMIN_HANDLE_PEPPER = PEPPER;
-			env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+			env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
 
+			userId = 777;
 			login = "a-stranger";
 
 			const response = await signIn("203.0.113.20");
@@ -2048,10 +2225,10 @@ describe("admin outside the organisation", () => {
 			expect((await sessionCount())?.n).toBe(0);
 		});
 
-		it("signs an exempt handle in without asking the organisation", async () => {
+		it("signs an exempt id in without asking the organisation", async () => {
 			env.ADMIN_GITHUB_USERS = "";
 			env.ADMIN_HANDLE_PEPPER = PEPPER;
-			env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+			env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
 
 			login = EXEMPT_HANDLE;
 
@@ -2060,13 +2237,38 @@ describe("admin outside the organisation", () => {
 			expect(response.status).toBe(302);
 			expect(response.headers.get("Location")).toBe("https://www.oscvitap.com/admin");
 
-			expect(called.some((url) => url.includes("/memberships/orgs/"))).toBe(false);
+			expect(called.filter((url) => url.includes("/memberships/orgs/"))).toHaveLength(0);
 
-			const session = await env.DB.prepare(`SELECT github_username FROM admin_sessions`).first<{
+			const session = await env.DB.prepare(`SELECT github_user_id, github_username FROM admin_sessions`).first<{
+				github_user_id: string;
 				github_username: string;
 			}>();
 
+			expect(session?.github_user_id).toBe(EXEMPT_ID);
 			expect(session?.github_username).toBe(EXEMPT_HANDLE);
+		});
+
+		/*
+		 * The hijack the id keying exists to stop, end to end: the exempt
+		 * account has been renamed or deleted and someone else now signs
+		 * in under its old handle. They must fall through to the
+		 * organisation check like anybody else.
+		 */
+		it("makes a new owner of the exempt handle prove organisation membership", async () => {
+			env.ADMIN_GITHUB_USERS = "";
+			env.ADMIN_HANDLE_PEPPER = PEPPER;
+			env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
+
+			userId = 99999999;
+			login = EXEMPT_HANDLE;
+
+			const response = await signIn("203.0.113.23");
+
+			expect(response.headers.get("Location")).toContain("reason=not-a-member");
+
+			expect(called.filter((url) => url.includes("/memberships/orgs/"))).toHaveLength(1);
+
+			expect((await sessionCount())?.n).toBe(0);
 		});
 
 		/*
@@ -2078,8 +2280,9 @@ describe("admin outside the organisation", () => {
 		it("turns away a handle the allow list does not name, before the organisation call", async () => {
 			env.ADMIN_GITHUB_USERS = "someone-else";
 			env.ADMIN_HANDLE_PEPPER = PEPPER;
-			env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+			env.ADMIN_OUTSIDER_ID_HASHES = await digestOf(EXEMPT_ID, PEPPER);
 
+			userId = 777;
 			login = "a-stranger";
 			inOrg = true;
 
@@ -2087,7 +2290,7 @@ describe("admin outside the organisation", () => {
 
 			expect(response.headers.get("Location")).toContain("reason=not-allowed");
 
-			expect(called.some((url) => url.includes("/memberships/orgs/"))).toBe(false);
+			expect(called.filter((url) => url.includes("/memberships/orgs/"))).toHaveLength(0);
 
 			expect((await sessionCount())?.n).toBe(0);
 		});

@@ -57,43 +57,51 @@ function adminGithubUsers(env?: Env): string[] {
 }
 
 /*
- * Handles allowed into the dashboard WITHOUT being in the osc-vitap
- * organisation.
+ * GitHub accounts allowed into the dashboard WITHOUT being in the
+ * osc-vitap organisation.
  *
  * This is a deliberate hole in the only real gate this admin has, so it
- * is its own setting rather than a flag on the existing one: a handle
+ * is its own setting rather than a flag on the existing one: an account
  * here is trusted on GitHub's word alone. Keep it to people who cannot
  * be added to the organisation, and empty it when they can.
  *
- * The handles themselves are not stored, only digests: this repository
- * is public, and the plaintext list named a real person on every clone.
+ * Keyed on the NUMERIC user id, never on the handle. GitHub logins are
+ * mutable and are not reserved when released: if an exempt account were
+ * ever renamed or deleted, whoever claimed the username next would sign
+ * in and skip the organisation check entirely — full admin, registrant
+ * PII, event PATCH/DELETE, and the session eviction endpoint that
+ * removes the real admins. An ordinary org member cannot be taken over
+ * that way because a rename breaks their membership too; this exemption
+ * is precisely what removes that backstop, and the log line reads the
+ * same either way. Numeric ids are never reused.
+ *
+ * The ids themselves are not stored, only digests: this repository is
+ * public, and the list named a real person on every clone.
  */
 function adminOrgExempt(env?: Env): string[] {
-	return (env?.ADMIN_OUTSIDER_HASHES ?? '')
+	return (env?.ADMIN_OUTSIDER_ID_HASHES ?? '')
 		.split(',')
 		.map((digest) => digest.trim().toLowerCase())
 		.filter(Boolean);
 }
 
 /*
- * HMAC-SHA256 of the handle under ADMIN_HANDLE_PEPPER, hex.
+ * HMAC-SHA256 of the GitHub user id under ADMIN_HANDLE_PEPPER, hex.
  *
- * Keyed, not a bare SHA-256. GitHub handles are short and the whole
- * user list is public, so an unkeyed digest is reversed by hashing
- * every known handle — a few minutes' work, and worse than the
- * plaintext it replaced because it looks private. Without the pepper
- * the committed digest is meaningless.
+ * Keyed, not a bare SHA-256. The id space is small and dense, so an
+ * unkeyed digest is reversed by hashing a counter — minutes' work, and
+ * worse than the plaintext it replaced because it looks private.
+ * Without the pepper the committed digest is meaningless.
  *
- * The handle is trimmed and lowercased first so the digest does not
- * depend on how GitHub happened to case it, which is how the plaintext
- * list behaved.
+ * Trimmed first so the digest does not depend on stray whitespace in
+ * the configured list.
  */
-async function adminHandleDigest(username: string, pepper: string): Promise<string> {
+async function adminIdDigest(githubUserId: string, pepper: string): Promise<string> {
 	const encoder = new TextEncoder();
 
 	const key = await crypto.subtle.importKey('raw', encoder.encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
 
-	const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(username.trim().toLowerCase()));
+	const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(githubUserId.trim()));
 
 	return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -117,7 +125,7 @@ function digestsMatch(a: string, b: string): boolean {
 	return difference === 0;
 }
 
-async function isOrgExempt(username: string, env?: Env): Promise<boolean> {
+async function isOrgExempt(githubUserId: string, env?: Env): Promise<boolean> {
 	const digests = adminOrgExempt(env);
 
 	const pepper = (env?.ADMIN_HANDLE_PEPPER ?? '').trim();
@@ -131,18 +139,23 @@ async function isOrgExempt(username: string, env?: Env): Promise<boolean> {
 		return false;
 	}
 
-	const digest = await adminHandleDigest(username, pepper);
+	const digest = await adminIdDigest(githubUserId, pepper);
 
 	return digests.some((configured) => digestsMatch(configured, digest));
 }
 
-async function isAllowedAdmin(username: string, env?: Env): Promise<boolean> {
+/*
+ * Takes both identifiers because they answer different questions: the
+ * exemption is keyed on the id GitHub can never reassign, while
+ * ADMIN_GITHUB_USERS is a handle list a human maintains by eye.
+ */
+async function isAllowedAdmin(githubUserId: string, username: string, env?: Env): Promise<boolean> {
 	/*
-	 * An exempt handle is allowed even once ADMIN_GITHUB_USERS is
+	 * An exempt account is allowed even once ADMIN_GITHUB_USERS is
 	 * populated — otherwise turning that list on would silently lock out
 	 * the very people this exists for.
 	 */
-	if (await isOrgExempt(username, env)) {
+	if (await isOrgExempt(githubUserId, env)) {
 		return true;
 	}
 
@@ -262,6 +275,36 @@ const LIMITS = {
 } as const;
 
 /*
+ * The same fields were length-checked but never character-checked, and
+ * they reach three renderers that do not treat a line break as ordinary
+ * text.
+ *
+ * The Discord announcement joins one participant's fields with " · " and
+ * puts one participant per line, so a name carrying a newline renders as
+ * extra roster rows under a header still reading "Participant" — one
+ * registration presenting itself as three, the last of them called
+ * "Admin Override". A "·" inside year_of_study forges the same thing
+ * inside a single line. The CSV export has its own version: an embedded
+ * newline splits one record across two rows.
+ *
+ * Collapsing every run of whitespace to one space removes the newline,
+ * tab and Unicode line-separator forms together, and is what a real
+ * registrant who pasted a name with a trailing newline wanted anyway.
+ */
+function collapseWhitespace(value: string): string {
+	return value.replace(/\s+/g, ' ').trim();
+}
+
+/*
+ * What collapsing cannot reach: the C0 and C1 control characters that
+ * are not whitespace, and the "·" the roster joins on. None of them
+ * belongs in a name, a year of study, a handle or a team name, so a
+ * value containing one is rejected rather than quietly rewritten — that
+ * submission is not a typo.
+ */
+const FORBIDDEN_FIELD_CHARACTERS = /[\p{Cc}\u00b7]/u;
+
+/*
  * ============================================================
  * DISCORD NOTIFICATIONS
  * ============================================================
@@ -321,9 +364,17 @@ function normalizeSource(raw: unknown): RegistrationSource | null {
  * This is defence in depth, not the whole defence: the payload also
  * sends allowed_mentions with an empty parse list, which is what
  * actually guarantees an @everyone in a name cannot ping anyone.
+ *
+ * The line breaks and the "·" separator are flattened here as well as
+ * at ingest, because this encoder also renders the event title and the
+ * team name, which an admin can set through PATCH /api/admin/events
+ * without ever passing the registration validator.
  */
 function escapeDiscord(value: string): string {
-	return value.replace(/[\\`*_~|<>@#:[\]()]/g, (character) => `\\${character}`);
+	return value
+		.replace(/[\s\p{Cc}]+/gu, ' ')
+		.replace(/·/g, '-')
+		.replace(/[\\`*_~|<>@#:[\]()]/g, (character) => `\\${character}`);
 }
 
 function truncate(value: string, max: number): string {
@@ -395,7 +446,7 @@ function registrationEmbed(announcement: RegistrationAnnouncement) {
 	}
 
 	return {
-		title: truncate(`New registration — ${announcement.eventTitle}`, 256),
+		title: truncate(`New registration — ${escapeDiscord(announcement.eventTitle)}`, 256),
 		url: `https://www.oscvitap.com/events`,
 		/* The site's own accent, so the channel reads as one system. */
 		color: 0xc0_84_fc,
@@ -678,7 +729,7 @@ async function getAdminSession(request: Request, env: Env) {
 	 * so removing a handle takes effect immediately instead of when
 	 * their eight hour session happens to expire.
 	 */
-	if (!(await isAllowedAdmin(session.github_username, env))) {
+	if (!(await isAllowedAdmin(session.github_user_id, session.github_username, env))) {
 		return null;
 	}
 
@@ -1397,7 +1448,9 @@ export default {
 				 * allowed is rejected without a second GitHub call.
 				 */
 
-				if (!(await isAllowedAdmin(githubUser.login, env))) {
+				const githubUserId = String(githubUser.id);
+
+				if (!(await isAllowedAdmin(githubUserId, githubUser.login, env))) {
 					console.log('Admin allow list rejected:', githubUser.login);
 
 					return authFailureRedirect(request, 'not-allowed');
@@ -1413,14 +1466,16 @@ export default {
 				 * works for private members too, which listing the
 				 * organisation's members would not.
 				 *
-				 * A handle whose digest is in ADMIN_OUTSIDER_HASHES skips
-				 * the gate entirely. That is the whole point of the
-				 * setting, and it is the only way into the dashboard that
-				 * organisation membership does not vouch for — so it is
-				 * logged every time it is used.
+				 * An account whose id digest is in
+				 * ADMIN_OUTSIDER_ID_HASHES skips the gate entirely. That
+				 * is the whole point of the setting, and it is the only
+				 * way into the dashboard that organisation membership does
+				 * not vouch for — so it is logged every time it is used.
+				 * The handle is in the log line for a human to read; the
+				 * decision above it is the id's alone.
 				 */
 
-				if (await isOrgExempt(githubUser.login, env)) {
+				if (await isOrgExempt(githubUserId, env)) {
 					console.log('Admin allowed without organisation membership:', githubUser.login);
 				} else {
 					const membershipResponse = await fetch(`https://api.github.com/user/memberships/orgs/${GITHUB_ORG}`, {
@@ -1476,7 +1531,7 @@ export default {
 	          VALUES (?, ?, ?, ?)
 	        `,
 				)
-					.bind(sessionId, String(githubUser.id), githubUser.login, sessionExpiresAt)
+					.bind(sessionId, githubUserId, githubUser.login, sessionExpiresAt)
 					.run();
 
 				/*
@@ -2823,6 +2878,25 @@ export default {
 					);
 				}
 
+				/*
+				 * Normalised once, here, rather than re-derived at the
+				 * INSERT and again at the Discord announcement — two
+				 * expressions producing "the same" string is how the
+				 * stored value and the announced value drift apart.
+				 */
+				const teamName = collapseWhitespace(body.team_name ?? '').slice(0, LIMITS.teamName) || null;
+
+				if (teamName !== null && FORBIDDEN_FIELD_CHARACTERS.test(teamName)) {
+					return json(
+						{
+							error: 'Team name contains characters that are not allowed',
+						},
+						400,
+						request,
+						env,
+					);
+				}
+
 				const rawMembers = body.members ?? [];
 
 				/*
@@ -2893,10 +2967,10 @@ export default {
 						);
 					}
 
-					const name = member.name?.trim() ?? '';
-					const yearOfStudy = member.year_of_study?.trim() ?? '';
-					const email = member.email?.trim().toLowerCase() ?? '';
-					const github = member.github?.trim() || null;
+					const name = collapseWhitespace(member.name ?? '');
+					const yearOfStudy = collapseWhitespace(member.year_of_study ?? '');
+					const email = collapseWhitespace(member.email ?? '').toLowerCase();
+					const github = collapseWhitespace(member.github ?? '') || null;
 					const registrationNumber = normalizeRegistrationNumber(member.college_registration_number ?? '');
 
 					if (!name || !yearOfStudy || !registrationNumber || !email) {
@@ -2919,6 +2993,27 @@ export default {
 						return json(
 							{
 								error: `One of the fields for member ${index + 1} is too long`,
+							},
+							400,
+							request,
+							env,
+						);
+					}
+
+					/*
+					 * See FORBIDDEN_FIELD_CHARACTERS: one of these in a name
+					 * or a year of study forges extra participant rows in
+					 * the Discord announcement and splits the CSV export.
+					 */
+					if (
+						FORBIDDEN_FIELD_CHARACTERS.test(name) ||
+						FORBIDDEN_FIELD_CHARACTERS.test(yearOfStudy) ||
+						FORBIDDEN_FIELD_CHARACTERS.test(email) ||
+						(github !== null && FORBIDDEN_FIELD_CHARACTERS.test(github))
+					) {
+						return json(
+							{
+								error: `One of the fields for member ${index + 1} contains characters that are not allowed`,
 							},
 							400,
 							request,
@@ -3070,7 +3165,7 @@ export default {
 						firstMember.year_of_study,
 						firstMember.github ?? null,
 						firstMember.email,
-						body.team_name?.trim().slice(0, LIMITS.teamName) || null,
+						teamName,
 						members.length,
 					)
 					.run();
@@ -3149,7 +3244,7 @@ export default {
 					eventTitle: event.title,
 					eventSlug: event.slug,
 					registrationId,
-					teamName: body.team_name?.trim().slice(0, LIMITS.teamName) || null,
+					teamName,
 					source: normalizeSource(body.source),
 					members,
 				});

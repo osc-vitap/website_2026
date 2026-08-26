@@ -545,7 +545,7 @@ const PosterPage = ({
           style={{ animationDelay: '0.6s' }}
         >
           <span
-            className="font-postermono text-[8px] uppercase tracking-[0.22em] opacity-40 md:text-[9px]"
+            className="font-postermono text-[8px] uppercase tracking-[0.22em] opacity-60 md:text-[9px]"
             style={{ color: variant.text }}
           >
             Some of our events that you might recognise
@@ -561,7 +561,7 @@ const PosterPage = ({
                * print they sit back from the poster rather than
                * competing with it.
                */
-              className="h-4 w-auto opacity-50 md:h-[18px]"
+              className="h-4 w-auto opacity-70 md:h-[18px]"
             />
           ))}
         </div>

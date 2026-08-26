@@ -708,7 +708,7 @@ export const posterVariants: PosterVariant[] = [
 		"layers": [
 			"radial-gradient(58% 68% at 84% 56%, rgba(120,150,190,.18) 0%, rgba(70,95,130,.08) 46%, rgba(0,0,0,0) 76%)",
 			"linear-gradient(90deg, #000 0%, rgba(0,0,0,.94) 34%, rgba(0,0,0,.5) 60%, rgba(0,0,0,0) 86%)",
-			"linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.45) 12%, rgba(0,0,0,0) 30%)"
+			"linear-gradient(0deg, rgba(0,0,0,.95) 0%, rgba(0,0,0,.78) 13%, rgba(0,0,0,.34) 26%, rgba(0,0,0,0) 42%)"
 		],
 		"ink": "#ffffff",
 		"inkGradient": "linear-gradient(101deg,#eef2fa 0%,#79808f 11%,#ffffff 24%,#565d6b 35%,#c9d2e4 47%,#6fe6ff 55%,#8e97a8 63%,#ffffff 76%,#646b7b 88%,#dfe5f0 100%)",

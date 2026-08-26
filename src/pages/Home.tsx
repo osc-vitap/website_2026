@@ -45,7 +45,7 @@ const Home = () => {
       
       {/* 1. Header Slideshow */}
       {slides.length > 0 && (
-        <section className="relative w-full aspect-[4/3] md:aspect-video min-h-[50vh] max-h-[90vh] overflow-hidden border-b border-dark-700 bg-black">
+        <section className="relative min-h-[50vh] w-full overflow-hidden border-b border-dark-700 bg-black aspect-[4/3] max-h-[90vh] md:aspect-video">
           <AnimatePresence mode='wait'>
             <motion.div
               key={currentSlide}
@@ -62,18 +62,18 @@ const Home = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-b from-dark-900/60 via-transparent to-dark-900"></div>
               
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 md:p-8 z-10">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-4 text-center sm:p-6 md:p-8">
                 <motion.div 
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
-                  className="mb-6 text-brand-accent text-sm tracking-[0.3em] uppercase font-bold"
+                  className="mb-4 px-2 text-center text-xs font-bold uppercase tracking-[0.22em] text-brand-accent sm:mb-6 sm:text-sm sm:tracking-[0.3em]"
                 >
                   [{slides[currentSlide].sub_title}] // {slides[currentSlide].date}
                 </motion.div>
                 
                 <h1 
-                  className="text-4xl sm:text-5xl md:text-7xl mb-6 md:mb-8 max-w-5xl text-white uppercase tracking-[0.2em] md:tracking-[0.3em] font-sans font-light"
+                  className="mb-5 max-w-5xl text-3xl font-light uppercase tracking-[0.16em] text-white sm:text-5xl sm:tracking-[0.2em] md:mb-8 md:text-7xl md:tracking-[0.3em]"
                 >
                   {slides[currentSlide].title}
                 </h1>
@@ -82,7 +82,7 @@ const Home = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.6, duration: 0.8 }}
-                  className="text-lg md:text-xl text-gray-400 mb-12 max-w-2xl leading-relaxed font-mono"
+                  className="mb-8 max-w-2xl px-2 font-mono text-sm leading-relaxed text-gray-400 sm:text-base md:mb-12 md:text-xl"
                 >
                   {slides[currentSlide].description}
                 </motion.p>
@@ -92,7 +92,7 @@ const Home = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.8, duration: 0.5 }}
                 >
-                  <Link to="/events" className="px-10 py-4 border border-brand-primary text-white uppercase tracking-[0.2em] text-sm flex items-center gap-4 bg-brand-primary/10 hover:bg-brand-primary transition-all duration-300 group">
+                  <Link to="/events" className="group inline-flex min-h-[44px] w-full items-center justify-center gap-3 border border-brand-primary bg-brand-primary/10 px-6 py-3 text-center text-xs uppercase tracking-[0.18em] text-white transition-all duration-300 hover:bg-brand-primary sm:w-auto sm:px-10 sm:py-4 sm:text-sm sm:tracking-[0.2em]">
                     Explore Events <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </motion.div>
@@ -107,12 +107,12 @@ const Home = () => {
             <ChevronRight size={24} />
           </button>
           
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
+          <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-8 sm:gap-3">
             {slides.map((_, i) => (
               <button 
                 key={i}
                 onClick={() => setCurrentSlide(i)}
-                className={`h-1.5 transition-all duration-500 ${currentSlide === i ? 'w-16 bg-brand-primary' : 'w-6 bg-dark-600 hover:bg-gray-500'}`}
+                className={`h-1.5 transition-all duration-500 ${currentSlide === i ? 'w-10 bg-brand-primary sm:w-16' : 'w-4 bg-dark-600 hover:bg-gray-500 sm:w-6'}`}
               />
             ))}
           </div>
@@ -126,24 +126,24 @@ const Home = () => {
       {upcomingEvent && (
         <section className="w-full bg-dark-900 border-b border-dark-700 relative overflow-hidden">
           <div className="absolute inset-0 bg-brand-primary/5 pattern-grid opacity-20"></div>
-          <div className="flex flex-col md:flex-row w-full max-w-7xl mx-auto relative z-10">
+          <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col md:flex-row">
             <div className="md:w-2/5 h-80 relative border-r border-dark-700 hidden md:block p-8">
               <div className="w-full h-full border border-dark-600 overflow-hidden relative">
                 <div className="absolute inset-0 bg-brand-primary/20 mix-blend-overlay z-10"></div>
                 <img src={upcomingEvent.image} alt={upcomingEvent.title} className="w-full h-full object-cover grayscale opacity-70" />
               </div>
             </div>
-            <div className="md:w-3/5 p-6 md:p-16 flex flex-col justify-center">
+            <div className="flex flex-col justify-center p-6 md:w-3/5 md:p-16">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-6">
                 <span className="text-brand-accent uppercase text-xs tracking-[0.2em] font-bold bg-brand-primary/10 px-3 py-1 border border-brand-primary/30">
                   // Upcoming Directive //
                 </span>
                 <span className="text-gray-500 font-mono text-sm">{upcomingEvent.date}</span>
               </div>
-              <h2 className="text-3xl md:text-5xl font-bebas text-white mb-6 uppercase tracking-wider">{upcomingEvent.title}</h2>
+              <h2 className="mb-6 text-3xl font-bebas uppercase tracking-wider text-white md:text-5xl">{upcomingEvent.title}</h2>
               <p className="text-gray-400 font-mono text-xs md:text-sm mb-8 md:mb-10 max-w-2xl leading-relaxed">{upcomingEvent.description}</p>
               <div>
-                <a href={upcomingEvent.url} className="inline-flex items-center gap-3 px-8 py-4 bg-brand-primary text-white font-bold uppercase tracking-[0.1em] text-sm hover:bg-brand-accent transition-colors">
+                <a href={upcomingEvent.url} className="inline-flex min-h-[44px] w-full items-center justify-center gap-3 bg-brand-primary px-6 py-4 text-sm font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand-accent sm:w-auto sm:px-8">
                   Initiate Link <ExternalLink size={16} />
                 </a>
               </div>
@@ -153,10 +153,10 @@ const Home = () => {
       )}
 
       {/* Main Container */}
-      <div className="container mx-auto px-4 md:px-12 py-16 md:py-24 max-w-7xl">
+      <div className="container mx-auto max-w-7xl px-4 py-14 sm:py-16 md:px-12 md:py-24">
         
         {/* Quick Stats */}
-        <section className="mb-24 md:mb-40">
+        <section className="mb-20 md:mb-40">
           <motion.div 
             variants={containerVariants}
             initial="hidden"
@@ -184,10 +184,10 @@ const Home = () => {
         </section>
 
         {/* Featured Events */}
-        <section className="mb-40">
-          <div className="flex justify-between items-end mb-12 border-b border-dark-700 pb-6">
-            <h2 className="text-4xl font-bebas uppercase tracking-widest text-white">Featured Events</h2>
-            <Link to="/events" className="text-gray-400 flex items-center gap-3 uppercase tracking-[0.1em] text-xs font-mono hover:text-brand-accent transition-colors">
+        <section className="mb-24 sm:mb-32 md:mb-40">
+          <div className="mb-10 flex flex-col items-start gap-4 border-b border-dark-700 pb-6 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
+            <h2 className="text-3xl font-bebas uppercase tracking-widest text-white sm:text-4xl">Featured Events</h2>
+            <Link to="/events" className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.1em] text-gray-400 transition-colors hover:text-brand-accent">
               View All <ArrowRight size={16} />
             </Link>
           </div>
@@ -219,9 +219,9 @@ const Home = () => {
 
         {/* Featured Projects */}
         <section className="mb-20">
-          <div className="flex justify-between items-end mb-12 border-b border-dark-700 pb-6">
-            <h2 className="text-4xl font-bebas uppercase tracking-widest text-white">Top Projects</h2>
-            <Link to="/projects" className="text-gray-400 flex items-center gap-3 uppercase tracking-[0.1em] text-xs font-mono hover:text-brand-accent transition-colors">
+          <div className="mb-10 flex flex-col items-start gap-4 border-b border-dark-700 pb-6 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
+            <h2 className="text-3xl font-bebas uppercase tracking-widest text-white sm:text-4xl">Top Projects</h2>
+            <Link to="/projects" className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.1em] text-gray-400 transition-colors hover:text-brand-accent">
               View All <ArrowRight size={16} />
             </Link>
           </div>
@@ -243,13 +243,13 @@ const Home = () => {
                     </span>
                   ))}
                 </div>
-                <div className="flex justify-between items-center mt-auto pt-6 border-t border-dark-700">
+                <div className="mt-auto flex flex-col gap-4 border-t border-dark-700 pt-6 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex -space-x-3">
                     {project.contributors.slice(0,3).map((avatar, i) => (
                       <img key={i} src={avatar} alt="contributor" className="w-10 h-10 border border-dark-700 grayscale opacity-80" />
                     ))}
                   </div>
-                  <a href={project.repoUrl} target="_blank" rel="noreferrer" className="text-[10px] font-mono uppercase tracking-[0.1em] text-brand-accent flex items-center gap-2 bg-brand-primary/10 px-3 py-2 border border-brand-primary/30 hover:bg-brand-primary hover:text-white transition-colors">
+                  <a href={project.repoUrl} target="_blank" rel="noreferrer" className="flex min-h-[44px] items-center justify-center gap-2 border border-brand-primary/30 bg-brand-primary/10 px-3 py-2 text-[10px] font-mono uppercase tracking-[0.1em] text-brand-accent transition-colors hover:bg-brand-primary hover:text-white sm:justify-start">
                     Repo <ExternalLink size={12} />
                   </a>
                 </div>
@@ -260,8 +260,8 @@ const Home = () => {
 
         {/* About & What We Do */}
         <section className="mb-20">
-          <div className="flex justify-between items-end mb-12 border-b border-dark-700 pb-6">
-            <h2 className="text-4xl font-bebas uppercase tracking-widest text-white">Directive: OSC VIT-AP</h2>
+          <div className="mb-10 flex flex-col items-start gap-4 border-b border-dark-700 pb-6 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
+            <h2 className="text-3xl font-bebas uppercase tracking-widest text-white sm:text-4xl">Directive: OSC VIT-AP</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
             <div className="border border-dark-700 p-8 flex flex-col bg-dark-900/40 relative overflow-hidden group">

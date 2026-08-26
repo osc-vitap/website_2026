@@ -39,13 +39,13 @@ const Gallery = () => {
   }, [selectedImage]);
 
   return (
-    <div className="container mx-auto px-4 md:px-12 py-16 md:py-24 max-w-7xl pt-32">
+    <div className="container mx-auto max-w-7xl px-4 pb-16 pt-24 sm:pb-20 sm:pt-28 md:px-12 md:pb-24 md:pt-32">
       
-      <div className="text-center max-w-3xl mx-auto mb-20">
+      <div className="mx-auto mb-16 max-w-3xl text-center sm:mb-20">
         <motion.h1 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-5xl md:text-6xl font-bebas uppercase tracking-widest text-white mb-6"
+          className="mb-6 text-4xl font-bebas uppercase tracking-[0.18em] text-white sm:text-5xl md:text-6xl md:tracking-widest"
         >
           Visual Intel
         </motion.h1>
@@ -60,9 +60,9 @@ const Gallery = () => {
       </div>
 
       {galleryData.map((section, idx) => (
-        <section key={idx} className="mb-24">
-          <div className="flex flex-wrap justify-between items-end gap-x-6 gap-y-2 mb-12 border-b border-dark-700 pb-6">
-            <h2 className="text-4xl font-bebas uppercase tracking-widest text-white">{section.category}</h2>
+        <section key={idx} className="mb-20 sm:mb-24">
+          <div className="mb-10 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-dark-700 pb-6 sm:mb-12">
+            <h2 className="text-3xl font-bebas uppercase tracking-widest text-white sm:text-4xl">{section.category}</h2>
             <span className="text-gray-400 font-mono text-xs uppercase tracking-[0.1em]">{section.images.length} files found</span>
           </div>
 
@@ -71,7 +71,7 @@ const Gallery = () => {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3"
           >
             {section.images.map((id, i) => (
               <motion.button
@@ -114,7 +114,7 @@ const Gallery = () => {
             role="dialog"
             aria-modal="true"
             aria-label="Expanded gallery image"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 pt-20 md:p-12 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 pt-20 backdrop-blur-sm sm:p-4 md:p-12"
             onClick={() => setSelectedImage(null)}
           >
             <button

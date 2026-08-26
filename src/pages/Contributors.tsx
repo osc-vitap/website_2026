@@ -17,13 +17,13 @@ const itemVariants = {
 
 const Contributors = () => {
   return (
-    <div className="container mx-auto px-4 md:px-12 py-16 md:py-24 max-w-7xl pt-32">
+    <div className="container mx-auto max-w-7xl px-4 pb-16 pt-24 sm:pb-20 sm:pt-28 md:px-12 md:pb-24 md:pt-32">
       
-      <div className="text-center max-w-3xl mx-auto mb-20">
+      <div className="mx-auto mb-16 max-w-3xl text-center sm:mb-20">
         <motion.h1 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-5xl md:text-6xl font-bebas uppercase tracking-widest text-white mb-6"
+          className="mb-6 text-4xl font-bebas uppercase tracking-[0.18em] text-white sm:text-5xl md:text-6xl md:tracking-widest"
         >
           Active Operatives
         </motion.h1>
@@ -37,7 +37,7 @@ const Contributors = () => {
         </motion.p>
       </div>
 
-      <section className="mb-24">
+      <section className="mb-20 sm:mb-24">
         {/* Stacks on phones: the heading and the record count cannot share a
             row below ~640px without the heading being squeezed. */}
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:items-end mb-12 border-b border-dark-700 pb-6">
@@ -52,7 +52,7 @@ const Contributors = () => {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-50px" }}
-          className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6"
+          className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4 lg:grid-cols-6"
         >
           {contributorsData.map((member, i) => (
             <motion.div 

@@ -19,9 +19,9 @@ const Contact = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-12">
+    <div className="container mx-auto px-4 py-10 sm:py-12 md:px-6">
       
-      <div className="text-center max-w-2xl mx-auto mb-16">
+      <div className="mx-auto mb-14 max-w-2xl text-center sm:mb-16">
         <h1 className="text-4xl md:text-5xl font-bold mb-4">Get in <span className="text-gradient">Touch</span></h1>
         <p className="text-gray-400">
           Have a question, want to collaborate, or just want to say hi? 
@@ -29,7 +29,7 @@ const Contact = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 max-w-6xl mx-auto">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 sm:gap-10 lg:grid-cols-5 lg:gap-12">
         
         {/* Contact Info */}
         <div className="lg:col-span-2 space-y-8">
@@ -62,9 +62,9 @@ const Contact = () => {
               </div>
             </div>
 
-            <div className="mt-10 pt-8 border-t border-dark-600">
+            <div className="mt-8 border-t border-dark-600 pt-8 sm:mt-10">
               <p className="text-sm text-gray-400 font-medium mb-4">Follow our socials</p>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-4">
                 <a href={config.socials.instagram} target="_blank" rel="noreferrer" aria-label="OSC on Instagram" className="inline-flex h-11 w-11 items-center justify-center bg-dark-700 rounded-lg text-gray-400 hover:text-white hover:bg-[#E1306C] transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent">
                   <Instagram size={20} aria-hidden="true" />
                 </a>

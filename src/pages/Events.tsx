@@ -217,7 +217,7 @@ const Events = () => {
       : pastEvents;
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-12">
+    <div className="container mx-auto px-4 py-10 sm:py-12 md:px-6">
 
       <div className="text-center max-w-2xl mx-auto mb-12">
 
@@ -236,15 +236,15 @@ const Events = () => {
 
       </div>
 
-      <div className="flex justify-center mb-12">
+      <div className="mb-10 flex justify-center sm:mb-12">
 
-        <div className="glass p-1 rounded-lg inline-flex">
+        <div className="glass inline-flex w-full max-w-md flex-col rounded-lg p-1 sm:w-auto sm:flex-row">
 
           <button
             onClick={() =>
               setActiveTab('upcoming')
             }
-            className={`px-6 py-2 rounded-md font-medium text-sm transition-all ${
+            className={`w-full rounded-md px-6 py-3 text-sm font-medium transition-all sm:w-auto sm:py-2 ${
               activeTab === 'upcoming'
                 ? 'bg-brand-primary text-white shadow-lg'
                 : 'text-gray-400 hover:text-white'
@@ -257,7 +257,7 @@ const Events = () => {
             onClick={() =>
               setActiveTab('past')
             }
-            className={`px-6 py-2 rounded-md font-medium text-sm transition-all ${
+            className={`w-full rounded-md px-6 py-3 text-sm font-medium transition-all sm:w-auto sm:py-2 ${
               activeTab === 'past'
                 ? 'bg-dark-600 text-white shadow-lg'
                 : 'text-gray-400 hover:text-white'
@@ -277,7 +277,7 @@ const Events = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
 
         {displayedEvents.map(
           (event, i) => (
@@ -294,10 +294,10 @@ const Events = () => {
               transition={{
                 delay: i * 0.1,
               }}
-              className="glass-card flex flex-col md:flex-row overflow-hidden group"
+              className="glass-card group flex flex-col overflow-hidden xl:flex-row"
             >
 
-              <div className="md:w-2/5 h-48 md:h-auto relative overflow-hidden">
+              <div className="relative h-48 overflow-hidden sm:h-56 xl:h-auto xl:w-2/5">
 
                 <img
                   src={event.image}
@@ -309,7 +309,7 @@ const Events = () => {
 
               </div>
 
-              <div className="p-6 md:w-3/5 flex flex-col">
+              <div className="flex min-w-0 flex-col p-5 sm:p-6 xl:w-3/5">
 
                 <div className="text-brand-accent text-xs font-bold uppercase tracking-widest mb-1">
                   {event.sub_title}
@@ -319,13 +319,13 @@ const Events = () => {
                   {event.title}
                 </h3>
 
-                <p className="text-gray-400 text-sm mb-6 flex-grow">
+                <p className="mb-6 flex-grow text-sm text-gray-400">
                   {event.description}
                 </p>
 
                 <div className="space-y-2 mb-6">
 
-                  <div className="flex items-center text-sm text-gray-300 gap-2">
+                  <div className="flex items-start gap-2 text-sm text-gray-300">
                     <Calendar
                       size={16}
                       className="text-gray-500"
@@ -333,7 +333,7 @@ const Events = () => {
                     {event.date}
                   </div>
 
-                  <div className="flex items-center text-sm text-gray-300 gap-2">
+                  <div className="flex items-start gap-2 text-sm text-gray-300">
                     <MapPin
                       size={16}
                       className="text-gray-500"

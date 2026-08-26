@@ -6,10 +6,10 @@ const Team = () => {
   const tiers = ["Admins", "Track Leads", "Technical Leads", "Executive Members"] as const;
 
   return (
-    <div className="container mx-auto px-6 md:px-12 py-24 max-w-7xl">
+    <div className="container mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 md:px-12 md:py-24">
       
-      <div className="text-left mb-20 border-b border-dark-700 pb-10">
-        <h1 className="text-5xl md:text-7xl font-bebas mb-6 tracking-wider uppercase text-white glitch-text" data-text="MEET THE 2026 ROSTER">
+      <div className="mb-16 border-b border-dark-700 pb-8 text-left sm:mb-20 sm:pb-10">
+        <h1 className="glitch-text mb-6 text-4xl font-bebas uppercase tracking-[0.18em] text-white sm:text-5xl md:text-7xl md:tracking-wider" data-text="MEET THE 2026 ROSTER">
           MEET THE 2026 ROSTER
         </h1>
         <p className="text-gray-400 font-mono text-sm max-w-2xl leading-relaxed uppercase tracking-[0.1em]">
@@ -18,19 +18,19 @@ const Team = () => {
         </p>
       </div>
 
-      <div className="space-y-32">
+      <div className="space-y-20 sm:space-y-24 md:space-y-32">
         {tiers.map((tier) => {
           const members = teamData.filter(m => m.tier === tier);
           if (members.length === 0) return null;
 
           return (
             <section key={tier}>
-              <h2 className="text-3xl font-bebas mb-12 flex items-center gap-4 text-white uppercase tracking-widest">
+              <h2 className="mb-8 flex items-center gap-4 text-2xl font-bebas uppercase tracking-widest text-white sm:mb-12 sm:text-3xl">
                 <span className="bg-brand-primary w-4 h-4 inline-block"></span>
                 {tier}
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-8">
                 {members.map((member, i) => (
                   <motion.div 
                     key={member.id}

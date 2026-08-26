@@ -8,6 +8,9 @@ interface __BaseEnv_Env {
 	DB: D1Database;
 	GITHUB_CLIENT_ID: string;
 	GITHUB_CLIENT_SECRET: string;
+	REGISTRATION_ID_LIMITER: RateLimit;
+	REGISTRATION_IP_LIMITER: RateLimit;
+	AUTH_LIMITER: RateLimit;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

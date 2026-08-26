@@ -86,6 +86,77 @@ function normalizeEventEnd(value: string | null | undefined): { ok: true; value:
 	return { ok: true, value: new Date(parsed).toISOString() };
 }
 
+/*
+ * A college registration number is the participant's identity within an
+ * event, so it is compared and stored in one canonical form: uppercase,
+ * no surrounding or internal whitespace. "22bce1234" and " 22BCE 1234 "
+ * are the same student.
+ */
+function normalizeRegistrationNumber(value: string): string {
+	return value.toUpperCase().replace(/\s+/g, '');
+}
+
+const REGISTRATION_NUMBER_PATTERN = /^[A-Z0-9]{4,20}$/;
+
+/*
+ * Not a full RFC 5322 validator — just enough to reject values that
+ * cannot possibly receive mail, without locking out unusual real
+ * addresses.
+ */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/*
+ * Field length ceilings. These are resource limits, not format
+ * validation: without them a single request can park megabytes of
+ * garbage in D1 and in every CSV export after it.
+ */
+const LIMITS = {
+	name: 120,
+	yearOfStudy: 40,
+	email: 254,
+	github: 100,
+	teamName: 120,
+	members: 20,
+} as const;
+
+/*
+ * The Workers rate limiting API (open beta).
+ *
+ * Fails open on purpose: if the binding is missing in a local setup or
+ * the limiter itself errors, registration must keep working — the
+ * limiter protects the service, it is not an authorisation control.
+ */
+async function withinRateLimit(limiter: RateLimit | undefined, key: string): Promise<boolean> {
+	if (!limiter) {
+		return true;
+	}
+
+	try {
+		const { success } = await limiter.limit({ key });
+
+		return success;
+	} catch (error) {
+		console.error('Rate limiter unavailable:', error);
+
+		return true;
+	}
+}
+
+function clientIp(request: Request): string {
+	return request.headers.get('CF-Connecting-IP') ?? 'unknown';
+}
+
+function rateLimited(request: Request, env: Env): Response {
+	return new Response(JSON.stringify({ error: 'Too many requests. Please wait a minute and try again.' }), {
+		status: 429,
+		headers: {
+			...corsHeaders(request, env),
+			'Content-Type': 'application/json',
+			'Retry-After': '60',
+		},
+	});
+}
+
 function randomToken(): string {
 	return crypto.randomUUID() + crypto.randomUUID();
 }
@@ -493,9 +564,23 @@ async function processCompletedEvents(env: Env): Promise<void> {
 	}
 }
 
+/*
+ * Expired sessions and OAuth states are dead on read — the lookups all
+ * filter on expires_at — but the rows themselves used to accumulate
+ * forever. Sweeping them hourly keeps the tables at working-set size.
+ */
+async function purgeExpiredAuthRows(env: Env): Promise<void> {
+	await env.DB.batch([
+		env.DB.prepare(`DELETE FROM admin_sessions WHERE expires_at <= datetime('now')`),
+		env.DB.prepare(`DELETE FROM admin_oauth_states WHERE expires_at <= datetime('now')`),
+	]);
+}
+
 export default {
 	async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
 		await processCompletedEvents(env);
+
+		await purgeExpiredAuthRows(env);
 	},
 
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -532,6 +617,14 @@ export default {
 			 */
 
 			if (request.method === 'GET' && url.pathname === '/auth/github') {
+				/*
+				 * This endpoint writes a state row per hit and is only used
+				 * by a handful of admins, so it gets the strictest limit.
+				 */
+				if (!(await withinRateLimit(env.AUTH_LIMITER, `auth:${clientIp(request)}`))) {
+					return rateLimited(request, env);
+				}
+
 				const state = randomToken();
 
 				const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -564,6 +657,15 @@ export default {
 			 */
 
 			if (request.method === 'GET' && url.pathname === '/auth/github/callback') {
+				/*
+				 * Same budget as the start of the flow — the callback burns
+				 * a single-use state, but it also drives two GitHub API
+				 * calls per hit.
+				 */
+				if (!(await withinRateLimit(env.AUTH_LIMITER, `auth:${clientIp(request)}`))) {
+					return rateLimited(request, env);
+				}
+
 				const code = url.searchParams.get('code');
 
 				const state = url.searchParams.get('state');
@@ -1692,27 +1794,19 @@ export default {
 				 */
 				const existingEvent = await env.DB.prepare(
 					`
-	            SELECT slug, archive_key
+	            SELECT id, slug, archive_key
 	            FROM events
 	            WHERE slug = ?
 	          `,
 				)
 					.bind(slug)
 					.first<{
+						id: string;
 						slug: string;
 						archive_key: string | null;
 					}>();
 
-				const result = await env.DB.prepare(
-					`
-	            DELETE FROM events
-	            WHERE slug = ?
-	          `,
-				)
-					.bind(slug)
-					.run();
-
-				if (!result.meta.changes) {
+				if (!existingEvent) {
 					return json(
 						{
 							error: 'Event not found',
@@ -1722,6 +1816,19 @@ export default {
 						env,
 					);
 				}
+
+				/*
+				 * Members must go before registrations and registrations
+				 * before the event: registration_members references
+				 * registrations without ON DELETE CASCADE, so deleting the
+				 * event alone trips the foreign key the moment an event has
+				 * a single registration.
+				 */
+				await env.DB.batch([
+					env.DB.prepare(`DELETE FROM registration_members WHERE event_id = ?`).bind(existingEvent.id),
+					env.DB.prepare(`DELETE FROM registrations WHERE event_id = ?`).bind(existingEvent.id),
+					env.DB.prepare(`DELETE FROM events WHERE id = ?`).bind(existingEvent.id),
+				]);
 
 				/*
 				 * The D1 row is gone, so a failure here only leaves an
@@ -1865,6 +1972,15 @@ export default {
 			if (request.method === 'POST' && registerMatch) {
 				const slug = registerMatch[1];
 
+				/*
+				 * Per-IP ceiling first, before any database work. It is
+				 * deliberately generous — the whole campus shares a few NAT
+				 * IPs — and only exists to stop scripted floods.
+				 */
+				if (!(await withinRateLimit(env.REGISTRATION_IP_LIMITER, `reg-ip:${clientIp(request)}`))) {
+					return rateLimited(request, env);
+				}
+
 				const event = await env.DB.prepare(
 					`
 	            SELECT
@@ -1968,10 +2084,26 @@ export default {
 					);
 				}
 
-				const members = body.members ?? [];
+				const rawMembers = body.members ?? [];
+
+				/*
+				 * Hard ceiling before any per-member work, so an oversized
+				 * array cannot drive the validation loop or the insert batch.
+				 * Real team sizes are validated against the event below.
+				 */
+				if (!Array.isArray(rawMembers) || rawMembers.length > LIMITS.members) {
+					return json(
+						{
+							error: 'Invalid members list',
+						},
+						400,
+						request,
+						env,
+					);
+				}
 
 				if (event.registration_type === 'solo' || event.registration_type === 'workshop') {
-					if (members.length !== 1) {
+					if (rawMembers.length !== 1) {
 						return json(
 							{
 								error: 'This event requires exactly 1 participant',
@@ -1984,7 +2116,7 @@ export default {
 				}
 
 				if (event.registration_type === 'team') {
-					if (members.length < event.min_team_size || members.length > event.max_team_size) {
+					if (rawMembers.length < event.min_team_size || rawMembers.length > event.max_team_size) {
 						return json(
 							{
 								error: `Team size must be between ${event.min_team_size} and ${event.max_team_size}`,
@@ -1996,8 +2128,22 @@ export default {
 					}
 				}
 
-				for (const [index, member] of members.entries()) {
-					if (!member.name?.trim() || !member.year_of_study?.trim() || !member.college_registration_number?.trim() || !member.email?.trim()) {
+				const members: {
+					name: string;
+					year_of_study: string;
+					college_registration_number: string;
+					github: string | null;
+					email: string;
+				}[] = [];
+
+				for (const [index, member] of rawMembers.entries()) {
+					const name = member.name?.trim() ?? '';
+					const yearOfStudy = member.year_of_study?.trim() ?? '';
+					const email = member.email?.trim().toLowerCase() ?? '';
+					const github = member.github?.trim() || null;
+					const registrationNumber = normalizeRegistrationNumber(member.college_registration_number ?? '');
+
+					if (!name || !yearOfStudy || !registrationNumber || !email) {
 						return json(
 							{
 								error: `Missing required information for member ${index + 1}`,
@@ -2007,6 +2153,116 @@ export default {
 							env,
 						);
 					}
+
+					if (
+						name.length > LIMITS.name ||
+						yearOfStudy.length > LIMITS.yearOfStudy ||
+						email.length > LIMITS.email ||
+						(github !== null && github.length > LIMITS.github)
+					) {
+						return json(
+							{
+								error: `One of the fields for member ${index + 1} is too long`,
+							},
+							400,
+							request,
+							env,
+						);
+					}
+
+					if (!REGISTRATION_NUMBER_PATTERN.test(registrationNumber)) {
+						return json(
+							{
+								error: `Registration number for member ${index + 1} looks invalid. Use the university format, e.g. 22BCE1234.`,
+							},
+							400,
+							request,
+							env,
+						);
+					}
+
+					if (!EMAIL_PATTERN.test(email)) {
+						return json(
+							{
+								error: `Email address for member ${index + 1} looks invalid`,
+							},
+							400,
+							request,
+							env,
+						);
+					}
+
+					members.push({
+						name,
+						year_of_study: yearOfStudy,
+						college_registration_number: registrationNumber,
+						github,
+						email,
+					});
+				}
+
+				/*
+				 * The same registration number twice in one submission is a
+				 * mistake in the form, not a returning registrant — report
+				 * it as one instead of a confusing conflict.
+				 */
+				const registrationNumbers = members.map((member) => member.college_registration_number);
+
+				const duplicateInTeam = registrationNumbers.find((value, index) => registrationNumbers.indexOf(value) !== index);
+
+				if (duplicateInTeam) {
+					return json(
+						{
+							error: `Registration number ${duplicateInTeam} appears more than once in this registration`,
+						},
+						400,
+						request,
+						env,
+					);
+				}
+
+				/*
+				 * Retry throttle, keyed on the identity being registered
+				 * rather than the IP — the whole campus shares a few NAT
+				 * IPs, but no two students share a registration number.
+				 */
+				if (!(await withinRateLimit(env.REGISTRATION_ID_LIMITER, `reg-id:${event.id}:${registrationNumbers[0]}`))) {
+					return rateLimited(request, env);
+				}
+
+				/*
+				 * Friendly duplicate check before inserting anything. The
+				 * unique index below remains the authority — two identical
+				 * submissions racing past this SELECT are still caught by
+				 * the constraint — but the index cannot say WHO collided,
+				 * and the error should.
+				 */
+				const existing = await env.DB.prepare(
+					`
+	            SELECT college_registration_number
+	            FROM registration_members
+	            WHERE event_id = ?
+	              AND UPPER(TRIM(college_registration_number)) IN (${registrationNumbers.map(() => '?').join(', ')})
+	          `,
+				)
+					.bind(event.id, ...registrationNumbers)
+					.all<{ college_registration_number: string }>();
+
+				if (existing.results.length > 0) {
+					const already = existing.results.map((row) => row.college_registration_number);
+
+					return json(
+						{
+							error:
+								already.length === 1
+									? `${already[0]} is already registered for this event`
+									: `Already registered for this event: ${already.join(', ')}`,
+							already_registered: already,
+						},
+						409,
+						request,
+						env,
+					);
 				}
 
 				const firstMember = members[0];
@@ -2032,7 +2288,7 @@ export default {
 						firstMember.year_of_study,
 						firstMember.github ?? null,
 						firstMember.email,
-						body.team_name ?? null,
+						body.team_name?.trim().slice(0, LIMITS.teamName) || null,
 						members.length,
 					)
 					.run();
@@ -2087,9 +2343,14 @@ export default {
 						.bind(registrationId)
 						.run();
 
+					/*
+					 * Reaching this means the SELECT above raced another
+					 * identical submission and the unique index caught it —
+					 * so "already registered" is exactly what happened.
+					 */
 					return json(
 						{
-							error: 'One or more members are already registered for this event.',
+							error: 'One or more members are already registered for this event',
 						},
 						409,
 						request,

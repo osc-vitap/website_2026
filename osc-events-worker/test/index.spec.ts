@@ -16,6 +16,9 @@ interface SeedEvent {
 	event_end_at?: string | null;
 	archive_status?: string;
 	is_open?: number;
+	registration_type?: "solo" | "team" | "workshop";
+	min_team_size?: number;
+	max_team_size?: number;
 }
 
 async function seedEvent(event: SeedEvent): Promise<void> {
@@ -28,9 +31,12 @@ async function seedEvent(event: SeedEvent): Promise<void> {
         event_date,
         event_end_at,
         is_open,
-        archive_status
+        archive_status,
+        registration_type,
+        min_team_size,
+        max_team_size
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
 	)
 		.bind(
@@ -41,6 +47,9 @@ async function seedEvent(event: SeedEvent): Promise<void> {
 			event.event_end_at ?? null,
 			event.is_open ?? 1,
 			event.archive_status ?? "pending",
+			event.registration_type ?? "solo",
+			event.min_team_size ?? 1,
+			event.max_team_size ?? 1,
 		)
 		.run();
 }
@@ -346,6 +355,206 @@ describe("registration lifecycle", () => {
 	});
 });
 
+describe("registration identity", () => {
+	function register(
+		slug: string,
+		members: Record<string, unknown>[],
+		options?: { ip?: string; team_name?: string },
+	): Promise<Response> {
+		return fetchWorker(`/api/events/${slug}/register`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				...(options?.ip ? { "CF-Connecting-IP": options.ip } : {}),
+			},
+			body: JSON.stringify({ members, team_name: options?.team_name }),
+		});
+	}
+
+	const student = (registrationNumber: string, overrides?: Record<string, unknown>) => ({
+		name: "Test Student",
+		year_of_study: "2",
+		college_registration_number: registrationNumber,
+		email: "student@example.com",
+		...overrides,
+	});
+
+	it("rejects a second registration and names who is already registered", async () => {
+		await seedEvent({ slug: "identity-event", title: "Identity Event" });
+
+		expect((await register("identity-event", [student("22BCE7001")])).status).toBe(201);
+
+		const response = await register("identity-event", [
+			student("22BCE7001", { name: "Different Name", email: "other@example.com" }),
+		]);
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toEqual({
+			error: "22BCE7001 is already registered for this event",
+			already_registered: ["22BCE7001"],
+		});
+	});
+
+	it("treats casing and whitespace as the same registration number", async () => {
+		await seedEvent({ slug: "casing-event", title: "Casing Event" });
+
+		expect((await register("casing-event", [student("22BCE7002")])).status).toBe(201);
+
+		const response = await register("casing-event", [student("  22bce 7002 ")]);
+
+		expect(response.status).toBe(409);
+	});
+
+	it("stores registration numbers in canonical form", async () => {
+		await seedEvent({ slug: "canonical-event", title: "Canonical Event" });
+
+		expect((await register("canonical-event", [student(" 22bce7003 ")])).status).toBe(201);
+
+		const row = await env.DB.prepare(`SELECT college_registration_number FROM registration_members`).first<{
+			college_registration_number: string;
+		}>();
+
+		expect(row?.college_registration_number).toBe("22BCE7003");
+	});
+
+	it("still allows the same student to register for a different event", async () => {
+		await seedEvent({ slug: "first-event", title: "First Event" });
+		await seedEvent({ slug: "second-event", title: "Second Event" });
+
+		expect((await register("first-event", [student("22BCE7004")])).status).toBe(201);
+		expect((await register("second-event", [student("22BCE7004")])).status).toBe(201);
+	});
+
+	it("rejects a team that lists the same member twice", async () => {
+		await seedEvent({
+			slug: "team-dupe-event",
+			title: "Team Dupe Event",
+			registration_type: "team",
+			min_team_size: 2,
+			max_team_size: 4,
+		});
+
+		const response = await register(
+			"team-dupe-event",
+			[student("22BCE7005"), student("22bce7005", { email: "twin@example.com" })],
+			{ team_name: "The Twins" },
+		);
+
+		expect(response.status).toBe(400);
+		expect(((await response.json()) as { error: string }).error).toContain("22BCE7005");
+	});
+
+	it("rejects an email address that cannot receive mail", async () => {
+		await seedEvent({ slug: "email-event", title: "Email Event" });
+
+		const response = await register("email-event", [student("22BCE7006", { email: "not-an-email" })]);
+
+		expect(response.status).toBe(400);
+	});
+
+	it("rejects a registration number that does not look like one", async () => {
+		await seedEvent({ slug: "format-event", title: "Format Event" });
+
+		const response = await register("format-event", [student("no!")]);
+
+		expect(response.status).toBe(400);
+	});
+
+	it("rejects oversized fields instead of storing them", async () => {
+		await seedEvent({ slug: "bloat-event", title: "Bloat Event" });
+
+		const response = await register("bloat-event", [student("22BCE7007", { name: "x".repeat(500) })]);
+
+		expect(response.status).toBe(400);
+	});
+});
+
+describe("rate limiting", () => {
+	function register(slug: string, registrationNumber: string, ip: string): Promise<Response> {
+		return fetchWorker(`/api/events/${slug}/register`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"CF-Connecting-IP": ip,
+			},
+			body: JSON.stringify({
+				members: [
+					{
+						name: "Rate Test",
+						year_of_study: "2",
+						college_registration_number: registrationNumber,
+						email: "rate@example.com",
+					},
+				],
+			}),
+		});
+	}
+
+	it("throttles repeated attempts for one registration number without punishing the shared IP", async () => {
+		await seedEvent({ slug: "retry-event", title: "Retry Event" });
+
+		/*
+		 * Six attempts for the same identity: the first registers, the
+		 * next four are duplicate conflicts, the sixth hits the identity
+		 * limiter. A different student on the SAME IP must still get
+		 * through — that is the campus NAT scenario.
+		 */
+		const statuses: number[] = [];
+
+		for (let attempt = 0; attempt < 6; attempt++) {
+			statuses.push((await register("retry-event", "22BCE8001", "203.0.113.10")).status);
+		}
+
+		expect(statuses.slice(0, 5)).toEqual([201, 409, 409, 409, 409]);
+		expect(statuses[5]).toBe(429);
+
+		const sameIpDifferentStudent = await register("retry-event", "22BCE8002", "203.0.113.10");
+
+		expect(sameIpDifferentStudent.status).toBe(201);
+	});
+
+	it("sends Retry-After with a throttled response", async () => {
+		await seedEvent({ slug: "retry-after-event", title: "Retry After Event" });
+
+		let last: Response | null = null;
+
+		for (let attempt = 0; attempt < 6; attempt++) {
+			last = await register("retry-after-event", "22BCE8003", "203.0.113.11");
+		}
+
+		expect(last?.status).toBe(429);
+		expect(last?.headers.get("Retry-After")).toBe("60");
+	});
+
+	it("stops a flood of fabricated registration numbers from one IP", async () => {
+		await seedEvent({ slug: "flood-event", title: "Flood Event" });
+
+		let throttled = 0;
+
+		for (let attempt = 0; attempt < 61; attempt++) {
+			const response = await register("flood-event", `22BCE${String(1000 + attempt)}`, "203.0.113.12");
+
+			if (response.status === 429) {
+				throttled++;
+			}
+		}
+
+		expect(throttled).toBeGreaterThan(0);
+	});
+
+	it("throttles the OAuth entry point", async () => {
+		let last: Response | null = null;
+
+		for (let attempt = 0; attempt < 11; attempt++) {
+			last = await fetchWorker("/auth/github", {
+				headers: { "CF-Connecting-IP": "203.0.113.13" },
+			});
+		}
+
+		expect(last?.status).toBe(429);
+	});
+});
+
 describe("admin access", () => {
 	const SESSION_ID = "test-admin-session";
 
@@ -486,6 +695,37 @@ describe("admin access", () => {
 			registration_count: 2,
 			participant_count: 2,
 		});
+	});
+
+	it("deletes an event together with its registrations", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+		await seedEvent({ slug: "doomed-event", title: "Doomed Event" });
+
+		/*
+		 * registration_members references registrations without ON DELETE
+		 * CASCADE, so deleting only the event row used to trip the foreign
+		 * key for any event that had a single registration.
+		 */
+		await seedRegistration("doomed-event", [
+			{ name: "Attendee", college_registration_number: "22BCE0009", email: "attendee@example.com" },
+		]);
+
+		const response = await asAdmin("/api/admin/events/doomed-event", { method: "DELETE" });
+
+		expect(response.status).toBe(200);
+
+		const counts = await env.DB.prepare(
+			`
+        SELECT
+          (SELECT COUNT(*) FROM events) AS events,
+          (SELECT COUNT(*) FROM registrations) AS registrations,
+          (SELECT COUNT(*) FROM registration_members) AS members
+      `,
+		).first<{ events: number; registrations: number; members: number }>();
+
+		expect(counts).toEqual({ events: 0, registrations: 0, members: 0 });
 	});
 
 	it("orders the admin list by created_at descending", async () => {

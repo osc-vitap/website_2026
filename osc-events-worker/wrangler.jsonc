@@ -46,6 +46,48 @@
 		]
 	},
 
+	/**
+	 * Rate limiting (Workers rate limiting API, open beta — hence
+	 * "unsafe"). Counters are per-Cloudflare-location and periods are
+	 * limited to 10 or 60 seconds.
+	 *
+	 * The university NATs the whole campus through a handful of IPs, so
+	 * a plain per-IP limit would lock every student out the moment a
+	 * class registers together. Instead:
+	 *
+	 *  - REGISTRATION_ID_LIMITER keys on the registration number being
+	 *    submitted. Shared IPs never collide on it, while a script
+	 *    hammering one identity is stopped almost immediately.
+	 *  - REGISTRATION_IP_LIMITER keys on the client IP with a ceiling
+	 *    sized for a burst of real students — its only job is to stop
+	 *    floods of fabricated registration numbers, which a per-identity
+	 *    key cannot see.
+	 *  - AUTH_LIMITER guards the OAuth endpoints, which write a state
+	 *    row per hit and are only ever used by a handful of admins.
+	 */
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "REGISTRATION_ID_LIMITER",
+				"type": "ratelimit",
+				"namespace_id": "1101",
+				"simple": { "limit": 5, "period": 60 }
+			},
+			{
+				"name": "REGISTRATION_IP_LIMITER",
+				"type": "ratelimit",
+				"namespace_id": "1102",
+				"simple": { "limit": 60, "period": 60 }
+			},
+			{
+				"name": "AUTH_LIMITER",
+				"type": "ratelimit",
+				"namespace_id": "1103",
+				"simple": { "limit": 10, "period": 60 }
+			}
+		]
+	},
+
 	"r2_buckets": [
 		{
 			"bucket_name": "osc-events-archives",

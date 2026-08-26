@@ -645,10 +645,10 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#03090c",
 		"layers": [
-			"repeating-linear-gradient(90deg, rgba(255,176,74,.4) 0 10px, rgba(255,176,74,0) 10px 16px)",
-			"repeating-linear-gradient(180deg, rgba(10,7,4,0) 0 15px, #0a0704 15px 24px)",
-			"linear-gradient(rgba(10,7,4,.62), rgba(10,7,4,.62))",
-			"linear-gradient(rgba(255,176,74,.4), rgba(255,176,74,.4)) 0 77% / 100% 1px no-repeat"
+			"url(\"data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27760%27%20height%3D%27182%27%3E%3Ctext%20x%3D%270%27%20y%3D%2718%27%20font-family%3D%27monospace%27%20font-size%3D%2715%27%20letter-spacing%3D%271.2%27%20fill%3D%27rgb(46%2C230%2C214)%27%20fill-opacity%3D%270.16%27%3E436d87a1cbe50f2436d87a1cbe50f2%209436d87a1cbe50%3C%2Ftext%3E%3Ctext%20x%3D%270%27%20y%3D%2744%27%20font-family%3D%27monospace%27%20font-size%3D%2715%27%20letter-spacing%3D%271.2%27%20fill%3D%27rgb(46%2C230%2C214)%27%20fill-opacity%3D%270.16%27%3Ef29436d87a1cbe5f29436d87a1cbe5%200f29436d87a1cb%3C%2Ftext%3E%3Ctext%20x%3D%270%27%20y%3D%2770%27%20font-family%3D%27monospace%27%20font-size%3D%2715%27%20letter-spacing%3D%271.2%27%20fill%3D%27rgb(46%2C230%2C214)%27%20fill-opacity%3D%270.16%27%3Ee50f29436d87a1ce50f29436d87a1c%20be50f29436d87a%3C%2Ftext%3E%3Ctext%20x%3D%270%27%20y%3D%2796%27%20font-family%3D%27monospace%27%20font-size%3D%2715%27%20letter-spacing%3D%271.2%27%20fill%3D%27rgb(46%2C230%2C214)%27%20fill-opacity%3D%270.16%27%3E1cbe50f29436d871cbe50f29436d87%20a1cbe50f29436d%3C%2Ftext%3E%3Ctext%20x%3D%270%27%20y%3D%27122%27%20font-family%3D%27monospace%27%20font-size%3D%2715%27%20letter-spacing%3D%271.2%27%20fill%3D%27rgb(46%2C230%2C214)%27%20fill-opacity%3D%270.16%27%3E87a1cbe50f2943687a1cbe50f29436%20d87a1cbe50f294%3C%2Ftext%3E%3Ctext%20x%3D%270%27%20y%3D%27148%27%20font-family%3D%27monospace%27%20font-size%3D%2715%27%20letter-spacing%3D%271.2%27%20fill%3D%27rgb(46%2C230%2C214)%27%20fill-opacity%3D%270.16%27%3E36d87a1cbe50f2936d87a1cbe50f29%20436d87a1cbe50f%3C%2Ftext%3E%3Ctext%20x%3D%270%27%20y%3D%27174%27%20font-family%3D%27monospace%27%20font-size%3D%2715%27%20letter-spacing%3D%271.2%27%20fill%3D%27rgb(46%2C230%2C214)%27%20fill-opacity%3D%270.16%27%3E29436d87a1cbe5029436d87a1cbe50%20f29436d87a1cbe%3C%2Ftext%3E%3C%2Fsvg%3E\") 0 0 / 760px 182px repeat",
+			"radial-gradient(105% 70% at 44% 34%, rgba(3,9,12,0) 0%, rgba(3,9,12,.55) 58%, rgba(3,9,12,.88) 100%)",
+			"linear-gradient(180deg, rgba(3,9,12,.55) 0%, rgba(3,9,12,.2) 30%, rgba(3,9,12,.82) 82%, #03090c 100%)",
+			"linear-gradient(rgba(46,230,214,.35), rgba(46,230,214,.35)) 0 77% / 100% 1px no-repeat"
 		],
 		"ink": "#ffffff",
 		"text": "#ffffff",

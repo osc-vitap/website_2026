@@ -181,6 +181,71 @@
   }
 
   /*
+   * The details panel on a poster page: frosted, lit along its top
+   * edge, and grained.
+   *
+   * It sits over thirty different backgrounds — chrome, halftone,
+   * photographs, flat colour — so it cannot carry a colour of its own.
+   * Everything here is relative to what is behind it: the blur and the
+   * saturation boost come from backdrop-filter, and the panel's own
+   * tint is the poster's ground at low alpha, set inline per variant.
+   *
+   * Corners stay square. borderRadius is 0 across this project by
+   * design, with rounded-full the only exception, and a lone rounded
+   * box would read as a mistake rather than a style.
+   */
+  .poster-glass {
+    position: relative;
+    isolation: isolate;
+
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    /*
+     * A bright hairline along the top and a dark one along the bottom
+     * is what reads as "a pane of glass" rather than "a dark box" —
+     * the same trick a bevel uses, at one pixel.
+     */
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
+      inset 0 -1px 0 0 rgba(0, 0, 0, 0.22),
+      0 14px 40px -16px rgba(0, 0, 0, 0.6);
+  }
+
+  /*
+   * Grain, over the whole panel including its text.
+   *
+   * Frosted glass is never perfectly smooth, and a flat blur looks
+   * plastic without it. Kept very low — at this opacity it is texture
+   * on the panel's flat areas and invisible on the type.
+   */
+  .poster-glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.055;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: 140px 140px;
+  }
+
+  /*
+   * Safari on iOS applies backdrop-filter but not always the saturation
+   * term, and a browser without it at all would leave the panel nearly
+   * transparent over a busy photograph. Where it is unsupported the
+   * tint carries the contrast on its own.
+   */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .poster-glass {
+      background-color: var(--glass-solid, rgba(0, 0, 0, 0.82)) !important;
+    }
+  }
+
+  /*
    * A highlight that sweeps across the call to action.
    *
    * The button is the one thing on a poster page that has to be found,

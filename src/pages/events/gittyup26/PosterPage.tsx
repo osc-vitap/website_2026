@@ -7,7 +7,7 @@ import { gridFontSize } from './posterGrid';
 import { PosterVariant } from './posterTypes';
 import { POSTER_COUNT } from './posterVariants';
 import PosterRegisterForm from './PosterRegisterForm';
-import { textHalo } from './posterColor';
+import { glassTint, textHalo } from './posterColor';
 import { rowMetrics, useFittingRows } from './useFittingRows';
 import { fetchEvent } from '../../../data/eventsApi';
 
@@ -373,24 +373,28 @@ const PosterPage = ({
             ) : (
             <div
               /*
-                * On a poster with a photographic ground the details sit
-                * over whatever the artwork happens to be doing at that
-                * point, and the mono lines are the smallest type on the
-                * page. Several of the printed sheets set this block on
-                * its own panel for the same reason; the scrim is that
-                * panel, and it only appears where there is artwork to
-                * read against.
+                * The details sit over whatever the artwork happens to be
+                * doing at that point, and the mono lines are the
+                * smallest type on the page — several of the printed
+                * sheets set this block on its own panel for exactly that
+                * reason.
+                *
+                * Every poster gets the panel, not only the ones with a
+                * photograph: the CSS grounds are just as busy in places,
+                * and one detail block that changes shape between posters
+                * reads as an accident.
                 */
-              className={
-                variant.image
-                  ? 'rounded-2xl border-t-2 p-5 backdrop-blur-[2px] md:p-6'
-                  : 'border-t-2 pt-6'
-              }
+              className="poster-glass p-5 md:p-6"
               style={{
-                borderColor: withAlpha(variant.accent, 35),
-                backgroundColor: variant.image
-                  ? withAlpha(variant.ground, 62)
-                  : undefined,
+                /*
+                  * The panel's tint is the poster's own ground, so it
+                  * belongs to each design rather than greying all thirty
+                  * towards the same slab. --glass-solid is the opaque
+                  * fallback for browsers without backdrop-filter.
+                  */
+                backgroundColor: glassTint(variant.ground),
+                ['--glass-solid' as string]: glassTint(variant.ground, 0.94),
+                borderColor: withAlpha(variant.accent, 22),
               }}
             >
 

@@ -92,3 +92,36 @@ export const textHalo = (
     ? '0 1px 2px rgba(0,0,0,0.75), 0 0 10px rgba(0,0,0,0.5)'
     : '0 1px 2px rgba(255,255,255,0.6), 0 0 10px rgba(255,255,255,0.4)';
 };
+
+/*
+ * The tint behind the frosted details panel.
+ *
+ * Taking the poster's ground at a fixed alpha does not work: the
+ * grounds run from #000 to a mid purple, so the same alpha produces a
+ * near-opaque black on one poster and a pale wash on another — and on
+ * the pale ones the small mono type ends up light-on-light.
+ *
+ * The hue is kept, the lightness is not: the ground is pulled towards
+ * black first, so every panel darkens what is behind it by a similar
+ * amount whatever colour it started from, and the poster's palette
+ * still shows through the glass.
+ */
+export const glassTint = (
+  ground: string,
+  alpha = 0.74,
+): string => {
+  const rgb = parse(ground);
+
+  if (!rgb) return `rgba(0, 0, 0, ${alpha})`;
+
+  /*
+   * How far towards black. A ground that is already dark barely moves;
+   * a bright one loses most of its lightness but keeps its hue.
+   */
+  const KEEP = 0.3;
+
+  const darken = (value: number) =>
+    Math.round(value * KEEP);
+
+  return `rgba(${darken(rgb.r)}, ${darken(rgb.g)}, ${darken(rgb.b)}, ${alpha})`;
+};

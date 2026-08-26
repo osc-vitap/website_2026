@@ -6,6 +6,7 @@ import {
   registrationNumberError,
   universityEmailError,
 } from '../../../data/registrationNumber';
+import { glassTint } from './posterColor';
 import { PosterVariant } from './posterTypes';
 
 /*
@@ -217,9 +218,11 @@ const PosterRegisterForm = ({
   if (done) {
     return (
       <div
-        className="poster-slide-in border-t-2 pt-6"
+        className="poster-slide-in poster-glass p-5 md:p-6"
         style={{
-          borderColor: `color-mix(in srgb, ${variant.accent} 35%, transparent)`,
+          backgroundColor: glassTint(variant.ground),
+          ['--glass-solid' as string]: glassTint(variant.ground, 0.94),
+          borderColor: `color-mix(in srgb, ${variant.accent} 22%, transparent)`,
         }}
       >
         <div
@@ -266,9 +269,11 @@ const PosterRegisterForm = ({
   return (
     <form
       onSubmit={submit}
-      className="poster-slide-in border-t-2 pt-6"
+      className="poster-slide-in poster-glass p-5 md:p-6"
       style={{
-        borderColor: `color-mix(in srgb, ${variant.accent} 35%, transparent)`,
+        backgroundColor: glassTint(variant.ground),
+        ['--glass-solid' as string]: glassTint(variant.ground, 0.94),
+        borderColor: `color-mix(in srgb, ${variant.accent} 22%, transparent)`,
       }}
     >
       <div className="flex items-baseline justify-between gap-4">

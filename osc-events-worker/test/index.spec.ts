@@ -1793,12 +1793,37 @@ describe("Discord registration webhook", () => {
 describe("admin outside the organisation", () => {
 	const SESSION_ID = "outsider-session";
 
+	/*
+	 * Not the deployed pepper — these only need the digests and the
+	 * Worker to agree, and the real one never leaves the secret store.
+	 */
+	const PEPPER = "test-pepper-0123456789abcdef";
+
+	const EXEMPT_HANDLE = "an-outsider";
+
 	const originalAllowList = env.ADMIN_GITHUB_USERS;
-	const originalOutsiders = env.ADMIN_GITHUB_OUTSIDERS;
+	const originalHashes = env.ADMIN_OUTSIDER_HASHES;
+	const originalPepper = env.ADMIN_HANDLE_PEPPER;
+
+	/*
+	 * Mirrors adminHandleDigest in the Worker. Written out rather than
+	 * imported so a change to the hashing there fails these tests
+	 * instead of being silently agreed with.
+	 */
+	async function digestOf(handle: string, pepper: string): Promise<string> {
+		const encoder = new TextEncoder();
+
+		const key = await crypto.subtle.importKey("raw", encoder.encode(pepper), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+
+		const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(handle.trim().toLowerCase()));
+
+		return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+	}
 
 	afterEach(async () => {
 		env.ADMIN_GITHUB_USERS = originalAllowList;
-		env.ADMIN_GITHUB_OUTSIDERS = originalOutsiders;
+		env.ADMIN_OUTSIDER_HASHES = originalHashes;
+		env.ADMIN_HANDLE_PEPPER = originalPepper;
 
 		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
 	});
@@ -1820,39 +1845,251 @@ describe("admin outside the organisation", () => {
 		});
 	}
 
+	/*
+	 * Every case here names someone else in ADMIN_GITHUB_USERS, so the
+	 * only thing that can produce a 200 is the exemption itself — an
+	 * empty allow list would let these pass without it being tested.
+	 */
 	it("lets an exempt handle in even when the allow list names other people", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
-		env.ADMIN_GITHUB_OUTSIDERS = "xyloflake";
+		env.ADMIN_HANDLE_PEPPER = PEPPER;
+		env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
 
-		await seedSession("xyloflake");
+		await seedSession(EXEMPT_HANDLE);
 
 		expect((await asAdmin("/api/admin/events")).status).toBe(200);
 	});
 
-	it("matches the handle whatever case it was typed in", async () => {
-		env.ADMIN_GITHUB_USERS = "";
-		env.ADMIN_GITHUB_OUTSIDERS = " XyloFlake ";
+	it("matches the handle whatever case or spacing it arrives in", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_HANDLE_PEPPER = PEPPER;
+		env.ADMIN_OUTSIDER_HASHES = ` ${(await digestOf(EXEMPT_HANDLE, PEPPER)).toUpperCase()} `;
 
-		await seedSession("xyloflake");
+		await seedSession(" An-Outsider ");
 
 		expect((await asAdmin("/api/admin/events")).status).toBe(200);
 	});
 
 	it("still refuses a handle that is on neither list", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
-		env.ADMIN_GITHUB_OUTSIDERS = "xyloflake";
+		env.ADMIN_HANDLE_PEPPER = PEPPER;
+		env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
 
 		await seedSession("a-stranger");
 
 		expect((await asAdmin("/api/admin/events")).status).toBe(401);
 	});
 
-	it("an empty outsider list exempts nobody", async () => {
+	it("an empty hash list exempts nobody", async () => {
 		env.ADMIN_GITHUB_USERS = "someone-else";
-		env.ADMIN_GITHUB_OUTSIDERS = "";
+		env.ADMIN_HANDLE_PEPPER = PEPPER;
+		env.ADMIN_OUTSIDER_HASHES = "";
 
-		await seedSession("xyloflake");
+		await seedSession(EXEMPT_HANDLE);
 
 		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+
+	/*
+	 * The digests are public, so a Worker missing the secret has to
+	 * close the hole rather than open it to whoever is listed.
+	 */
+	it("exempts nobody when no pepper is configured", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+		env.ADMIN_HANDLE_PEPPER = "";
+
+		await seedSession(EXEMPT_HANDLE);
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+
+	it("exempts nobody when the pepper is wrong", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+		env.ADMIN_HANDLE_PEPPER = `${PEPPER}-rotated`;
+
+		await seedSession(EXEMPT_HANDLE);
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+
+	/*
+	 * A typo in a committed digest must be an entry that never matches,
+	 * not a 500 that takes the whole admin API down with it.
+	 */
+	it("survives a malformed hex entry", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_HANDLE_PEPPER = PEPPER;
+		env.ADMIN_OUTSIDER_HASHES = `not-a-digest,${await digestOf(EXEMPT_HANDLE, PEPPER)}`;
+
+		await seedSession(EXEMPT_HANDLE);
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(200);
+
+		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+
+		env.ADMIN_OUTSIDER_HASHES = "zzzz,,   ,not-a-digest";
+
+		await seedSession(EXEMPT_HANDLE);
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+
+	/*
+	 * A truncated entry must not act as a wildcard for everything that
+	 * starts with it — the comparison is over the whole digest, so a
+	 * prefix is simply a different length and never matches.
+	 */
+	it("refuses a handle whose digest merely starts a listed one", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_HANDLE_PEPPER = PEPPER;
+		env.ADMIN_OUTSIDER_HASHES = (await digestOf(EXEMPT_HANDLE, PEPPER)).slice(0, 32);
+
+		await seedSession(EXEMPT_HANDLE);
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+
+	/*
+	 * Everything above reads a session that already exists. The sign-in
+	 * callback is the only place that decides whether the osc-vitap
+	 * membership call happens at all, and both of its checks became
+	 * async when the exemption moved to hashed handles. A dropped await
+	 * there leaves a pending promise, which is truthy — so the
+	 * organisation gate is skipped and an eight-hour session is handed
+	 * to any GitHub account that reaches the callback. Nothing else in
+	 * this file touches that route, so these are its only guard.
+	 */
+	describe("signing in", () => {
+		const STATE = "callback-state";
+
+		const realFetch = globalThis.fetch;
+
+		/** Every URL the Worker reached, so a skipped call is visible. */
+		let called: string[] = [];
+
+		/** What GitHub answers with, set per test before signing in. */
+		let login = "";
+		let inOrg = false;
+
+		beforeEach(async () => {
+			called = [];
+			login = "";
+			inOrg = false;
+
+			globalThis.fetch = (async (input: any, init?: RequestInit) => {
+				const url = typeof input === "string" ? input : input.url;
+
+				called.push(url);
+
+				if (url === "https://github.com/login/oauth/access_token") {
+					return Response.json({ access_token: "gho_test", token_type: "bearer" });
+				}
+
+				if (url === "https://api.github.com/user") {
+					return Response.json({ id: 4242, login });
+				}
+
+				if (url.startsWith("https://api.github.com/user/memberships/orgs/")) {
+					return inOrg ? Response.json({ state: "active", role: "member" }) : new Response("Not Found", { status: 404 });
+				}
+
+				return realFetch(input, init);
+			}) as typeof fetch;
+
+			await env.DB.prepare(
+				`
+        INSERT INTO admin_oauth_states (state, expires_at)
+        VALUES (?, ?)
+      `,
+			)
+				.bind(STATE, new Date(Date.now() + 600_000).toISOString())
+				.run();
+		});
+
+		afterEach(async () => {
+			globalThis.fetch = realFetch;
+
+			await env.DB.prepare(`DELETE FROM admin_oauth_states`).run();
+		});
+
+		/* A fresh IP per test, so AUTH_LIMITER never sees a second hit. */
+		function signIn(ip: string): Promise<Response> {
+			return fetchWorker(`/auth/github/callback?code=abc&state=${STATE}`, {
+				headers: {
+					Cookie: `osc_oauth_state=${STATE}`,
+					"CF-Connecting-IP": ip,
+				},
+			});
+		}
+
+		function sessionCount(): Promise<{ n: number } | null> {
+			return env.DB.prepare(`SELECT COUNT(*) AS n FROM admin_sessions`).first<{ n: number }>();
+		}
+
+		/*
+		 * With the deployed ADMIN_GITHUB_USERS of "" the allow list lets
+		 * everyone past, so organisation membership is the whole gate —
+		 * the exact configuration this has to hold under.
+		 */
+		it("turns away a handle the organisation does not know and stores no session", async () => {
+			env.ADMIN_GITHUB_USERS = "";
+			env.ADMIN_HANDLE_PEPPER = PEPPER;
+			env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+
+			login = "a-stranger";
+
+			const response = await signIn("203.0.113.20");
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toContain("reason=not-a-member");
+
+			expect((await sessionCount())?.n).toBe(0);
+		});
+
+		it("signs an exempt handle in without asking the organisation", async () => {
+			env.ADMIN_GITHUB_USERS = "";
+			env.ADMIN_HANDLE_PEPPER = PEPPER;
+			env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+
+			login = EXEMPT_HANDLE;
+
+			const response = await signIn("203.0.113.21");
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("https://www.oscvitap.com/admin");
+
+			expect(called.some((url) => url.includes("/memberships/orgs/"))).toBe(false);
+
+			const session = await env.DB.prepare(`SELECT github_username FROM admin_sessions`).first<{
+				github_username: string;
+			}>();
+
+			expect(session?.github_username).toBe(EXEMPT_HANDLE);
+		});
+
+		/*
+		 * The allow list is checked first so an unwanted handle costs one
+		 * GitHub call rather than two. It is also a member of the
+		 * organisation here, which is what would let them in if that
+		 * check were skipped.
+		 */
+		it("turns away a handle the allow list does not name, before the organisation call", async () => {
+			env.ADMIN_GITHUB_USERS = "someone-else";
+			env.ADMIN_HANDLE_PEPPER = PEPPER;
+			env.ADMIN_OUTSIDER_HASHES = await digestOf(EXEMPT_HANDLE, PEPPER);
+
+			login = "a-stranger";
+			inOrg = true;
+
+			const response = await signIn("203.0.113.22");
+
+			expect(response.headers.get("Location")).toContain("reason=not-allowed");
+
+			expect(called.some((url) => url.includes("/memberships/orgs/"))).toBe(false);
+
+			expect((await sessionCount())?.n).toBe(0);
+		});
 	});
 });

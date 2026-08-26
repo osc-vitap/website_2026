@@ -64,25 +64,85 @@ function adminGithubUsers(env?: Env): string[] {
  * is its own setting rather than a flag on the existing one: a handle
  * here is trusted on GitHub's word alone. Keep it to people who cannot
  * be added to the organisation, and empty it when they can.
+ *
+ * The handles themselves are not stored, only digests: this repository
+ * is public, and the plaintext list named a real person on every clone.
  */
 function adminOrgExempt(env?: Env): string[] {
-	return (env?.ADMIN_GITHUB_OUTSIDERS ?? '')
+	return (env?.ADMIN_OUTSIDER_HASHES ?? '')
 		.split(',')
-		.map((user) => user.trim().toLowerCase())
+		.map((digest) => digest.trim().toLowerCase())
 		.filter(Boolean);
 }
 
-function isOrgExempt(username: string, env?: Env): boolean {
-	return adminOrgExempt(env).includes(username.toLowerCase());
+/*
+ * HMAC-SHA256 of the handle under ADMIN_HANDLE_PEPPER, hex.
+ *
+ * Keyed, not a bare SHA-256. GitHub handles are short and the whole
+ * user list is public, so an unkeyed digest is reversed by hashing
+ * every known handle — a few minutes' work, and worse than the
+ * plaintext it replaced because it looks private. Without the pepper
+ * the committed digest is meaningless.
+ *
+ * The handle is trimmed and lowercased first so the digest does not
+ * depend on how GitHub happened to case it, which is how the plaintext
+ * list behaved.
+ */
+async function adminHandleDigest(username: string, pepper: string): Promise<string> {
+	const encoder = new TextEncoder();
+
+	const key = await crypto.subtle.importKey('raw', encoder.encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+
+	const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(username.trim().toLowerCase()));
+
+	return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function isAllowedAdmin(username: string, env?: Env): boolean {
+/*
+ * `===` on two hex strings stops at the first character that differs,
+ * so how long it takes to say no tells an attacker how much of a
+ * guessed digest was right. Compare every character and accumulate.
+ */
+function digestsMatch(a: string, b: string): boolean {
+	if (a.length !== b.length) {
+		return false;
+	}
+
+	let difference = 0;
+
+	for (let index = 0; index < a.length; index++) {
+		difference |= a.charCodeAt(index) ^ b.charCodeAt(index);
+	}
+
+	return difference === 0;
+}
+
+async function isOrgExempt(username: string, env?: Env): Promise<boolean> {
+	const digests = adminOrgExempt(env);
+
+	const pepper = (env?.ADMIN_HANDLE_PEPPER ?? '').trim();
+
+	/*
+	 * Nothing configured, or no pepper to reproduce the digests with,
+	 * exempts nobody. This gate skips the organisation check entirely,
+	 * so a missing secret has to fail closed.
+	 */
+	if (digests.length === 0 || pepper === '') {
+		return false;
+	}
+
+	const digest = await adminHandleDigest(username, pepper);
+
+	return digests.some((configured) => digestsMatch(configured, digest));
+}
+
+async function isAllowedAdmin(username: string, env?: Env): Promise<boolean> {
 	/*
 	 * An exempt handle is allowed even once ADMIN_GITHUB_USERS is
 	 * populated — otherwise turning that list on would silently lock out
 	 * the very people this exists for.
 	 */
-	if (isOrgExempt(username, env)) {
+	if (await isOrgExempt(username, env)) {
 		return true;
 	}
 
@@ -618,7 +678,7 @@ async function getAdminSession(request: Request, env: Env) {
 	 * so removing a handle takes effect immediately instead of when
 	 * their eight hour session happens to expire.
 	 */
-	if (!isAllowedAdmin(session.github_username, env)) {
+	if (!(await isAllowedAdmin(session.github_username, env))) {
 		return null;
 	}
 
@@ -1337,7 +1397,7 @@ export default {
 				 * allowed is rejected without a second GitHub call.
 				 */
 
-				if (!isAllowedAdmin(githubUser.login, env)) {
+				if (!(await isAllowedAdmin(githubUser.login, env))) {
 					console.log('Admin allow list rejected:', githubUser.login);
 
 					return authFailureRedirect(request, 'not-allowed');
@@ -1353,14 +1413,14 @@ export default {
 				 * works for private members too, which listing the
 				 * organisation's members would not.
 				 *
-				 * A handle in ADMIN_GITHUB_OUTSIDERS skips the gate
-				 * entirely. That is the whole point of the setting, and it
-				 * is the only way into the dashboard that organisation
-				 * membership does not vouch for — so it is logged every
-				 * time it is used.
+				 * A handle whose digest is in ADMIN_OUTSIDER_HASHES skips
+				 * the gate entirely. That is the whole point of the
+				 * setting, and it is the only way into the dashboard that
+				 * organisation membership does not vouch for — so it is
+				 * logged every time it is used.
 				 */
 
-				if (isOrgExempt(githubUser.login, env)) {
+				if (await isOrgExempt(githubUser.login, env)) {
 					console.log('Admin allowed without organisation membership:', githubUser.login);
 				} else {
 					const membershipResponse = await fetch(`https://api.github.com/user/memberships/orgs/${GITHUB_ORG}`, {

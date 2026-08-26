@@ -39,16 +39,26 @@
 		"ADMIN_GITHUB_USERS": "",
 
 		/**
-		 * Comma-separated GitHub handles allowed into the dashboard
-		 * WITHOUT being in the osc-vitap organisation.
+		 * Comma-separated hex digests of the GitHub handles allowed into
+		 * the dashboard WITHOUT being in the osc-vitap organisation.
 		 *
-		 * A deliberate hole in the only real gate this admin has: a
-		 * handle listed here is trusted on GitHub's word alone, with no
-		 * organisation to revoke it. Keep it to people who genuinely
-		 * cannot be added to the org, and empty it once they can. Every
-		 * use is logged.
+		 * A deliberate hole in the only real gate this admin has: such a
+		 * handle is trusted on GitHub's word alone, with no organisation
+		 * to revoke it. Keep it to people who genuinely cannot be added
+		 * to the org, and empty it once they can. Every use is logged.
+		 *
+		 * Digests, not handles, because this repository is public and the
+		 * old plaintext var named a real person on every clone. Each entry
+		 * is HMAC-SHA256 of the lowercased handle under the
+		 * ADMIN_HANDLE_PEPPER secret — without that secret the digest
+		 * says nothing about who is listed, and it cannot be reversed by
+		 * hashing the public GitHub user list the way a bare SHA-256 can.
+		 *
+		 * Add one with:
+		 *   node -e "const c=require('crypto');console.log(c.createHmac('sha256',process.env.P).update(process.argv[1].trim().toLowerCase()).digest('hex'))" <handle>
+		 * with P set to the same pepper the Worker holds.
 		 */
-		"ADMIN_GITHUB_OUTSIDERS": "xyloflake"
+		"ADMIN_OUTSIDER_HASHES": "1974307ebd05e0e2e282d8b4eb549e348b517f587a65a25fe7da9788882d484b"
 	},
 
 	/**
@@ -71,7 +81,16 @@
 			 * channel — so it is never committed. With it unset the
 			 * announcement is skipped and registration is unaffected.
 			 */
-			"DISCORD_WEBHOOK_URL"
+			"DISCORD_WEBHOOK_URL",
+
+			/*
+			 * The key ADMIN_OUTSIDER_HASHES is computed under. It is what
+			 * makes those committed digests meaningless to anyone reading
+			 * this repository, so it is never committed itself. With it
+			 * unset nobody is exempt from the organisation check — the
+			 * hole closes rather than opens.
+			 */
+			"ADMIN_HANDLE_PEPPER"
 		]
 	},
 

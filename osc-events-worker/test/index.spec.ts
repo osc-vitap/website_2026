@@ -491,6 +491,21 @@ describe("registration identity", () => {
 		expect((await register(slug, [student(registrationNumber)])).status).toBe(201);
 	});
 
+	it("reports a null member as bad input rather than crashing", async () => {
+		await seedEvent({ slug: "null-member-event", title: "Null Member Event" });
+
+		/*
+		 * [null] is a valid JSON array, and reading .name off it threw a
+		 * TypeError that surfaced as a 500 — an input problem reported as
+		 * a server fault.
+		 */
+		for (const members of [[null], ["not an object"], [42]]) {
+			const response = await register("null-member-event", members as never);
+
+			expect(response.status).toBe(400);
+		}
+	});
+
 	it("rejects oversized fields instead of storing them", async () => {
 		await seedEvent({ slug: "bloat-event", title: "Bloat Event" });
 
@@ -781,6 +796,54 @@ describe("OAuth failure handling", () => {
 
 		expect(response.status).toBe(302);
 		expect(response.headers.get("Location")).toContain("reason=no-code");
+	});
+
+	it("rejects a state that this browser did not start the flow with", async () => {
+		/*
+		 * The row alone only proves the flow started here, not that it
+		 * started in THIS browser. Without the cookie half, someone can
+		 * begin a sign-in and get a victim to open the callback, leaving
+		 * the victim holding a session for the attacker's GitHub account.
+		 */
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_oauth_states (state, expires_at)
+        VALUES (?, ?)
+      `,
+		)
+			.bind("issued-to-someone-else", new Date(Date.now() + 600_000).toISOString())
+			.run();
+
+		const response = await fetchWorker("/auth/github/callback?code=abc&state=issued-to-someone-else");
+
+		expect(response.status).toBe(302);
+		expect(response.headers.get("Location")).toContain("reason=bad-state");
+
+		/* The state row survives, so the real owner can still use it. */
+		const still = await env.DB.prepare(`SELECT COUNT(*) AS n FROM admin_oauth_states`).first<{ n: number }>();
+
+		expect(still?.n).toBe(1);
+
+		await env.DB.prepare(`DELETE FROM admin_oauth_states`).run();
+	});
+
+	it("rejects a cookie that does not match the state in the URL", async () => {
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_oauth_states (state, expires_at)
+        VALUES (?, ?)
+      `,
+		)
+			.bind("real-state", new Date(Date.now() + 600_000).toISOString())
+			.run();
+
+		const response = await fetchWorker("/auth/github/callback?code=abc&state=real-state", {
+			headers: { Cookie: "osc_oauth_state=a-different-state" },
+		});
+
+		expect(response.headers.get("Location")).toContain("reason=bad-state");
+
+		await env.DB.prepare(`DELETE FROM admin_oauth_states`).run();
 	});
 
 	it("sends an unknown OAuth state to the restricted page", async () => {
@@ -1178,6 +1241,69 @@ describe("admin access", () => {
 			registration_count: 2,
 			participant_count: 2,
 		});
+	});
+
+	it("does not change an event's public URL on an unrelated save", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+		await seedEvent({ slug: "stable-slug-26", title: "Stable Slug" });
+
+		/*
+		 * The admin form round-trips the stored slug on every save. Create
+		 * kept it verbatim while update lowercased and hyphenated it, so
+		 * the first unrelated edit could rewrite a published URL and break
+		 * every printed QR code pointing at it. Both normalise now, which
+		 * makes a re-save idempotent.
+		 */
+		const response = await asAdmin("/api/admin/events/stable-slug-26", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ slug: "stable-slug-26", venue: "A new room" }),
+		});
+
+		expect(response.status).toBe(200);
+
+		const row = await env.DB.prepare(`SELECT slug, venue FROM events WHERE id IS NOT NULL`).first<{
+			slug: string;
+			venue: string;
+		}>();
+
+		expect(row).toMatchObject({ slug: "stable-slug-26", venue: "A new room" });
+	});
+
+	it("rejects a slug that is not in canonical form", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+
+		const response = await asAdmin("/api/admin/events", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ slug: "!!!", title: "Bad Slug", event_date: "2099-01-01" }),
+		});
+
+		expect(response.status).toBe(400);
+	});
+
+	it("normalises a slug on create so later saves cannot rewrite it", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+
+		const created = await asAdmin("/api/admin/events", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ slug: "GittyUp 26", title: "Mixed Case", event_date: "2099-01-01" }),
+		});
+
+		expect(created.status).toBe(201);
+
+		const row = await env.DB.prepare(`SELECT slug FROM events WHERE title = ?`)
+			.bind("Mixed Case")
+			.first<{ slug: string }>();
+
+		expect(row?.slug).toBe("gittyup-26");
 	});
 
 	it("deletes an event together with its registrations", async () => {

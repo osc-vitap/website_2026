@@ -1,0 +1,21 @@
+# Open Source Community, VIT-AP
+#
+# This file exists so /robots.txt is a real answer. The SPA rewrite
+# turns every unmatched path into index.html with a 200, so a crawler
+# asking for robots.txt was served the site's HTML shell and had to
+# decide for itself what that meant.
+
+User-agent: *
+Allow: /
+
+# The admin dashboard needs a GitHub sign-in and holds participants'
+# personal data. Nothing there should be indexed, and the restricted
+# page is only ever reached by being redirected to it.
+Disallow: /admin
+Disallow: /admin/
+
+# Individual poster variants are the same page thirty-three ways; the
+# canonical entry point is /gittyup26 itself.
+Disallow: /gittyup26?pg=
+
+Sitemap: https://www.oscvitap.com/sitemap.xml

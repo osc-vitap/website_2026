@@ -75,13 +75,13 @@ const News = () => {
                 <p className="text-gray-400 leading-relaxed">
                   {news.excerpt}
                 </p>
-                <button
-                  type="button"
-                  aria-label={`Read more: ${news.title}`}
-                  className="mt-2 inline-flex items-center min-h-[44px] text-brand-accent text-sm font-medium hover:text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
-                >
-                  Read more →
-                </button>
+                {/*
+                  * No "Read more" here. There was a button, but each
+                  * item is only a title and an excerpt — there is no
+                  * article behind it and the button had no handler, so
+                  * it did nothing when pressed. Give it somewhere to go
+                  * before bringing it back.
+                  */}
               </div>
             </motion.div>
           ))}

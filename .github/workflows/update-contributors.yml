@@ -27,8 +27,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/fetch_contributors.cjs
         
+      # Pinned to a commit, not the v5 tag.
+      #
+      # This is a third-party action holding contents: write on main,
+      # and main deploys straight to production. A moved tag — which the
+      # upstream owner or anyone who compromises that account can do
+      # without any change here — would run their code with permission
+      # to commit to this repository. A SHA cannot be moved.
+      #
+      # To update: check the release notes, then
+      #   gh api repos/stefanzweifel/git-auto-commit-action/git/ref/tags/vN --jq .object.sha
       - name: Commit and Push Changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5
         with:
           commit_message: "chore(data): auto-sync GitHub organization contributors"
           branch: main

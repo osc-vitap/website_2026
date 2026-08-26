@@ -39,6 +39,15 @@
 		"ADMIN_GITHUB_USERS": ""
 	},
 
+	/**
+	 * Secrets this Worker needs, set with `wrangler secret put <NAME>`.
+	 *
+	 * An audit flagged this block as a field Wrangler does not recognise
+	 * and silently ignores. That is wrong, and it was checked: removing
+	 * it removes the "Missing required secrets: GITHUB_CLIENT_ID,
+	 * GITHUB_CLIENT_SECRET" warning that Wrangler prints when either is
+	 * absent. It stays.
+	 */
 	"secrets": {
 		"required": [
 			"GITHUB_CLIENT_ID",

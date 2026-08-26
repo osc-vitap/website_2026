@@ -54,6 +54,15 @@ const EventRegistration = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+
+  /*
+   * A completed registration is final. The form used to stay live and
+   * the button enabled, so a second click re-posted the same members,
+   * hit the duplicate check, and replaced the green success message
+   * with a red "already registered" error — telling someone their
+   * registration had failed when it had in fact worked.
+   */
+  const [succeeded, setSucceeded] = useState(false);
   const [bannerSrc, setBannerSrc] = useState('');
 
   useEffect(() => {
@@ -188,22 +197,34 @@ const EventRegistration = () => {
         },
       );
 
-      const data = await response.json();
+      /*
+       * Not every response is JSON. A Cloudflare 502, a captive portal
+       * or a dropped connection returns HTML, and parsing that threw a
+       * SyntaxError whose message — "Unexpected token '<'..." — was
+       * shown to the student as if it were the reason their
+       * registration failed.
+       */
+      const data = await response
+        .json()
+        .catch(() => null);
 
       if (!response.ok) {
         throw new Error(
-          data.error || 'Registration failed',
+          data?.error ||
+            'Registration failed. Please try again in a moment.',
         );
       }
 
+      setSucceeded(true);
+
       setMessage(
-        `Registration successful! Registration ID: ${data.registration_id}`,
+        `Registration successful! Registration ID: ${data?.registration_id ?? '—'}`,
       );
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Registration failed',
+          : 'Registration failed. Please check your connection and try again.',
       );
     } finally {
       setSubmitting(false);
@@ -316,6 +337,16 @@ const EventRegistration = () => {
                 onSubmit={handleSubmit}
                 className="space-y-8"
               >
+
+                {/*
+                  * Locked once the registration is in. Editing a field
+                  * after success and pressing enter would otherwise
+                  * resubmit and report a duplicate.
+                  */}
+                <fieldset
+                  disabled={succeeded}
+                  className="space-y-8 border-0 p-0 m-0 disabled:opacity-60"
+                >
 
                 {isTeam && (
                   <div className="glass rounded-lg p-5">
@@ -498,6 +529,8 @@ const EventRegistration = () => {
                   ),
                 )}
 
+                </fieldset>
+
                 {message && (
                   <div
                     role="status"
@@ -514,16 +547,25 @@ const EventRegistration = () => {
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  aria-busy={submitting}
-                  className="w-full bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold min-h-[44px] py-3 rounded-lg transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
-                >
-                  {submitting
-                    ? 'Submitting...'
-                    : 'Complete Registration'}
-                </button>
+                {succeeded ? (
+                  <Link
+                    to="/events"
+                    className="w-full inline-flex items-center justify-center bg-dark-700 hover:bg-dark-600 border border-dark-600 text-white font-semibold min-h-[44px] py-3 rounded-lg transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+                  >
+                    Back to events
+                  </Link>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    aria-busy={submitting}
+                    className="w-full bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold min-h-[44px] py-3 rounded-lg transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+                  >
+                    {submitting
+                      ? 'Submitting...'
+                      : 'Complete Registration'}
+                  </button>
+                )}
 
               </form>
             )}

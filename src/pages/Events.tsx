@@ -8,14 +8,33 @@ import {
   isEventUpcoming,
   orFallback,
 } from '../data/eventsApi';
-import { MapPin, Calendar, ExternalLink, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, ArrowRight } from 'lucide-react';
 
-const createSlug = (title: string) =>
-  title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+/*
+ * D1 stores event_date as an ISO date, and it was printed straight onto
+ * the card — "2026-08-29" next to hand-written entries like
+ * "19–21 Apr 2026". Formatted here so both read the same way.
+ *
+ * A value that is already prose (every hardcoded event) is passed
+ * through untouched rather than guessed at.
+ */
+const formatEventDate = (value: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value;
+  }
+
+  const parsed = new Date(`${value.slice(0, 10)}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
 
 const Events = () => {
   const [activeTab, setActiveTab] =
@@ -39,6 +58,7 @@ const Events = () => {
         const apiMappedEvents: Event[] =
           apiEvents.map((event) => ({
             id: event.id,
+            slug: event.slug,
             title: event.title,
             sub_title: orFallback(
               event.sub_title,
@@ -48,7 +68,9 @@ const Events = () => {
               event.venue,
               '',
             ),
-            date: event.event_date,
+            date: formatEventDate(
+              event.event_date,
+            ),
             image: orFallback(
               event.image,
               'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
@@ -84,13 +106,10 @@ const Events = () => {
 
         const mergedEvents =
           eventsData.map((localEvent) => {
-            const localSlug =
-              createSlug(
-                localEvent.title,
-              );
-
             const apiEvent =
-              apiBySlug.get(localSlug);
+              apiBySlug.get(
+                localEvent.slug,
+              );
 
             if (!apiEvent) {
               return localEvent;
@@ -98,6 +117,7 @@ const Events = () => {
 
             return {
               id: apiEvent.id,
+              slug: apiEvent.slug,
               title: apiEvent.title,
               sub_title: orFallback(
                 apiEvent.sub_title,
@@ -107,8 +127,9 @@ const Events = () => {
                 apiEvent.venue,
                 localEvent.venue,
               ),
-              date:
+              date: formatEventDate(
                 apiEvent.event_date,
+              ),
               image: orFallback(
                 apiEvent.image,
                 localEvent.image,
@@ -134,21 +155,25 @@ const Events = () => {
           });
 
         /*
-         * Add D1 events which don't exist
-         * in the original static data.
+         * Add D1 events which don't exist in the original static data,
+         * compared on slug — the same key the merge above uses.
+         *
+         * This used to slugify titles on both sides, so a D1 event
+         * whose title happened to slugify onto a local one was filtered
+         * out here having already failed to merge above. "GittyUp"
+         * (stored as gittyup-2025) hit exactly that and appeared
+         * nowhere on the site at all.
          */
         const localSlugs = new Set(
-          eventsData.map((event) =>
-            createSlug(event.title),
+          eventsData.map(
+            (event) => event.slug,
           ),
         );
 
         const newApiEvents =
           apiMappedEvents.filter(
             (event) =>
-              !localSlugs.has(
-                createSlug(event.title),
-              ),
+              !localSlugs.has(event.slug),
           );
 
         setDisplayEvents([
@@ -343,13 +368,19 @@ const Events = () => {
                     Register Now
                   </Link>
                 ) : (
-                  <a
-                    href={event.url}
-                    className="mt-auto w-full py-2.5 rounded-lg font-semibold text-center transition-all flex items-center justify-center gap-2 glass border border-dark-600 hover:border-gray-500 text-gray-300"
-                  >
-                    View Details
-                    <ExternalLink size={16} />
-                  </a>
+                  /*
+                    * A finished event has nowhere useful to go. This was
+                    * a "View Details" link to event.url, which is "#" on
+                    * every hardcoded event — a dead link that jumped to
+                    * the top of the page — and on a D1-backed one is the
+                    * registration form, offering to sign people up for
+                    * something that already happened. An event with
+                    * somewhere real to point is handled by the branch
+                    * above.
+                    */
+                  <div className="mt-auto w-full py-2.5 text-center font-semibold text-sm text-gray-600">
+                    This event has ended
+                  </div>
                 )}
 
               </div>

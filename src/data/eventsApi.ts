@@ -61,9 +61,21 @@ export const isEventUpcoming = (
     return false;
   }
 
-  const startOfToday = Date.parse(
-    new Date().toISOString().split('T')[0],
-  );
+  /*
+   * Midnight where the reader is, not midnight UTC.
+   *
+   * toISOString() converts to UTC first, so between 00:00 and 05:30
+   * IST the "start of today" it produced was still yesterday's date —
+   * an event that finished yesterday reappeared under Upcoming every
+   * night, for everyone in India, which is everyone.
+   */
+  const today = new Date();
+
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  ).getTime();
 
   return startsAt >= startOfToday;
 };

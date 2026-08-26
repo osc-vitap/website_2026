@@ -107,6 +107,27 @@ function normalizeRegistrationNumber(value: string): string {
 const REGISTRATION_NUMBER_PATTERN = /^2[2-6][A-Z]{3}[0-9]{4}$/;
 
 /*
+ * The canonical form of an event slug: lowercase, words joined by single
+ * hyphens, nothing else.
+ *
+ * Create and update used to disagree — POST stored `body.slug.trim()`
+ * verbatim while PATCH lowercased and hyphenated it. The admin form
+ * round-trips the stored slug on every save, so the first unrelated edit
+ * to an event created with, say, "GittyUp 26" silently changed its
+ * public URL and broke every printed QR code pointing at it. Both paths
+ * normalise through here now, which also makes a re-save idempotent.
+ */
+function normalizeSlug(value: string): string {
+	return value
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '');
+}
+
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/*
  * Not a full RFC 5322 validator — just enough to reject values that
  * cannot possibly receive mail, without locking out unusual real
  * addresses.
@@ -242,14 +263,15 @@ type AuthFailure =
  * redirect or a way to render attacker text on the site.
  */
 function authFailureRedirect(request: Request, reason: AuthFailure): Response {
-	return new Response(null, {
-		status: 302,
-		headers: {
-			Location: `${siteOrigin(request)}/admin/restricted?reason=${reason}`,
-			/* A failure must not leave a half-made session behind. */
-			'Set-Cookie': clearedSessionCookie(request),
-		},
+	const headers = new Headers({
+		Location: `${siteOrigin(request)}/admin/restricted?reason=${reason}`,
 	});
+
+	/* A failure must not leave a half-made session or a live state behind. */
+	headers.append('Set-Cookie', clearedSessionCookie(request));
+	headers.append('Set-Cookie', clearedOauthStateCookie(request));
+
+	return new Response(null, { status: 302, headers });
 }
 
 function sessionCookie(sessionId: string, request: Request): string {
@@ -263,6 +285,36 @@ function sessionCookie(sessionId: string, request: Request): string {
 		'Max-Age=28800',
 		secure ? 'Secure' : '',
 	]
+		.filter(Boolean)
+		.join('; ');
+}
+
+/*
+ * Binds an in-flight OAuth attempt to the browser that started it.
+ *
+ * SameSite=Lax rather than Strict because the browser arrives here from
+ * github.com — a Strict cookie would not be sent on that navigation and
+ * every sign-in would fail.
+ */
+function oauthStateCookie(state: string, request: Request): string {
+	const secure = !isLocalRequest(request);
+
+	return [
+		`osc_oauth_state=${encodeURIComponent(state)}`,
+		'Path=/',
+		'HttpOnly',
+		'SameSite=Lax',
+		'Max-Age=600',
+		secure ? 'Secure' : '',
+	]
+		.filter(Boolean)
+		.join('; ');
+}
+
+function clearedOauthStateCookie(request: Request): string {
+	const secure = !isLocalRequest(request);
+
+	return ['osc_oauth_state=', 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0', secure ? 'Secure' : '']
 		.filter(Boolean)
 		.join('; ');
 }
@@ -867,7 +919,25 @@ export default {
 
 				githubUrl.searchParams.set('state', state);
 
-				return Response.redirect(githubUrl.toString(), 302);
+				/*
+				 * The state row alone proves the flow started here, but not
+				 * that it started in THIS browser. Without that, someone can
+				 * begin a sign-in, keep the callback URL, and get a victim
+				 * to open it — the victim's browser then receives a session
+				 * for the attacker's GitHub account, and every subsequent
+				 * created_by / updated_by / deleted_by records the wrong
+				 * person.
+				 *
+				 * Pairing the state with a cookie ties the two halves of the
+				 * flow to one browser. Ten minutes, matching the row's TTL.
+				 */
+				return new Response(null, {
+					status: 302,
+					headers: {
+						Location: githubUrl.toString(),
+						'Set-Cookie': oauthStateCookie(state, request),
+					},
+				});
 			}
 
 			/*
@@ -908,7 +978,19 @@ export default {
 
 				/*
 				 * Validate OAuth state
+				 *
+				 * Two halves. The cookie proves this browser is the one
+				 * that started the flow; the row proves the flow started
+				 * here at all and has not been used already. A state that
+				 * satisfies only the row is a callback someone else began,
+				 * which is how a victim ends up holding a session for the
+				 * attacker's GitHub account.
 				 */
+				const statedCookie = getCookie(request, 'osc_oauth_state');
+
+				if (!statedCookie || statedCookie !== state) {
+					return authFailureRedirect(request, 'bad-state');
+				}
 
 				const oauthState = await env.DB.prepare(
 					`
@@ -1091,14 +1173,18 @@ export default {
 				 * React admin dashboard after successful authentication.
 				 */
 
-				const redirectUrl = isLocalRequest(request) ? 'http://localhost:5173/admin' : 'https://www.oscvitap.com/admin';
+				const successHeaders = new Headers({
+					Location: `${siteOrigin(request)}/admin`,
+				});
+
+				successHeaders.append('Set-Cookie', sessionCookie(sessionId, request));
+
+				/* The flow is finished; the state cookie has no further use. */
+				successHeaders.append('Set-Cookie', clearedOauthStateCookie(request));
 
 				return new Response(null, {
 					status: 302,
-					headers: {
-						Location: redirectUrl,
-						'Set-Cookie': sessionCookie(sessionId, request),
-					},
+					headers: successHeaders,
 				});
 			}
 
@@ -1719,7 +1805,7 @@ export default {
 
 				const title = body.title !== undefined ? body.title.trim() : existingEvent.title;
 
-				const slug = body.slug !== undefined ? body.slug.trim().toLowerCase().replace(/\s+/g, '-') : existingEvent.slug;
+				const slug = body.slug !== undefined ? normalizeSlug(body.slug) : existingEvent.slug;
 
 				const eventDate = body.event_date ?? existingEvent.event_date;
 
@@ -1732,6 +1818,17 @@ export default {
 					return json(
 						{
 							error: 'Title, slug and event date are required.',
+						},
+						400,
+						request,
+						env,
+					);
+				}
+
+				if (!SLUG_PATTERN.test(slug)) {
+					return json(
+						{
+							error: 'Slug must be lowercase letters, numbers and single hyphens, e.g. gittyup26.',
 						},
 						400,
 						request,
@@ -1968,7 +2065,7 @@ export default {
 					);
 				}
 
-				const slug = body.slug?.trim();
+				const slug = body.slug === undefined ? undefined : normalizeSlug(body.slug);
 
 				const title = body.title?.trim();
 
@@ -1978,6 +2075,17 @@ export default {
 					return json(
 						{
 							error: 'slug, title and event_date are required',
+						},
+						400,
+						request,
+						env,
+					);
+				}
+
+				if (!SLUG_PATTERN.test(slug)) {
+					return json(
+						{
+							error: 'Slug must be lowercase letters, numbers and single hyphens, e.g. gittyup26.',
 						},
 						400,
 						request,
@@ -2452,6 +2560,23 @@ export default {
 				}[] = [];
 
 				for (const [index, member] of rawMembers.entries()) {
+					/*
+					 * `[null]` and `["hello"]` are valid JSON arrays, and
+					 * reading .name off either threw a TypeError that
+					 * surfaced as a 500 — an input problem reported as a
+					 * server fault.
+					 */
+					if (typeof member !== 'object' || member === null) {
+						return json(
+							{
+								error: `Missing required information for member ${index + 1}`,
+							},
+							400,
+							request,
+							env,
+						);
+					}
+
 					const name = member.name?.trim() ?? '';
 					const yearOfStudy = member.year_of_study?.trim() ?? '';
 					const email = member.email?.trim().toLowerCase() ?? '';
@@ -2563,6 +2688,21 @@ export default {
 					.bind(event.id, ...registrationNumbers)
 					.all<{ college_registration_number: string }>();
 
+				/*
+				 * Naming the clashing registration number tells an
+				 * unauthenticated caller that it is registered, which makes
+				 * this endpoint an oracle over a bounded id space.
+				 *
+				 * Kept deliberately: a student who mistypes one digit and
+				 * is told only "already registered" cannot tell whether
+				 * they are looking at their own earlier entry or somebody
+				 * else's, and the whole point of the message is to answer
+				 * that. The exposure is bounded instead — REGISTRATION_ID_
+				 * LIMITER caps attempts per number and REGISTRATION_IP_
+				 * LIMITER caps a sweep of fabricated ones — and what leaks
+				 * is only that a registration number is registered, not any
+				 * name, email or handle attached to it.
+				 */
 				if (existing.results.length > 0) {
 					const already = existing.results.map((row) => row.college_registration_number);
 

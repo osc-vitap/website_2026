@@ -1,5 +1,18 @@
 export interface Event {
   id: string;
+
+  /**
+   * The slug this event has in D1.
+   *
+   * Deliberately not derived from the title. "GittyUp" is stored as
+   * "gittyup-2025" and "Getting Started with Networking" as
+   * "getting-started-networking", so slugifying the title missed both:
+   * neither merged with its D1 row, and the merge's own de-duplication
+   * then filtered them out of the append as well — every admin edit to
+   * those two events was invisible on the site.
+   */
+  slug: string;
+
   title: string;
   sub_title: string;
   venue: string;
@@ -22,6 +35,7 @@ export const eventsData: Event[] = [
   // Past Events (From JSON)
   {
     id: "past-2026-3",
+    slug: "recon-2026",
     title: "RECON 2026",
     sub_title: "National Workshop on System Security",
     venue: "Central Block, VIT-AP University",
@@ -35,6 +49,7 @@ export const eventsData: Event[] = [
  
   {
     id: "past-2026-1",
+    slug: "dumbathon-2-0",
     title: "Dumbathon 2.0",
     sub_title: "Apocalypse Protocol",
     venue: "421, AB-1",
@@ -47,6 +62,7 @@ export const eventsData: Event[] = [
   },
   {
     id: "past-2026-2",
+    slug: "project-atlas",
     title: "Project ATLAS",
     sub_title: "Orbital Cascade",
     venue: "Newton Hall, AB-1",
@@ -59,6 +75,7 @@ export const eventsData: Event[] = [
   },
   {
     id: "past-2025-1",
+    slug: "gittyup-2025",
     title: "GittyUp",
     sub_title: "Hands-On Introduction to Git & GitHub",
     venue: "Einstein Hall, AB1",
@@ -71,6 +88,7 @@ export const eventsData: Event[] = [
   },
   {
     id: "past-2025-2",
+    slug: "ai-bootcamp",
     title: "AI Bootcamp",
     sub_title: "Agents in Action",
     venue: "Newton Hall, AB-1",
@@ -83,6 +101,7 @@ export const eventsData: Event[] = [
   },
   {
     id: "past-2025-3",
+    slug: "hit-the-hitler",
     title: "Hit The Hitler",
     sub_title: "Capture The Flag",
     venue: "Newton Hall, AB-1",
@@ -97,6 +116,7 @@ export const eventsData: Event[] = [
   
   {
     id: "past-2023-1",
+    slug: "cyber-syndicate",
     title: "Cyber Syndicate",
     sub_title: "Capture The Flag",
     venue: "AB1-G03,04",
@@ -109,6 +129,7 @@ export const eventsData: Event[] = [
   },
   {
     id: "past-2022-4",
+    slug: "gitty-up-learn-git-github",
     title: "GITTY UP: Learn Git & GitHub",
     sub_title: "Workshop",
     venue: "Auditorium",
@@ -121,6 +142,7 @@ export const eventsData: Event[] = [
   },
   {
     id: "past-2022-2",
+    slug: "docker-fundamentals",
     title: "Docker Fundamentals",
     sub_title: "Workshop",
     venue: "Online",
@@ -133,6 +155,7 @@ export const eventsData: Event[] = [
   },
   {
     id: "past-2022-1",
+    slug: "getting-started-networking",
     title: "Getting Started with Networking",
     sub_title: "Workshop",
     venue: "Online",

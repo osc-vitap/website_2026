@@ -31,16 +31,28 @@ type RegistrationState =
 /*
  * One box, three states.
  *
- * The height of this box is padding plus line box plus border, so the
- * three states hold all three equal and the panel cannot change height
- * underneath the reader at the exact moment the answer lands — which is
- * the moment they are most likely to be looking at it. The open state
- * used to carry no border at all while the closed one carried two
- * pixels of it, which was already a 4px jump between the two outcomes
- * before a third state existed.
+ * The size is reserved here rather than left to the labels: a set
+ * height, a set width from `sm` up, and no wrapping anywhere. Equal
+ * padding and border were not enough, because whichever label wrapped
+ * decided the height. The closed label used to read "Registration
+ * opening soon" and took two lines wherever the box was narrow, so it
+ * grew at the exact moment the answer landed: on a 390px phone the
+ * panel went 88px to 112px and everything under it dropped 24px, and at
+ * 1024px, where the two-column layout makes this column narrowest,
+ * 28px. The width moved with it — 204px to 309px across the three
+ * states at 640px.
+ *
+ * Which is why both settled labels are short enough to sit on one line
+ * at 320px, the narrowest phone this page is reached from. Below `sm`
+ * the box is the panel's full width, so only the height is at stake
+ * there.
+ *
+ * The open state used to carry no border at all while the closed one
+ * carried two pixels of it, which was already a 4px jump between the
+ * two outcomes before a third state existed.
  */
 const CTA_BOX =
-  'mt-7 inline-flex w-full items-center gap-3 rounded-full border-2 px-7 py-4 text-base font-bold sm:w-auto md:text-lg';
+  'mt-7 inline-flex h-[3.75rem] w-full items-center gap-3 whitespace-nowrap rounded-full border-2 px-7 text-base font-bold sm:w-[17rem] md:h-[4rem] md:text-lg';
 
 /*
  * A handful of layouts, thirty palettes.
@@ -138,11 +150,11 @@ const PosterPage = ({
    *
    * Three states rather than a boolean. It was a boolean that started
    * false, so for the whole of the fetch — and permanently if the fetch
-   * never came back — the page said "Registration opening soon" in the
-   * same confident type it uses when that is actually true. On campus
-   * wifi that is long enough to read, believe and walk away from. Not
-   * knowing yet is a different thing from knowing it is shut, and only
-   * one of them is worth telling somebody.
+   * never came back — the page said registration was opening soon in
+   * the same confident type it uses when that is actually true. On
+   * campus wifi that is long enough to read, believe and walk away
+   * from. Not knowing yet is a different thing from knowing it is shut,
+   * and only one of them is worth telling somebody.
    *
    * `closed` is still where an unread or unreachable API lands, because
    * the property that matters has not changed: never offer a form the
@@ -651,7 +663,7 @@ const PosterPage = ({
                       aria-hidden="true"
                       className="poster-checking-spin shrink-0"
                     />
-                    Checking registration
+                    Checking…
                   </div>
                 )}
 
@@ -694,7 +706,7 @@ const PosterPage = ({
                     }}
                   >
                     <Clock size={18} className="shrink-0" />
-                    Registration opening soon
+                    Opening soon
                   </div>
                 )}
 
@@ -740,7 +752,7 @@ const PosterPage = ({
               ref={aboutTriggerRef}
               type="button"
               onClick={() => setShowAbout(true)}
-              className="poster-glass group mt-5 inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 px-5 py-3 text-sm font-semibold transition-colors sm:w-auto md:text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+              className="poster-glass group mt-5 inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 px-5 py-3 text-sm font-semibold sm:w-auto md:text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
               style={{
                 /*
                   * The label stays in the body colour and the accent goes
@@ -758,6 +770,14 @@ const PosterPage = ({
                   */
                 color: variant.text,
                 backgroundColor: glassTint(variant.ground, 0.95),
+                /*
+                  * The opaque fallback .poster-glass reaches for where
+                  * there is no backdrop-filter, the same one the panel
+                  * and the dialog set. Unset, that rule painted this
+                  * chip flat black while everything around it kept the
+                  * sheet's tint.
+                  */
+                ['--glass-solid' as string]: glassTint(variant.ground, 0.96),
                 borderColor: withAlpha(variant.accent, 55),
                 outlineColor: variant.accent,
               }}

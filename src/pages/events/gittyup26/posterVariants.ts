@@ -1,3 +1,4 @@
+import { notePosterSeen, takeNextPosterId } from './posterShuffle';
 import { PosterVariant } from './posterTypes';
 
 /*
@@ -757,6 +758,17 @@ export const posterVariants: PosterVariant[] = [
  * code — picks at random, so the bare URL shows a different poster on
  * each visit rather than always the first.
  */
+/*
+ * Only the printed run is in the random pool. An unlisted sheet is
+ * reachable by its own QR and by nothing else — opening /gittyup26 with
+ * no query should not ask a stranger whether they have lost their car
+ * keys.
+ */
+const randomPool = (): PosterVariant[] =>
+	posterVariants.filter(
+		(variant) => !variant.unlisted,
+	);
+
 export const variantFromParam = (
 	value: string | null,
 ): PosterVariant => {
@@ -769,19 +781,38 @@ export const variantFromParam = (
 		page >= 1 &&
 		page <= posterVariants.length;
 
-	if (valid) return posterVariants[page - 1];
+	if (valid) {
+		const chosen = posterVariants[page - 1];
+
+		/*
+		 * Scanning a sheet counts as seeing it, so it is struck from
+		 * the cycle — opening the bare URL afterwards should not hand
+		 * back the poster still in their hand.
+		 */
+		notePosterSeen(
+			chosen.id,
+			randomPool().map(
+				(variant) => variant.id,
+			),
+		);
+
+		return chosen;
+	}
+
+	const pool = randomPool();
 
 	/*
-	 * Only the printed run is in the random pool. An unlisted sheet is
-	 * reachable by its own QR and by nothing else — opening /gittyup26
-	 * with no query should not ask a stranger whether they have lost
-	 * their car keys.
+	 * Dealt from a shuffled bag rather than drawn at random, so all
+	 * thirty are seen before any is seen twice and the same sheet can
+	 * never come up two visits running. See posterShuffle.
 	 */
-	const pool = posterVariants.filter(
-		(variant) => !variant.unlisted,
+	const id = takeNextPosterId(
+		pool.map((variant) => variant.id),
 	);
 
-	return pool[
-		Math.floor(Math.random() * pool.length)
-	];
+	return (
+		pool.find(
+			(variant) => variant.id === id,
+		) ?? pool[0]
+	);
 };

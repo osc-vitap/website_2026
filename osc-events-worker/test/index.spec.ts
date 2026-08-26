@@ -500,6 +500,269 @@ describe("registration identity", () => {
 	});
 });
 
+/*
+ * The archive path is where irreversible loss lives: once the cron has
+ * written R2 and purged D1, that object is the only copy of every
+ * participant's name, registration number and email. It had no test
+ * coverage at all, and an audit found four separate ways to destroy it.
+ */
+describe("registration archive", () => {
+	const ARCHIVE_SESSION = "archive-session";
+
+	async function asArchiveAdmin(path: string, init?: RequestInit): Promise<Response> {
+		return fetchWorker(path, {
+			...init,
+			headers: {
+				...(init?.headers ?? {}),
+				Cookie: `osc_admin_session=${ARCHIVE_SESSION}`,
+			},
+		});
+	}
+
+	beforeEach(async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+        VALUES (?, ?, ?, ?)
+      `,
+		)
+			.bind(ARCHIVE_SESSION, "1", "archivist", new Date(Date.now() + 3600_000).toISOString())
+			.run();
+	});
+
+	afterEach(async () => {
+		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+
+		const listed = await env.osc_events_archives.list();
+
+		for (const object of listed.objects) {
+			await env.osc_events_archives.delete(object.key);
+		}
+	});
+
+	async function eventIdFor(slug: string): Promise<string> {
+		const row = await env.DB.prepare(`SELECT id FROM events WHERE slug = ?`).bind(slug).first<{ id: string }>();
+
+		if (!row) throw new Error(`no event seeded for ${slug}`);
+
+		return row.id;
+	}
+
+	async function runCron(): Promise<void> {
+		const ctx = createExecutionContext();
+		await worker.scheduled({ scheduledTime: Date.now(), cron: "0 * * * *", noRetry() {} }, env, ctx);
+		await waitOnExecutionContext(ctx);
+	}
+
+	const ENDED = {
+		event_date: "2020-01-01",
+		event_end_at: "2020-01-02T10:00:00Z",
+	};
+
+	it("keys the archive on the event id, not on its slug", async () => {
+		/*
+		 * The key used to be the slug through
+		 * replace(/[^a-zA-Z0-9_-]/g,'-'), which is many-to-one: these two
+		 * slugs both became "clash-2-0", so the second archive overwrote
+		 * the first and the cron then deleted the first event's rows
+		 * having "verified" that an object existed at that key.
+		 */
+		await seedEvent({ slug: "clash-2.0", title: "Clash Dot", ...ENDED });
+		await seedEvent({ slug: "clash-2-0", title: "Clash Dash", ...ENDED });
+
+		await seedRegistration("clash-2.0", [
+			{ name: "Dot Person", college_registration_number: "22BCE5001", email: "dot@example.com" },
+		]);
+		await seedRegistration("clash-2-0", [
+			{ name: "Dash Person", college_registration_number: "22BCE5002", email: "dash@example.com" },
+		]);
+
+		const dotId = await eventIdFor("clash-2.0");
+		const dashId = await eventIdFor("clash-2-0");
+
+		await runCron();
+
+		/* Two events, two distinct objects — neither overwrote the other. */
+		const dot = await env.osc_events_archives.head(`events/${dotId}/registrations.csv.gz`);
+		const dash = await env.osc_events_archives.head(`events/${dashId}/registrations.csv.gz`);
+
+		expect(dot).not.toBeNull();
+		expect(dash).not.toBeNull();
+		expect(dot?.customMetadata?.eventId).toBe(dotId);
+		expect(dash?.customMetadata?.eventId).toBe(dashId);
+	});
+
+	it("records archive_key before deleting the rows it replaces", async () => {
+		await seedEvent({ slug: "keyed-event", title: "Keyed Event", ...ENDED });
+		await seedRegistration("keyed-event", [
+			{ name: "Someone", college_registration_number: "22BCE5003", email: "someone@example.com" },
+		]);
+
+		const id = await eventIdFor("keyed-event");
+
+		await runCron();
+
+		const row = await env.DB.prepare(`SELECT archive_status, archive_key, is_open FROM events WHERE slug = ?`)
+			.bind("keyed-event")
+			.first<{ archive_status: string; archive_key: string | null; is_open: number }>();
+
+		expect(row).toMatchObject({
+			archive_status: "archived",
+			archive_key: `events/${id}/registrations.csv.gz`,
+			is_open: 0,
+		});
+	});
+
+	it("does not write an archive for an event nobody registered for", async () => {
+		await seedEvent({ slug: "empty-event", title: "Empty Event", ...ENDED });
+
+		await runCron();
+
+		const listed = await env.osc_events_archives.list();
+
+		expect(listed.objects).toHaveLength(0);
+
+		const row = await env.DB.prepare(`SELECT archive_status FROM events WHERE slug = ?`)
+			.bind("empty-event")
+			.first<{ archive_status: string }>();
+
+		expect(row?.archive_status).toBe("archived");
+	});
+
+	it("refuses a manual archive that would write a header-only file", async () => {
+		/*
+		 * The scenario that destroyed data: the cron archives and purges,
+		 * then an admin runs the manual endpoint to "take a fresh
+		 * backup". The rebuild finds zero rows and used to put a ~22 byte
+		 * gzip over the real archive, answering {"success": true}.
+		 */
+		await seedEvent({ slug: "purged-event", title: "Purged Event", ...ENDED });
+		await seedRegistration("purged-event", [
+			{ name: "Archived Soul", college_registration_number: "22BCE5004", email: "soul@example.com" },
+		]);
+
+		const id = await eventIdFor("purged-event");
+
+		await runCron();
+
+		const before = await env.osc_events_archives.head(`events/${id}/registrations.csv.gz`);
+
+		expect(before).not.toBeNull();
+
+		const response = await asArchiveAdmin("/api/admin/events/purged-event/registrations/archive", {
+			method: "POST",
+		});
+
+		expect(response.status).toBe(409);
+
+		/* The good archive is untouched, byte for byte. */
+		const after = await env.osc_events_archives.head(`events/${id}/registrations.csv.gz`);
+
+		expect(after?.size).toBe(before?.size);
+	});
+
+	it("refuses to overwrite an archived event without an explicit opt-in", async () => {
+		await seedEvent({ slug: "guarded-event", title: "Guarded Event" });
+		await seedRegistration("guarded-event", [
+			{ name: "Still Here", college_registration_number: "22BCE5005", email: "here@example.com" },
+		]);
+
+		await env.DB.prepare(`UPDATE events SET archive_status = 'archived' WHERE slug = ?`)
+			.bind("guarded-event")
+			.run();
+
+		const blocked = await asArchiveAdmin("/api/admin/events/guarded-event/registrations/archive", {
+			method: "POST",
+		});
+
+		expect(blocked.status).toBe(409);
+
+		const allowed = await asArchiveAdmin(
+			"/api/admin/events/guarded-event/registrations/archive?overwrite=1",
+			{ method: "POST" },
+		);
+
+		expect(allowed.status).toBe(200);
+	});
+
+	it("does not retire a live event when an admin takes a snapshot", async () => {
+		/*
+		 * The manual endpoint used to set archive_status='archived',
+		 * which hides the event from the public list — while the register
+		 * handler, which reads only is_open, kept accepting entries the
+		 * cron would never preserve because it only selects 'pending'.
+		 */
+		await seedEvent({ slug: "live-event", title: "Live Event" });
+		await seedRegistration("live-event", [
+			{ name: "Early Bird", college_registration_number: "22BCE5006", email: "early@example.com" },
+		]);
+
+		const response = await asArchiveAdmin("/api/admin/events/live-event/registrations/archive", {
+			method: "POST",
+		});
+
+		expect(response.status).toBe(200);
+
+		const row = await env.DB.prepare(`SELECT archive_status, is_open, archive_key FROM events WHERE slug = ?`)
+			.bind("live-event")
+			.first<{ archive_status: string; is_open: number; archive_key: string | null }>();
+
+		/* Snapshot recorded, event still live and still visible. */
+		expect(row?.archive_status).toBe("pending");
+		expect(row?.is_open).toBe(1);
+		expect(row?.archive_key).not.toBeNull();
+
+		const publicList = await fetchWorker("/api/events");
+		const { events } = (await publicList.json()) as { events: { slug: string }[] };
+
+		expect(events.map((e) => e.slug)).toContain("live-event");
+	});
+
+	it("serves the archive from the stored key after the event is renamed", async () => {
+		/*
+		 * The download used to recompute the key from the CURRENT slug,
+		 * so renaming an archived event pointed it at a key nothing had
+		 * been written to and the archive became unreachable.
+		 */
+		await seedEvent({ slug: "old-name", title: "Old Name", ...ENDED });
+		await seedRegistration("old-name", [
+			{ name: "Renamed", college_registration_number: "22BCE5007", email: "renamed@example.com" },
+		]);
+
+		await runCron();
+
+		await env.DB.prepare(`UPDATE events SET slug = ? WHERE slug = ?`).bind("new-name", "old-name").run();
+
+		const response = await asArchiveAdmin("/api/admin/events/new-name/registrations/archive");
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe("application/gzip");
+	});
+
+	it("archives an event exactly once even if the cron runs again", async () => {
+		await seedEvent({ slug: "twice-event", title: "Twice Event", ...ENDED });
+		await seedRegistration("twice-event", [
+			{ name: "Only Once", college_registration_number: "22BCE5008", email: "once@example.com" },
+		]);
+
+		const id = await eventIdFor("twice-event");
+
+		await runCron();
+
+		const first = await env.osc_events_archives.head(`events/${id}/registrations.csv.gz`);
+
+		/* A second tick must not rebuild an empty CSV over the good one. */
+		await runCron();
+
+		const second = await env.osc_events_archives.head(`events/${id}/registrations.csv.gz`);
+
+		expect(second?.size).toBe(first?.size);
+		expect(second?.customMetadata?.rowCount).toBe("1");
+	});
+});
+
 describe("OAuth failure handling", () => {
 	/*
 	 * Every one of these used to answer a top-level browser navigation

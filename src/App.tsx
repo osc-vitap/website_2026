@@ -10,6 +10,7 @@ import Projects from './pages/Projects';
 import News from './pages/News';
 import Contact from './pages/Contact';
 import StarBackground from './components/StarBackground';
+import EventCountdown from './components/EventCountdown';
 
 import EventRegistration from './pages/EventRegistration';
 
@@ -32,6 +33,10 @@ const SiteLayout = () => (
     {/* Foreground Content */}
     <div className="relative z-10 flex flex-col min-h-screen">
       <Navbar />
+
+      {/* Sits in the shell so every page carries it, and retires
+          itself once there is nothing upcoming to count down to. */}
+      <EventCountdown />
 
       <main className="flex-grow">
         <Outlet />

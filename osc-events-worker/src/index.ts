@@ -468,6 +468,67 @@ async function processCompletedEvents(env: Env): Promise<void> {
 		await archiveEventAfterCompletion(env, event);
 	}
 }
+async function sendDiscordRegistrationMilestone(
+  env: Env,
+  eventTitle: string,
+  registrationCount: number,
+): Promise<void> {
+  if (!env.DISCORD_WEBHOOK_URL) {
+    console.log(
+      "Discord milestone skipped: DISCORD_WEBHOOK_URL is not configured.",
+    );
+    return;
+  }
+
+  if (
+    registrationCount <= 0 ||
+    registrationCount % 100 !== 0
+  ) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      env.DISCORD_WEBHOOK_URL,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content:
+            `🔔 **Registration Milestone**\n\n**${eventTitle}** has reached **${registrationCount} registrations.**`,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorText =
+        await response.text();
+
+      console.error(
+        "Discord webhook failed:",
+        response.status,
+        errorText,
+      );
+
+      return;
+    }
+
+    console.log(
+      `Discord milestone notification sent for ${eventTitle}: ${registrationCount}`,
+    );
+  } catch (error) {
+    /*
+     * Discord must NEVER cause a successful registration
+     * to fail.
+     */
+    console.error(
+      "Discord milestone notification error:",
+      error,
+    );
+  }
+}
 
 export default {
 	async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
@@ -2019,7 +2080,38 @@ export default {
 						env,
 					);
 				}
+                  /*
+                 * ============================================================
+                 * DISCORD REGISTRATION MILESTONE
+                  * ============================================================
+                 *
+                 * Count registrations only after the complete registration
+                 * has successfully been written.
+                 *
+                 * Discord failures are intentionally isolated from registration.
+                  */
+                         const registrationCountResult =
+                                await env.DB
+                                    .prepare(`
+                SELECT COUNT(*) AS count
+                FROM registrations
+                WHERE event_id = ?
+              `)
+                                            .bind(event.id)
+                                            .first<{
+                                                    count: number;
+                                            }>();
 
+                            const registrationCount =
+                                    Number(
+                                            registrationCountResult?.count ?? 0,
+                                    );
+
+                            await sendDiscordRegistrationMilestone(
+                                    env,
+                                    event.title,
+                                    registrationCount,
+                            );
 				return json(
 					{
 						success: true,

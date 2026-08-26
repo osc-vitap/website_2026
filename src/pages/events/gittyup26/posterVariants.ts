@@ -723,6 +723,30 @@ export const posterVariants: PosterVariant[] = [
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true
 	},
+	{
+		"id": 32,
+		"layout": "hero-word",
+		"ground": "#050505",
+		"image": "/events/gittyup26/crying-emoji-web.webp",
+		"imagePosition": "78% 42%",
+		"layers": [
+			"radial-gradient(56% 62% at 78% 34%, rgba(150,86,255,.26) 0%, rgba(96,44,190,.12) 46%, rgba(0,0,0,0) 76%)",
+			"linear-gradient(90deg, #050505 0%, rgba(5,5,5,.94) 32%, rgba(5,5,5,.48) 58%, rgba(5,5,5,0) 84%)",
+			"linear-gradient(0deg, rgba(5,5,5,.96) 0%, rgba(5,5,5,.8) 14%, rgba(5,5,5,.34) 27%, rgba(5,5,5,0) 43%)"
+		],
+		"ink": "#ffffff",
+		"inkGradient": "linear-gradient(101deg,#f2eefa 0%,#8a7fa0 12%,#ffffff 26%,#5e4f7a 38%,#d2c9e4 50%,#b98cff 58%,#948aa8 66%,#ffffff 78%,#6b647b 89%,#e8e5f0 100%)",
+		"text": "rgba(255,255,255,.9)",
+		"accent": "#c4cddd",
+		"rows": 1,
+		"headline": "It is all still in GITTY UP.",
+		"emphasis": "GITTY UP",
+		"heroWord": "SHOULD'VE COMMITTED EARLIER.",
+		"subline": "Nothing you never saved is coming back. Everything after this one is up to you.",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium",
+		"unlisted": true
+	},
 ];
 
 /*

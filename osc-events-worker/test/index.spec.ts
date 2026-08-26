@@ -1566,3 +1566,293 @@ describe("admin access", () => {
 		expect(remaining?.n).toBe(1);
 	});
 });
+
+describe("Discord registration webhook", () => {
+	const HOOK = "https://discord.com/api/webhooks/test/token";
+
+	const originalWebhook = env.DISCORD_WEBHOOK_URL;
+	const realFetch = globalThis.fetch;
+
+	/** Every outbound call the Worker made, so the test can read the payload. */
+	let sent: { url: string; body: any }[] = [];
+
+	let respondWith: () => Promise<Response> = async () => new Response("", { status: 204 });
+
+	beforeEach(() => {
+		sent = [];
+		env.DISCORD_WEBHOOK_URL = HOOK;
+		respondWith = async () => new Response("", { status: 204 });
+
+		globalThis.fetch = (async (input: any, init?: RequestInit) => {
+			const url = typeof input === "string" ? input : input.url;
+
+			if (url.startsWith("https://discord.com/")) {
+				sent.push({ url, body: JSON.parse(String(init?.body ?? "{}")) });
+				return respondWith();
+			}
+
+			return realFetch(input, init);
+		}) as typeof fetch;
+	});
+
+	afterEach(async () => {
+		globalThis.fetch = realFetch;
+		env.DISCORD_WEBHOOK_URL = originalWebhook;
+
+		await env.DB.prepare(`DELETE FROM registration_members`).run();
+		await env.DB.prepare(`DELETE FROM registrations`).run();
+	});
+
+	const member = {
+		name: "Ada Lovelace",
+		year_of_study: "2",
+		college_registration_number: "22BCE0777",
+		email: "ada.22bce0777@vitapstudent.ac.in",
+	};
+
+	async function register(slug: string, body: Record<string, unknown>): Promise<Response> {
+		return fetchWorker(`/api/events/${slug}/register`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		});
+	}
+
+	it("announces a registration and says which poster it came from", async () => {
+		await seedEvent({ slug: "hook-poster", title: "GITTY UP" });
+
+		const response = await register("hook-poster", {
+			source: { page: "/gittyup26", poster: 13 },
+			members: [member],
+		});
+
+		expect(response.status).toBe(201);
+		expect(sent).toHaveLength(1);
+		expect(sent[0].url).toBe(HOOK);
+
+		const embed = sent[0].body.embeds[0];
+
+		expect(embed.title).toBe("New registration — GITTY UP");
+
+		const from = embed.fields.find((f: any) => f.name === "Registered from");
+
+		expect(from.value).toContain("/gittyup26");
+		expect(from.value).toContain("poster 13");
+
+		const who = embed.fields.find((f: any) => f.name === "Participant");
+
+		expect(who.value).toContain("Ada Lovelace");
+		expect(who.value).toContain("22BCE0777");
+	});
+
+	it("names the plain registration page when there is no poster", async () => {
+		await seedEvent({ slug: "hook-plain", title: "Plain Event" });
+
+		await register("hook-plain", {
+			source: { page: "/events/hook-plain/register" },
+			members: [member],
+		});
+
+		const from = sent[0].body.embeds[0].fields.find((f: any) => f.name === "Registered from");
+
+		expect(from.value).toContain("/events/hook-plain/register");
+		expect(from.value).not.toContain("poster");
+	});
+
+	/*
+	 * The source is browser-supplied. These are the shapes an attacker
+	 * would reach for to get their own text, or a link, into the
+	 * club's channel.
+	 */
+	it.each([
+		["an absolute URL", { page: "https://evil.example/pwned" }],
+		["a protocol-relative URL", { page: "//evil.example" }],
+		["a path with a query", { page: "/gittyup26?x=<script>" }],
+		["a very long path", { page: `/${"a".repeat(200)}` }],
+		["a non-string page", { page: 42 }],
+		["no page at all", {}],
+		["not an object", "just a string"],
+	])("drops %s and says the page is unknown", async (label, source) => {
+		const slug = `hook-bad-${label.replace(/[^a-z]+/gi, "")}`;
+
+		await seedEvent({ slug, title: "Bad Source" });
+
+		await register(slug, { source, members: [member] });
+
+		const from = sent[0].body.embeds[0].fields.find((f: any) => f.name === "Registered from");
+
+		expect(from.value).toBe("Unknown page");
+	});
+
+	it("drops a poster id outside the printed run", async () => {
+		await seedEvent({ slug: "hook-poster-range", title: "Range" });
+
+		await register("hook-poster-range", {
+			source: { page: "/gittyup26", poster: 9999 },
+			members: [member],
+		});
+
+		const from = sent[0].body.embeds[0].fields.find((f: any) => f.name === "Registered from");
+
+		expect(from.value).toBe("/gittyup26");
+	});
+
+	/*
+	 * The name field is filled in by whoever is registering. Without
+	 * allowed_mentions an @everyone in it pings the whole server, and
+	 * without escaping a name of asterisks reformats the message.
+	 */
+	it("cannot be used to ping the server or to inject markdown", async () => {
+		await seedEvent({ slug: "hook-hostile", title: "Hostile" });
+
+		await register("hook-hostile", {
+			source: { page: "/gittyup26", poster: 1 },
+			members: [
+				{
+					...member,
+					name: "@everyone **bold** [link](https://evil.example)",
+				},
+			],
+		});
+
+		const payload = sent[0].body;
+
+		expect(payload.allowed_mentions).toEqual({ parse: [] });
+
+		const who = payload.embeds[0].fields.find((f: any) => f.name === "Participant");
+
+		/*
+		 * The escaped form still contains the literal characters, so the
+		 * property is that no @ is left UNescaped — an @ not preceded by
+		 * a backslash is the one Discord would act on.
+		 */
+		expect(who.value).not.toMatch(/(^|[^\\])@/);
+		expect(who.value).toContain("\\@everyone");
+		expect(who.value).toContain("\\[link\\]");
+	});
+
+	it("sends nothing when no webhook is configured", async () => {
+		env.DISCORD_WEBHOOK_URL = "";
+
+		await seedEvent({ slug: "hook-off", title: "No Hook" });
+
+		const response = await register("hook-off", {
+			source: { page: "/gittyup26", poster: 2 },
+			members: [member],
+		});
+
+		expect(response.status).toBe(201);
+		expect(sent).toHaveLength(0);
+	});
+
+	it("still registers when Discord rejects the webhook", async () => {
+		respondWith = async () => new Response("bad webhook", { status: 404 });
+
+		await seedEvent({ slug: "hook-rejected", title: "Rejected" });
+
+		const response = await register("hook-rejected", {
+			source: { page: "/gittyup26", poster: 3 },
+			members: [member],
+		});
+
+		expect(response.status).toBe(201);
+
+		const stored = await env.DB.prepare(`SELECT COUNT(*) AS n FROM registrations`).first<{ n: number }>();
+
+		expect(stored?.n).toBe(1);
+	});
+
+	it("still registers when Discord cannot be reached at all", async () => {
+		respondWith = async () => {
+			throw new Error("network down");
+		};
+
+		await seedEvent({ slug: "hook-down", title: "Down" });
+
+		const response = await register("hook-down", {
+			source: { page: "/gittyup26", poster: 4 },
+			members: [member],
+		});
+
+		expect(response.status).toBe(201);
+	});
+
+	it("announces nothing for a registration that was rejected", async () => {
+		await seedEvent({ slug: "hook-closed", title: "Closed", is_open: 0 });
+
+		const response = await register("hook-closed", {
+			source: { page: "/gittyup26", poster: 5 },
+			members: [member],
+		});
+
+		expect(response.status).toBe(400);
+		expect(sent).toHaveLength(0);
+	});
+});
+
+describe("admin outside the organisation", () => {
+	const SESSION_ID = "outsider-session";
+
+	const originalAllowList = env.ADMIN_GITHUB_USERS;
+	const originalOutsiders = env.ADMIN_GITHUB_OUTSIDERS;
+
+	afterEach(async () => {
+		env.ADMIN_GITHUB_USERS = originalAllowList;
+		env.ADMIN_GITHUB_OUTSIDERS = originalOutsiders;
+
+		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+	});
+
+	async function seedSession(username: string): Promise<void> {
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+        VALUES (?, ?, ?, ?)
+      `,
+		)
+			.bind(SESSION_ID, "9", username, new Date(Date.now() + 3600_000).toISOString())
+			.run();
+	}
+
+	function asAdmin(path: string): Promise<Response> {
+		return fetchWorker(path, {
+			headers: { Cookie: `osc_admin_session=${SESSION_ID}` },
+		});
+	}
+
+	it("lets an exempt handle in even when the allow list names other people", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_GITHUB_OUTSIDERS = "xyloflake";
+
+		await seedSession("xyloflake");
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(200);
+	});
+
+	it("matches the handle whatever case it was typed in", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+		env.ADMIN_GITHUB_OUTSIDERS = " XyloFlake ";
+
+		await seedSession("xyloflake");
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(200);
+	});
+
+	it("still refuses a handle that is on neither list", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_GITHUB_OUTSIDERS = "xyloflake";
+
+		await seedSession("a-stranger");
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+
+	it("an empty outsider list exempts nobody", async () => {
+		env.ADMIN_GITHUB_USERS = "someone-else";
+		env.ADMIN_GITHUB_OUTSIDERS = "";
+
+		await seedSession("xyloflake");
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+});

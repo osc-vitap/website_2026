@@ -36,7 +36,19 @@
 		 * dashboard, on top of the osc-vitap organisation membership
 		 * check. Leave empty to allow anyone in the organisation.
 		 */
-		"ADMIN_GITHUB_USERS": ""
+		"ADMIN_GITHUB_USERS": "",
+
+		/**
+		 * Comma-separated GitHub handles allowed into the dashboard
+		 * WITHOUT being in the osc-vitap organisation.
+		 *
+		 * A deliberate hole in the only real gate this admin has: a
+		 * handle listed here is trusted on GitHub's word alone, with no
+		 * organisation to revoke it. Keep it to people who genuinely
+		 * cannot be added to the org, and empty it once they can. Every
+		 * use is logged.
+		 */
+		"ADMIN_GITHUB_OUTSIDERS": "xyloflake"
 	},
 
 	/**
@@ -51,7 +63,15 @@
 	"secrets": {
 		"required": [
 			"GITHUB_CLIENT_ID",
-			"GITHUB_CLIENT_SECRET"
+			"GITHUB_CLIENT_SECRET",
+
+			/*
+			 * The Discord webhook that announces registrations. It is a
+			 * credential — anyone holding the URL can post to the
+			 * channel — so it is never committed. With it unset the
+			 * announcement is skipped and registration is unaffected.
+			 */
+			"DISCORD_WEBHOOK_URL"
 		]
 	},
 

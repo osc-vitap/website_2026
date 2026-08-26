@@ -163,6 +163,17 @@ const PosterRegisterForm = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            /*
+             * Which sheet sent them, so the Discord announcement can say
+             * so and the club can see which of the thirty printed
+             * posters actually bring people in. The Worker validates
+             * this and falls back to "unknown" rather than repeating
+             * anything it does not recognise.
+             */
+            source: {
+              page: window.location.pathname,
+              poster: variant.id,
+            },
             members: [
               {
                 name: values.name.trim(),

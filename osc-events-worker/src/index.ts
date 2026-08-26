@@ -56,7 +56,36 @@ function adminGithubUsers(env?: Env): string[] {
 		.filter(Boolean);
 }
 
+/*
+ * Handles allowed into the dashboard WITHOUT being in the osc-vitap
+ * organisation.
+ *
+ * This is a deliberate hole in the only real gate this admin has, so it
+ * is its own setting rather than a flag on the existing one: a handle
+ * here is trusted on GitHub's word alone. Keep it to people who cannot
+ * be added to the organisation, and empty it when they can.
+ */
+function adminOrgExempt(env?: Env): string[] {
+	return (env?.ADMIN_GITHUB_OUTSIDERS ?? '')
+		.split(',')
+		.map((user) => user.trim().toLowerCase())
+		.filter(Boolean);
+}
+
+function isOrgExempt(username: string, env?: Env): boolean {
+	return adminOrgExempt(env).includes(username.toLowerCase());
+}
+
 function isAllowedAdmin(username: string, env?: Env): boolean {
+	/*
+	 * An exempt handle is allowed even once ADMIN_GITHUB_USERS is
+	 * populated — otherwise turning that list on would silently lock out
+	 * the very people this exists for.
+	 */
+	if (isOrgExempt(username, env)) {
+		return true;
+	}
+
 	const allowList = adminGithubUsers(env);
 
 	return allowList.length === 0 || allowList.includes(username.toLowerCase());
@@ -171,6 +200,197 @@ const LIMITS = {
 	teamName: 120,
 	members: 20,
 } as const;
+
+/*
+ * ============================================================
+ * DISCORD NOTIFICATIONS
+ * ============================================================
+ *
+ * Every registration is announced to the club's #event-logs channel.
+ *
+ * The webhook URL is a credential — anyone holding it can post to that
+ * channel — so it lives in DISCORD_WEBHOOK_URL, set with
+ * `wrangler secret put`, and never in this repo. With no secret set the
+ * announcement is skipped and registration is unaffected.
+ */
+
+/** Where the registration came from, as told by the page that sent it. */
+interface RegistrationSource {
+	/** Path only, no query or host. */
+	page: string;
+	/** Which printed sheet, for a scan of a poster QR. */
+	poster: number | null;
+}
+
+/*
+ * The source is supplied by the browser, so it is treated as hostile:
+ * a path of a known shape, and a small integer. Anything else is
+ * dropped rather than corrected, and the message then says "unknown"
+ * instead of repeating whatever was sent.
+ */
+const SOURCE_PATH = /^\/[A-Za-z0-9\-_/]{0,64}$/;
+
+const MAX_POSTER_ID = 99;
+
+function normalizeSource(raw: unknown): RegistrationSource | null {
+	if (!raw || typeof raw !== 'object') {
+		return null;
+	}
+
+	const value = raw as { page?: unknown; poster?: unknown };
+
+	const page = typeof value.page === 'string' ? value.page.trim() : '';
+
+	if (!SOURCE_PATH.test(page)) {
+		return null;
+	}
+
+	const poster =
+		typeof value.poster === 'number' && Number.isInteger(value.poster) && value.poster >= 1 && value.poster <= MAX_POSTER_ID
+			? value.poster
+			: null;
+
+	return { page, poster };
+}
+
+/*
+ * Discord renders message content as markdown, and these fields carry
+ * names typed by strangers. Escaping the markdown characters stops a
+ * registration called `**` from reformatting the channel.
+ *
+ * This is defence in depth, not the whole defence: the payload also
+ * sends allowed_mentions with an empty parse list, which is what
+ * actually guarantees an @everyone in a name cannot ping anyone.
+ */
+function escapeDiscord(value: string): string {
+	return value.replace(/[\\`*_~|<>@#:[\]()]/g, (character) => `\\${character}`);
+}
+
+function truncate(value: string, max: number): string {
+	return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
+}
+
+/** Human wording for where a registration came from. */
+function describeSource(source: RegistrationSource | null): string {
+	if (!source) {
+		return 'Unknown page';
+	}
+
+	if (source.poster !== null) {
+		return `${source.page} — poster ${source.poster}`;
+	}
+
+	return source.page;
+}
+
+interface RegistrationAnnouncement {
+	eventTitle: string;
+	eventSlug: string;
+	registrationId: number | string;
+	teamName: string | null;
+	source: RegistrationSource | null;
+	members: {
+		name: string;
+		year_of_study: string;
+		college_registration_number: string;
+		email: string;
+		github: string | null;
+	}[];
+}
+
+function registrationEmbed(announcement: RegistrationAnnouncement) {
+	const { members } = announcement;
+
+	const roster = members
+		.map((member) => {
+			const parts = [
+				escapeDiscord(member.college_registration_number),
+				`year ${escapeDiscord(member.year_of_study)}`,
+			];
+
+			if (member.github) {
+				parts.push(escapeDiscord(member.github));
+			}
+
+			return `**${escapeDiscord(member.name)}** · ${parts.join(' · ')}`;
+		})
+		.join('\n');
+
+	const fields = [
+		{
+			name: members.length > 1 ? `Participants (${members.length})` : 'Participant',
+			value: truncate(roster || '—', 1024),
+		},
+		{
+			name: 'Registered from',
+			value: truncate(escapeDiscord(describeSource(announcement.source)), 1024),
+		},
+	];
+
+	if (announcement.teamName) {
+		fields.unshift({
+			name: 'Team',
+			value: truncate(escapeDiscord(announcement.teamName), 1024),
+		});
+	}
+
+	return {
+		title: truncate(`New registration — ${announcement.eventTitle}`, 256),
+		url: `https://www.oscvitap.com/events`,
+		/* The site's own accent, so the channel reads as one system. */
+		color: 0xc0_84_fc,
+		fields,
+		footer: {
+			text: truncate(`${announcement.eventSlug} · #${announcement.registrationId}`, 2048),
+		},
+		timestamp: new Date().toISOString(),
+	};
+}
+
+/*
+ * Posts the announcement, and never lets it affect the registration.
+ *
+ * Called through waitUntil so the participant's response is not held
+ * behind a call to discord.com, and wrapped so that a Discord outage,
+ * a revoked webhook or a slow response is logged rather than turned
+ * into a failed registration for someone standing in a corridor.
+ */
+function announceRegistration(env: Env, ctx: ExecutionContext, announcement: RegistrationAnnouncement): void {
+	const webhook = env.DISCORD_WEBHOOK_URL?.trim();
+
+	if (!webhook) {
+		return;
+	}
+
+	const body = {
+		username: 'OSC Events',
+		/*
+		 * The single most important line here. Names arrive from a public
+		 * form; without this, "@everyone" as a first name would ping the
+		 * entire server on every registration.
+		 */
+		allowed_mentions: { parse: [] as string[] },
+		embeds: [registrationEmbed(announcement)],
+	};
+
+	ctx.waitUntil(
+		fetch(webhook, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+			/* A hung webhook must not hold the invocation open. */
+			signal: AbortSignal.timeout(5000),
+		})
+			.then(async (response) => {
+				if (!response.ok) {
+					console.error('Discord webhook rejected:', response.status, await response.text().catch(() => ''));
+				}
+			})
+			.catch((error) => {
+				console.error('Discord webhook failed:', error);
+			}),
+	);
+}
 
 /*
  * The Workers rate limiting API (open beta).
@@ -877,7 +1097,7 @@ export default {
 		await purgeExpiredAuthRows(env);
 	},
 
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		try {
 			const url = new URL(request.url);
 
@@ -1132,36 +1352,46 @@ export default {
 				 * This reads the signed-in user's own membership, so it
 				 * works for private members too, which listing the
 				 * organisation's members would not.
+				 *
+				 * A handle in ADMIN_GITHUB_OUTSIDERS skips the gate
+				 * entirely. That is the whole point of the setting, and it
+				 * is the only way into the dashboard that organisation
+				 * membership does not vouch for — so it is logged every
+				 * time it is used.
 				 */
 
-				const membershipResponse = await fetch(`https://api.github.com/user/memberships/orgs/${GITHUB_ORG}`, {
-					headers: {
-						Authorization: `Bearer ${accessToken}`,
-						Accept: 'application/vnd.github+json',
-						'X-GitHub-Api-Version': '2022-11-28',
-						'User-Agent': 'OSC-VITAP-Events-Admin',
-					},
-				});
+				if (isOrgExempt(githubUser.login, env)) {
+					console.log('Admin allowed without organisation membership:', githubUser.login);
+				} else {
+					const membershipResponse = await fetch(`https://api.github.com/user/memberships/orgs/${GITHUB_ORG}`, {
+						headers: {
+							Authorization: `Bearer ${accessToken}`,
+							Accept: 'application/vnd.github+json',
+							'X-GitHub-Api-Version': '2022-11-28',
+							'User-Agent': 'OSC-VITAP-Events-Admin',
+						},
+					});
 
-				if (!membershipResponse.ok) {
-					const githubError = await membershipResponse.text();
+					if (!membershipResponse.ok) {
+						const githubError = await membershipResponse.text();
 
-					console.log('GitHub org membership check:', githubUser.login, membershipResponse.status, githubError);
+						console.log('GitHub org membership check:', githubUser.login, membershipResponse.status, githubError);
 
-					return authFailureRedirect(request, 'not-a-member');
-				}
+						return authFailureRedirect(request, 'not-a-member');
+					}
 
-				const membership = (await membershipResponse.json()) as {
-					state?: string;
-					role?: string;
-				};
+					const membership = (await membershipResponse.json()) as {
+						state?: string;
+						role?: string;
+					};
 
-				/*
-				 * An invitation that has not been accepted yet comes back
-				 * as 'pending'.
-				 */
-				if (membership.state !== 'active') {
-					return authFailureRedirect(request, 'pending-invite');
+					/*
+					 * An invitation that has not been accepted yet comes
+					 * back as 'pending'.
+					 */
+					if (membership.state !== 'active') {
+						return authFailureRedirect(request, 'pending-invite');
+					}
 				}
 
 				/*
@@ -2509,6 +2739,8 @@ export default {
 
 				let body: {
 					team_name?: string;
+					/* Which page the form was on. Validated, never trusted. */
+					source?: unknown;
 					members?: {
 						name: string;
 						year_of_study: string;
@@ -2847,6 +3079,20 @@ export default {
 						env,
 					);
 				}
+
+				/*
+				 * After the write, so the channel only ever sees
+				 * registrations that actually landed in D1, and through
+				 * waitUntil so it cannot delay the response.
+				 */
+				announceRegistration(env, ctx, {
+					eventTitle: event.title,
+					eventSlug: event.slug,
+					registrationId,
+					teamName: body.team_name?.trim().slice(0, LIMITS.teamName) || null,
+					source: normalizeSource(body.source),
+					members,
+				});
 
 				return json(
 					{

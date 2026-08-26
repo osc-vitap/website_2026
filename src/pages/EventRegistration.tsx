@@ -206,6 +206,10 @@ const EventRegistration = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            /* Which page sent them, for the Discord announcement. */
+            source: {
+              page: window.location.pathname,
+            },
             team_name:
               event.registration_type === 'team'
                 ? teamName || undefined

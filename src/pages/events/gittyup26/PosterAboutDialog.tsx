@@ -82,9 +82,21 @@ const PosterAboutDialog = ({
    * focus on the panel the browser had nothing to scroll.
    */
   useEffect(() => {
+    /*
+     * The opener is held as a node from here rather than read back off
+     * the ref in the cleanup. It points at a React-rendered element, so
+     * reading .current out of a cleanup trips
+     * react-hooks/exhaustive-deps, and lint runs at --max-warnings 0 —
+     * that one warning failed `npm run lint` for the whole repo. The
+     * footnote button sits outside the panel the dialog replaces and
+     * outlives it, so the node captured on open is still the one to go
+     * back to on close.
+     */
+    const opener = returnFocusTo.current;
+
     copyRef.current?.focus();
 
-    return () => returnFocusTo.current?.focus();
+    return () => opener?.focus();
   }, [returnFocusTo]);
 
   /* Nothing behind the dialog scrolls while it is up. */

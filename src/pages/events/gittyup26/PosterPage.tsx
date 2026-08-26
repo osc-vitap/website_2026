@@ -99,8 +99,7 @@ const PosterPage = ({
   const [showForm, setShowForm] = useState(false);
 
   /* What the session is, asked for from the footnote under the panel. */
-  const [showAbout, setShowAbout] =
-    useState(false);
+  const [showAbout, setShowAbout] = useState(false);
 
   /* Held so the dialog can put focus back where it came from. */
   const aboutTriggerRef =

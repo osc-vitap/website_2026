@@ -67,6 +67,20 @@ export interface PosterVariant {
   imagePosition?: string;
 
   /**
+   * This sheet's artwork is dispersed glass or liquid chrome: prismatic
+   * edges, a warm copy of every contour thrown one way and a cool one
+   * the other. The details panel answers by splitting its own hairline
+   * into the same two channels — see .poster-fringe in index.css.
+   *
+   * Carried on the variant rather than as a list of ids somewhere else,
+   * for the same reason `unlisted` and `imageBlend` are. The run has
+   * been re-ordered once already, and a list of ids goes quietly wrong
+   * the next time it is — decorating whichever sheets have moved into
+   * those positions instead.
+   */
+  dispersion?: boolean;
+
+  /**
    * CSS background values painted over the ground, first entry
    * closest to the ground. Taken from the poster's own overlays,
    * plus a replacement for the photograph where there was one.

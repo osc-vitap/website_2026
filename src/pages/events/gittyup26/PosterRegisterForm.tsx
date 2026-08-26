@@ -229,6 +229,17 @@ const PosterRegisterForm = ({
           borderColor: `color-mix(in srgb, ${variant.accent} 22%, transparent)`,
         }}
       >
+        {/* Same split hairline the details panel carries, so replacing
+            one with the other does not change the shape of the card. */}
+        {variant.dispersion && (
+          <span
+            aria-hidden="true"
+            className="poster-fringe"
+          >
+            <span className="poster-fringe-tear" />
+          </span>
+        )}
+
         <div
           className="flex items-center gap-3 text-lg font-bold md:text-xl"
           style={{ color: variant.text }}
@@ -289,6 +300,18 @@ const PosterRegisterForm = ({
         borderColor: `color-mix(in srgb, ${variant.accent} 22%, transparent)`,
       }}
     >
+      {/* It holds still while any of these fields has focus — see
+          .poster-fringe. An edge jittering under someone typing their
+          registration number reads as the page being broken. */}
+      {variant.dispersion && (
+        <span
+          aria-hidden="true"
+          className="poster-fringe"
+        >
+          <span className="poster-fringe-tear" />
+        </span>
+      )}
+
       <div className="flex items-baseline justify-between gap-4">
         <h2
           className="text-[clamp(1.25rem,2.6vw,1.75rem)] font-bold leading-none tracking-[-0.02em]"

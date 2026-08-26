@@ -62,6 +62,21 @@
   body {
     @apply bg-dark-900 text-gray-100;
   }
+
+  /*
+   * The poster panel's corner radius, named because everything drawn
+   * over or beside the panel has to land on the same curve — including
+   * the About dialog, which is portalled to <body> and so cannot pick
+   * it up from the panel. It was left square there once, on screen at
+   * the same time as the rounded panel it is meant to match.
+   *
+   * This is the border-box radius. Anything whose own box coincides
+   * with the panel's border box — the fringe rings, which sit at
+   * inset:-1px on a padding box one border in — takes it unchanged.
+   */
+  :root {
+    --glass-r: 16px;
+  }
 }
 
 @layer utilities {
@@ -190,13 +205,18 @@
    * saturation boost come from backdrop-filter, and the panel's own
    * tint is the poster's ground at low alpha, set inline per variant.
    *
-   * Corners stay square. borderRadius is 0 across this project by
-   * design, with rounded-full the only exception, and a lone rounded
-   * box would read as a mistake rather than a style.
+   * The corners are soft rather than square. Square, over a chrome or
+   * photographic ground, read as a crop mark rather than as a card —
+   * and this is the one box on the page a stranger has to act inside.
+   * Held well short of a pill: the sheet is a print design on a grid,
+   * and a capsule would fight it.
    */
   .poster-glass {
     position: relative;
     isolation: isolate;
+
+    /* Shared with the fringe and the About dialog — see :root. */
+    border-radius: var(--glass-r);
 
     backdrop-filter: blur(16px) saturate(150%);
     -webkit-backdrop-filter: blur(16px) saturate(150%);
@@ -227,6 +247,11 @@
     inset: 0;
     z-index: 2;
     pointer-events: none;
+    /*
+     * Without this the grain paints square corners over the rounded
+     * panel and the softening appears not to have taken at all.
+     */
+    border-radius: inherit;
     opacity: 0.055;
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
@@ -243,6 +268,307 @@
     .poster-glass {
       background-color: var(--glass-solid, rgba(0, 0, 0, 0.82)) !important;
     }
+  }
+
+  /*
+   * A chromatic fringe on the panel's hairline, for the sheets whose
+   * artwork is dispersed glass or liquid chrome.
+   *
+   * Those photographs read the way they do because of chromatic
+   * aberration: a warm copy thrown one way, a cool copy the other,
+   * prismatic wherever the two miss. The panel is the only hard-edged
+   * object on those pages, and a clean grey hairline over that artwork
+   * looked like a screenshot pasted onto a photograph.
+   *
+   * So the hairline misregisters. Two copies of the same ring, one warm
+   * and one cool, resting half a pixel apart and jumping every few
+   * seconds — a plate that has slipped in the press, a signal that has
+   * not locked. Deliberately not scanlines and not blocks.
+   *
+   * Two channels rather than the full spectrum, though the artwork has
+   * the full spectrum: carkey.webp and crying-emoji-web.webp both fringe
+   * green and yellow along every contour. That is the reason, not an
+   * excuse for it — a rainbow hairline over a rainbow photograph reads
+   * as a second rainbow competing with it, while a warm/cool split reads
+   * as the panel itself being out of register.
+   *
+   * Rings moved by transform and opacity, which the compositor does
+   * without repainting, and steps(1) rather than a tween, so each ring
+   * changes value about ten times per 3.7s cycle instead of sixty times
+   * a second. That matters here: these pages are opened by scanning a
+   * printed sheet, so the device is a phone and often a cheap one.
+   *
+   * Nothing in the keyframes touches clip-path. It is not a property
+   * the compositor can animate, and a single clip-path step drags the
+   * whole animation — transforms included — back onto the main thread,
+   * where it then runs a style recalc, a prepaint, a layerize and a
+   * commit every frame for as long as the page is open. Traced on a
+   * 430x932 phone profile, the two versions of this same page over four
+   * seconds: ~576 of each and ~1152 AnimationFrame::StyleAndLayout with
+   * the clip-path steps in, 6 and 12 with them out. That is the
+   * sixty-times-a-second wake this design was picked over canvas to
+   * avoid, so the tear bands below are clipped statically instead.
+   *
+   * The canvas version was built and measured against this. Drawing the
+   * same two rounded-rect strokes at 422x202 CSS px costs 0.002ms of
+   * main thread per frame — cheap — but it also wants a 1.3MB backing
+   * store at dpr 2, a rAF loop that wakes the main thread sixty times a
+   * second for an effect that changes ten, and a teardown on unmount
+   * that, if ever missed, leaks a context per navigation. This costs
+   * 596 bytes gzipped, no teardown, and traces at under two main thread
+   * wakes a second rather than sixty. It looks the same. It was not
+   * close.
+   */
+  .poster-fringe {
+    position: absolute;
+    /*
+     * Negative so the ring lands on the panel's own border instead of a
+     * pixel inside it — inset resolves against the padding box, and the
+     * border sits just outside that.
+     */
+    inset: -1px;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .poster-fringe::before,
+  .poster-fringe::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid;
+    border-radius: var(--glass-r);
+    /*
+     * Screen, so the two copies rebuild a bright hairline where they
+     * land together and leave colour only where they miss. It can only
+     * lighten, and it is confined to the ring, so nothing inside the
+     * panel loses contrast.
+     */
+    mix-blend-mode: screen;
+  }
+
+  /*
+   * The resting split. This is also the entire effect under reduced
+   * motion and while the form is being filled in, so it has to read as
+   * dispersion standing still rather than as a plain border.
+   */
+  .poster-fringe::before {
+    border-color: rgba(255, 86, 64, 0.85);
+    transform: translate3d(0.5px, 0, 0);
+    animation: poster-fringe-warm 3.7s steps(1, end) infinite;
+  }
+
+  .poster-fringe::after {
+    border-color: rgba(72, 196, 255, 0.85);
+    transform: translate3d(-0.5px, 0, 0);
+    animation: poster-fringe-cool 3.7s steps(1, end) infinite;
+  }
+
+  /*
+   * Long holds with short bursts, rather than a constant shimmer: a
+   * misregistration is an event, and something that never settles reads
+   * as a broken page instead of a printing accident.
+   *
+   * These two rings are never clipped. Both channels stay unbroken all
+   * the way round the panel for the whole cycle, which is what makes
+   * the tears below read as a slipped band rather than as the border
+   * changing colour.
+   */
+  @keyframes poster-fringe-warm {
+    0%,
+    33% {
+      transform: translate3d(0.5px, 0, 0);
+    }
+    34% {
+      transform: translate3d(-2px, 0.5px, 0);
+    }
+    35% {
+      transform: translate3d(2.5px, -0.5px, 0);
+    }
+    37% {
+      transform: translate3d(-1px, 0, 0);
+    }
+    38%,
+    71% {
+      transform: translate3d(0.5px, 0, 0);
+    }
+    72% {
+      transform: translate3d(1.5px, 0, 0);
+    }
+    73% {
+      transform: translate3d(-2.5px, 0, 0);
+    }
+    75% {
+      transform: translate3d(0.5px, 0.5px, 0);
+    }
+    76%,
+    100% {
+      transform: translate3d(0.5px, 0, 0);
+    }
+  }
+
+  /* Offset from the warm channel on purpose — two rings snapping in
+     lockstep read as one ring wobbling. */
+  @keyframes poster-fringe-cool {
+    0%,
+    33% {
+      transform: translate3d(-0.5px, 0, 0);
+    }
+    34% {
+      transform: translate3d(2px, -0.5px, 0);
+    }
+    35% {
+      transform: translate3d(-2.5px, 0.5px, 0);
+    }
+    37% {
+      transform: translate3d(1px, 0, 0);
+    }
+    38%,
+    55% {
+      transform: translate3d(-0.5px, 0, 0);
+    }
+    56% {
+      transform: translate3d(-2px, 0, 0);
+    }
+    58% {
+      transform: translate3d(1px, 0, 0);
+    }
+    59%,
+    71% {
+      transform: translate3d(-0.5px, 0, 0);
+    }
+    72% {
+      transform: translate3d(-1.5px, 0, 0);
+    }
+    73% {
+      transform: translate3d(2.5px, 0, 0);
+    }
+    75% {
+      transform: translate3d(-0.5px, -0.5px, 0);
+    }
+    76%,
+    100% {
+      transform: translate3d(-0.5px, 0, 0);
+    }
+  }
+
+  /*
+   * The slice tears: a band of one channel displaced on its own while
+   * the other holds.
+   *
+   * Drawn as extra copies rather than by clipping the rings above,
+   * because inset() on a 1px ring keeps only what the band crosses. A
+   * mid-height band crosses the two vertical edge segments and nothing
+   * else, so clipping the warm ring erased its top edge, its bottom
+   * edge and all four corners, and the panel outline went solid cyan
+   * three times a cycle — the whole-border flicker this design exists
+   * to avoid, not a tear.
+   */
+  .poster-fringe-tear {
+    position: absolute;
+    inset: 0;
+  }
+
+  .poster-fringe-tear::before,
+  .poster-fringe-tear::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid;
+    border-radius: var(--glass-r);
+    mix-blend-mode: screen;
+    /*
+     * Hidden at rest, which is also what the freeze rules below leave
+     * behind: a band parked on top of its own ring screens with it and
+     * reads as a permanently brighter stripe.
+     */
+    opacity: 0;
+  }
+
+  /*
+   * One band per channel, and the clip is static. Animating it is what
+   * took the whole effect off the compositor — see the note above.
+   */
+  .poster-fringe-tear::before {
+    border-color: rgba(255, 86, 64, 0.85);
+    clip-path: inset(18% 0 60% 0);
+    animation: poster-fringe-tear-warm 3.7s steps(1, end) infinite;
+  }
+
+  .poster-fringe-tear::after {
+    border-color: rgba(72, 196, 255, 0.85);
+    clip-path: inset(35% 0 42% 0);
+    animation: poster-fringe-tear-cool 3.7s steps(1, end) infinite;
+  }
+
+  /*
+   * Torn on the beats the rings jump on, and thrown further than the
+   * ring underneath — a band that moved with its ring would be invisible
+   * against it.
+   */
+  @keyframes poster-fringe-tear-warm {
+    0%,
+    34% {
+      opacity: 0;
+      transform: translate3d(0.5px, 0, 0);
+    }
+    35% {
+      opacity: 1;
+      transform: translate3d(-3px, 0, 0);
+    }
+    37%,
+    71% {
+      opacity: 0;
+      transform: translate3d(0.5px, 0, 0);
+    }
+    72% {
+      opacity: 1;
+      transform: translate3d(4px, 0, 0);
+    }
+    73% {
+      opacity: 1;
+      transform: translate3d(-3.5px, 0, 0);
+    }
+    75%,
+    100% {
+      opacity: 0;
+      transform: translate3d(0.5px, 0, 0);
+    }
+  }
+
+  /* Its own beat, for the same reason the cool ring has one. */
+  @keyframes poster-fringe-tear-cool {
+    0%,
+    55% {
+      opacity: 0;
+      transform: translate3d(-0.5px, 0, 0);
+    }
+    56% {
+      opacity: 1;
+      transform: translate3d(3px, 0, 0);
+    }
+    58%,
+    100% {
+      opacity: 0;
+      transform: translate3d(-0.5px, 0, 0);
+    }
+  }
+
+  /*
+   * The edge holds still for as long as anything inside the panel has
+   * focus. A border jittering while someone types their registration
+   * number reads as the site being broken, not as a design.
+   *
+   * :focus-within rather than :has(input:focus): these pages are reached
+   * from a printed QR on whatever phone the reader is carrying, and of
+   * the two selectors this is the one that has been supported for years.
+   * Freezing while the Register button is focused too costs nothing.
+   */
+  .poster-glass:focus-within .poster-fringe::before,
+  .poster-glass:focus-within .poster-fringe::after,
+  .poster-glass:focus-within .poster-fringe-tear::before,
+  .poster-glass:focus-within .poster-fringe-tear::after {
+    animation: none;
   }
 
   /*
@@ -347,6 +673,19 @@
     /* The hook already bails out, but never leave the layer visible. */
     .poster-spotlight {
       display: none;
+    }
+
+    /*
+     * The split stays, the jitter goes. Dropping the fringe entirely
+     * would leave the panel a plain grey box on exactly the sheets whose
+     * whole design is prismatic edges — the request was less motion, not
+     * a different poster.
+     */
+    .poster-fringe::before,
+    .poster-fringe::after,
+    .poster-fringe-tear::before,
+    .poster-fringe-tear::after {
+      animation: none;
     }
   }
 

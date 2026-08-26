@@ -45,6 +45,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#04040a",
 		"image": "/events/gittyup26/chrome-3.webp",
+		"dispersion": true,
 		"layers": [
 			"linear-gradient(78deg,rgba(216,209,236,.5) 0%,rgba(216,209,236,.5) 9%,rgba(40,36,58,.55) 9%,rgba(40,36,58,.55) 17%,rgba(180,172,204,.3) 17%,rgba(180,172,204,.3) 23%,rgba(30,27,45,.6) 23%,rgba(30,27,45,.6) 38%,rgba(230,224,244,.26) 38%,rgba(230,224,244,.26) 44%,rgba(46,42,66,.5) 44%,rgba(46,42,66,.5) 62%,rgba(198,190,222,.28) 62%,rgba(198,190,222,.28) 70%,rgba(26,23,40,.55) 70%,rgba(26,23,40,.55) 100%)",
 			"linear-gradient(168deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,0) 22%,rgba(0,0,0,.34) 46%,rgba(255,255,255,.1) 60%,rgba(0,0,0,.4) 100%)",
@@ -90,6 +91,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#000",
 		"image": "/events/gittyup26/glass-x.webp",
+		"dispersion": true,
 		"layers": [
 			"repeating-linear-gradient(96deg,#0f0c1d 0px,#3b3550 9px,#15111f 17px,#5b5470 24px,#1b1729 33px,#46405c 41px,#100d1c 52px) 0 68%/100% 18% no-repeat",
 			"linear-gradient(80deg,rgba(255,255,255,0) 0%,rgba(226,220,246,.22) 24%,rgba(255,255,255,0) 40%,rgba(183,157,255,.16) 62%,rgba(255,255,255,0) 84%) 0 68%/100% 18% no-repeat",
@@ -174,6 +176,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#000000",
 		"image": "/events/gittyup26/chrome-rings.webp",
+		"dispersion": true,
 		"layers": [
 			"linear-gradient(-16deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 11%,rgba(255,255,255,.11) 19%,rgba(255,255,255,0) 30%,rgba(255,255,255,.15) 43%,rgba(255,255,255,0) 54%,rgba(255,255,255,.08) 67%,rgba(255,255,255,0) 79%,rgba(255,255,255,.12) 92%,rgba(255,255,255,0) 100%)",
 			"radial-gradient(88% 54% at 50% 10%,rgba(217,210,238,.34) 0%,rgba(150,142,176,.15) 38%,rgba(0,0,0,0) 72%)",
@@ -285,6 +288,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#000",
 		"image": "/events/gittyup26/glass-soft.webp",
+		"dispersion": true,
 		"layers": [
 			"linear-gradient(104deg, #101019 0%, #35304a 8%, #15141d 14%, #5b5474 23%, #1e1b29 30%, #746c92 40%, #272332 47%, #4e4767 57%, #151420 65%, #443d5a 77%, #121118 87%, #2a2639 100%) 0 0 / 100% 56% no-repeat",
 			"linear-gradient(-56deg, rgba(231,225,244,.18) 0%, rgba(231,225,244,0) 11%, rgba(76,67,104,.32) 21%, rgba(0,0,0,0) 32%, rgba(219,212,236,.16) 43%, rgba(0,0,0,0) 54%, rgba(97,86,121,.3) 69%, rgba(0,0,0,0) 83%, rgba(226,220,242,.12) 100%) 0 0 / 100% 56% no-repeat",
@@ -347,6 +351,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "letter-grid",
 		"ground": "#000000",
 		"image": "/events/gittyup26/chrome-blobs.webp",
+		"dispersion": true,
 		"imagePosition": "72% center",
 		"layers": [
 			"radial-gradient(60% 46% at 76% 34%,rgba(0,0,0,0) 0%,rgba(0,0,0,.42) 62%,rgba(0,0,0,.9) 92%)",
@@ -368,6 +373,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#010409",
 		"image": "/events/gittyup26/glass-tall.webp",
+		"dispersion": true,
 		"layers": [
 			"linear-gradient(180deg, rgba(150,186,220,.34) 0%, rgba(96,132,172,.22) 18%, rgba(44,68,102,.10) 32%, rgba(1,5,12,0) 44%)",
 			"radial-gradient(120% 58% at 50% 16%, rgba(196,220,240,.40) 0%, rgba(110,150,190,.24) 34%, rgba(28,50,82,.08) 62%, rgba(1,5,12,0) 80%)",
@@ -392,6 +398,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#06040f",
 		"image": "/events/gittyup26/chrome-blobs2.webp",
+		"dispersion": true,
 		"layers": [
 			"linear-gradient(168deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 11%, rgba(0,0,0,.36) 21%, rgba(255,255,255,.12) 33%, rgba(0,0,0,.30) 46%, rgba(255,255,255,.18) 60%, rgba(0,0,0,.42) 75%, rgba(255,255,255,.09) 87%, rgba(0,0,0,.32) 100%)",
 			"radial-gradient(95% 50% at 50% 24%, rgba(201,179,255,.20) 0%, rgba(201,179,255,.07) 42%, rgba(201,179,255,0) 74%)",
@@ -413,6 +420,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "hero-word",
 		"ground": "#000000",
 		"image": "/events/gittyup26/glass-corner.webp",
+		"dispersion": true,
 		"layers": [
 			"linear-gradient(100deg, rgba(118,113,140,.30) 0%, rgba(200,195,218,.42) 13%, rgba(68,64,88,.34) 27%, rgba(216,211,232,.38) 43%, rgba(82,77,104,.32) 57%, rgba(180,174,200,.36) 73%, rgba(60,56,78,.30) 100%)",
 			"radial-gradient(80% 48% at 30% 30%, rgba(230,224,245,.32) 0%, rgba(140,132,168,.15) 44%, rgba(0,0,0,0) 78%)",
@@ -566,6 +574,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#04030d",
 		"image": "/events/gittyup26/glass-fan.webp",
+		"dispersion": true,
 		"layers": [
 			"conic-gradient(from 205deg at 40% 44%, rgba(122,74,238,.34) 0deg, rgba(38,20,96,.20) 88deg, rgba(196,162,255,.24) 172deg, rgba(26,14,66,.18) 256deg, rgba(122,74,238,.34) 360deg)",
 			"radial-gradient(95% 68% at 64% 28%, rgba(242,236,255,.20) 0%, rgba(104,58,204,.16) 42%, rgba(4,3,13,0) 80%)",
@@ -625,6 +634,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#04020c",
 		"image": "/events/gittyup26/chrome-blobs.webp",
+		"dispersion": true,
 		"layers": [
 			"radial-gradient(125% 92% at 50% 32%, rgba(200,206,224,.30) 0%, rgba(112,118,142,.20) 40%, rgba(46,48,66,.12) 62%, rgba(4,2,12,0) 82%)",
 			"linear-gradient(102deg, rgba(228,232,244,.26) 0 11%, rgba(68,74,94,.20) 11% 19%, rgba(198,206,226,.22) 19% 30%, rgba(26,28,42,.24) 30% 43%, rgba(214,220,238,.18) 43% 55%, rgba(52,56,74,.22) 55% 100%)",
@@ -687,6 +697,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "headline-led",
 		"ground": "#020104",
 		"image": "/events/gittyup26/glass-stack.webp",
+		"dispersion": true,
 		"layers": [
 			"radial-gradient(56% 34% at 62% 58%,rgba(86,0,255,.44) 0%,rgba(35,0,90,.14) 46%,rgba(0,0,0,0) 74%)",
 			"linear-gradient(rgba(2,1,4,.46), rgba(2,1,4,.46))"
@@ -705,6 +716,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "hero-word",
 		"ground": "#000000",
 		"image": "/events/gittyup26/carkey.webp",
+		"dispersion": true,
 		"imagePosition": "88% 52%",
 		"layers": [
 			"radial-gradient(58% 68% at 84% 56%, rgba(120,150,190,.18) 0%, rgba(70,95,130,.08) 46%, rgba(0,0,0,0) 76%)",
@@ -729,6 +741,7 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "hero-word",
 		"ground": "#050505",
 		"image": "/events/gittyup26/crying-emoji-web.webp",
+		"dispersion": true,
 		"imagePosition": "78% 42%",
 		"layers": [
 			"radial-gradient(56% 62% at 78% 34%, rgba(150,86,255,.26) 0%, rgba(96,44,190,.12) 46%, rgba(0,0,0,0) 76%)",

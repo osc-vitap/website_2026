@@ -214,6 +214,15 @@ const PosterAboutDialog = ({
           backgroundColor: panelInk,
           border: `1px solid ${withAlpha(variant.accent, 22)}`,
           /*
+            * The panel's own token, not a repeated 16px. The backdrop is
+            * only rgba(0,0,0,0.72), so the rounded details panel stays
+            * visible beside this one — left square, the largest box on
+            * the page was the only sharp-cornered one on screen.
+            * overflow-hidden above clips the header and the scroller to
+            * the same curve.
+            */
+          borderRadius: 'var(--glass-r)',
+          /*
             * The hairlines .poster-glass draws, repeated here by hand.
             * Without them a panel this large next to the frosted details
             * block reads as a different material.

@@ -436,6 +436,23 @@ const PosterPage = ({
               }}
             >
 
+              {/*
+                * On the dispersed-glass sheets the panel's hairline
+                * splits into a warm and a cool copy, the way every
+                * contour in that artwork does. Decorative and 1px, so
+                * it is a bare span rather than anything with meaning.
+                */}
+              {variant.dispersion && (
+                <span
+                  aria-hidden="true"
+                  className="poster-fringe"
+                >
+                  {/* The torn band, an extra copy over the two rings
+                      rather than a hole cut in one of them. */}
+                  <span className="poster-fringe-tear" />
+                </span>
+              )}
+
               {variant.eyebrow && (
                 <div
                   className="font-postermono text-[10px] font-medium uppercase tracking-[0.26em] md:text-xs"

@@ -84,6 +84,10 @@ export interface PosterVariant {
    * CSS background values painted over the ground, first entry
    * closest to the ground. Taken from the poster's own overlays,
    * plus a replacement for the photograph where there was one.
+   *
+   * Empty on the sheets the print leaves as ground plus artwork and
+   * nothing else. That is a finished background, not a gap the
+   * generator failed to fill, so it should be left alone.
    */
   layers: string[];
 

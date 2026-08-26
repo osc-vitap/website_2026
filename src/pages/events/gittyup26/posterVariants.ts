@@ -92,12 +92,16 @@ export const posterVariants: PosterVariant[] = [
 		"ground": "#000",
 		"image": "/events/gittyup26/glass-x.webp",
 		"dispersion": true,
-		"layers": [
-			"repeating-linear-gradient(96deg,#0f0c1d 0px,#3b3550 9px,#15111f 17px,#5b5470 24px,#1b1729 33px,#46405c 41px,#100d1c 52px) 0 68%/100% 18% no-repeat",
-			"linear-gradient(80deg,rgba(255,255,255,0) 0%,rgba(226,220,246,.22) 24%,rgba(255,255,255,0) 40%,rgba(183,157,255,.16) 62%,rgba(255,255,255,0) 84%) 0 68%/100% 18% no-repeat",
-			"linear-gradient(180deg,#050310 0%,rgba(5,3,16,0) 16%,rgba(5,3,16,0) 84%,#050310 100%) 0 68%/100% 18% no-repeat",
-			"linear-gradient(rgba(3,2,10,.5), rgba(3,2,10,.5))"
-		],
+		/*
+		 * Empty on purpose. The printed sheet is bare black behind the
+		 * glass artwork, and everything that used to be here fought it:
+		 * three layers pinned to `0 68%/100% 18%` rebuilt a chrome strip
+		 * the print does not have, which landed as a pinstriped bar
+		 * ruled across the middle of the page, and a flat 50% black
+		 * scrim over the full bleed greyed out the prismatic edges that
+		 * are the whole point of this one.
+		 */
+		"layers": [],
 		"ink": "#ffffff",
 		"text": "rgba(255,255,255,.72)",
 		"accent": "#b79dff",
@@ -113,9 +117,22 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "wordmark-stack",
 		"ground": "#02060f",
 		"image": "/events/gittyup26/grad-warmcool.webp",
+		/*
+		 * The two 16px dot lattices that used to lead this list are
+		 * gone. The printed sheet is a clean warm-to-cool wash — its
+		 * only texture is a faint vertical striping — so tiled dots read
+		 * as a halftone screen belonging to a different poster.
+		 *
+		 * Losing them also drops this sheet out of the cursor spotlight,
+		 * which lights only posters that already carry a lattice for it
+		 * to deepen. That is the intended trade, not a regression.
+		 *
+		 * The scrim stays. It is the only thing dimming the warm half of
+		 * the wash, and on a phone the subline sits right on top of
+		 * that half: measured there, dropping the scrim takes the body
+		 * copy from 7.1:1 to 3.4:1, under the 4.5:1 floor.
+		 */
 		"layers": [
-			"radial-gradient(circle at 50% 50%,rgba(11,0,34,.34) 0 26%,rgba(11,0,34,0) 28%) 0 0/16px 16px",
-			"radial-gradient(circle at 50% 50%,rgba(26,0,88,.22) 0 18%,rgba(26,0,88,0) 20%) 8px 8px/16px 16px",
 			"linear-gradient(rgba(2,6,15,.44), rgba(2,6,15,.44))"
 		],
 		"ink": "#ffffff",

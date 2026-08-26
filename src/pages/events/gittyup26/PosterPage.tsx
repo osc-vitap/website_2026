@@ -9,7 +9,7 @@ import { POSTER_COUNT } from './posterVariants';
 import PosterRegisterForm from './PosterRegisterForm';
 import { glassTint, textHalo } from './posterColor';
 import { rowMetrics, useFittingRows } from './useFittingRows';
-import { fetchEvent } from '../../../data/eventsApi';
+import { ApiEvent, fetchEvent } from '../../../data/eventsApi';
 
 /* The D1 event these poster pages register for. */
 const REGISTRATION_SLUG = 'gittyup26';
@@ -109,11 +109,20 @@ const PosterPage = ({
   const [registrationOpen, setRegistrationOpen] =
     useState(false);
 
+  /* Kept whole, not just its is_open flag: the confirmation screen
+     counts down to this event's own start. */
+  const [event, setEvent] =
+    useState<ApiEvent | null>(null);
+
   useEffect(() => {
     let live = true;
 
-    fetchEvent(REGISTRATION_SLUG).then((event) => {
-      if (live && event?.is_open) {
+    fetchEvent(REGISTRATION_SLUG).then((found) => {
+      if (!live) return;
+
+      setEvent(found);
+
+      if (found?.is_open) {
         setRegistrationOpen(true);
       }
     });
@@ -386,6 +395,7 @@ const PosterPage = ({
             {showForm ? (
               <PosterRegisterForm
                 variant={variant}
+                event={event}
                 onClose={() =>
                   setShowForm(false)
                 }

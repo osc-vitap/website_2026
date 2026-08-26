@@ -85,9 +85,13 @@ export const parseIstInstant = (
 /**
  * The instant an event begins. A bare date means the start of that day
  * in IST, which is what "counting down to the event day" means.
+ *
+ * Typed to the one field it reads rather than to ApiEvent: the
+ * registration page carries its own local Event interface, and this is
+ * the only thing either shape needs to agree on.
  */
 export const eventStartsAt = (
-  event: ApiEvent,
+  event: Pick<ApiEvent, 'event_date'>,
 ): number | null =>
   parseIstInstant(event.event_date);
 

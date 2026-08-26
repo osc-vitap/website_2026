@@ -6,6 +6,8 @@ import {
   registrationNumberError,
   universityEmailError,
 } from '../data/registrationNumber';
+import EventStartsIn from '../components/EventStartsIn';
+import RedirectToast from '../components/RedirectToast';
 
 const API_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -566,12 +568,30 @@ const EventRegistration = () => {
                 )}
 
                 {succeeded ? (
-                  <Link
-                    to="/events"
-                    className="w-full inline-flex items-center justify-center bg-dark-700 hover:bg-dark-600 border border-dark-600 text-white font-semibold min-h-[44px] py-3 rounded-lg transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
-                  >
-                    Back to events
-                  </Link>
+                  <>
+                    {/* How long the wait is, now that there is one. */}
+                    <div className="glass rounded-lg p-5">
+                      <EventStartsIn
+                        event={event}
+                        size={32}
+                        ground="rgba(19,19,22,0.95)"
+                      />
+                    </div>
+
+                    <Link
+                      to="/events"
+                      className="w-full inline-flex items-center justify-center bg-dark-700 hover:bg-dark-600 border border-dark-600 text-white font-semibold min-h-[44px] py-3 rounded-lg transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+                    >
+                      Back to events
+                    </Link>
+
+                    {/*
+                      * Counts the wait down out loud and can be
+                      * cancelled, so someone photographing their
+                      * registration ID keeps the page they are reading.
+                      */}
+                    <RedirectToast seconds={5} />
+                  </>
                 ) : (
                   <button
                     type="submit"

@@ -1,7 +1,8 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { FormEvent, useState } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
-import { API_BASE_URL } from '../../../data/eventsApi';
+import { ApiEvent, API_BASE_URL } from '../../../data/eventsApi';
+import EventStartsIn from '../../../components/EventStartsIn';
+import RedirectToast from '../../../components/RedirectToast';
 import {
   registrationNumberError,
   universityEmailError,
@@ -84,11 +85,14 @@ const EMPTY: Record<FieldName, string> = {
 
 interface PosterRegisterFormProps {
   variant: PosterVariant;
+  /** The event registered for, so the confirmation can count down to it. */
+  event: ApiEvent | null;
   onClose: () => void;
 }
 
 const PosterRegisterForm = ({
   variant,
+  event,
   onClose,
 }: PosterRegisterFormProps) => {
   const [values, setValues] =
@@ -101,25 +105,14 @@ const PosterRegisterForm = ({
 
   const [done, setDone] = useState(false);
 
-  const navigate = useNavigate();
-
   /*
    * A registration is the end of what this page is for, so it hands the
    * visitor on to the rest of the site rather than leaving them on a
-   * poster with nothing further to do.
-   *
-   * Three seconds: long enough to read the confirmation, short enough
-   * not to feel stuck. The timer is cleared on unmount so navigating
-   * away sooner — the mark in the masthead goes home too — cannot fire
-   * a redirect from a page that is no longer on screen.
+   * poster with nothing further to do. RedirectToast owns that now: it
+   * counts the wait down out loud and can be cancelled, which a silent
+   * setTimeout could not be — someone photographing their confirmation
+   * had the page moved out from under them.
    */
-  useEffect(() => {
-    if (!done) return;
-
-    const timer = window.setTimeout(() => navigate('/'), 3000);
-
-    return () => window.clearTimeout(timer);
-  }, [done, navigate]);
 
   const set = (
     field: FieldName,
@@ -131,9 +124,9 @@ const PosterRegisterForm = ({
     }));
 
   const submit = async (
-    event: FormEvent,
+    submitEvent: FormEvent,
   ) => {
-    event.preventDefault();
+    submitEvent.preventDefault();
 
     setError('');
 
@@ -249,19 +242,28 @@ const PosterRegisterForm = ({
           Bring a laptop if you have one.
         </p>
 
-        {/*
-          * Says what is about to happen rather than moving the page
-          * under someone mid-sentence, and gives them a way to go now.
-          */}
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="mt-6 inline-flex items-center gap-2 font-postermono text-[10px] uppercase tracking-[0.2em] underline-offset-4 hover:underline md:text-xs"
-          style={{ color: variant.accent }}
-        >
-          Taking you to oscvitap.com
-          <ArrowRight size={14} />
-        </button>
+        {/* How long the wait is, now that there is one. */}
+        {event && (
+          <div
+            className="mt-6 border-t pt-5"
+            style={{
+              borderColor: `color-mix(in srgb, ${variant.accent} 20%, transparent)`,
+            }}
+          >
+            <EventStartsIn
+              event={event}
+              size={30}
+              accent={variant.accent}
+              ground={glassTint(
+                variant.ground,
+                0.94,
+              )}
+              labelColor={variant.text}
+            />
+          </div>
+        )}
+
+        <RedirectToast seconds={5} />
       </div>
     );
   }

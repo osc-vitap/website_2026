@@ -1,19 +1,15 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useReducedMotion } from 'framer-motion';
 
-import Counter from './Counter';
+import CountdownDigits from './CountdownDigits';
+import { useCountdown } from '../hooks/useCountdown';
 import { useUpcomingEvents } from '../hooks/useUpcomingEvents';
 import { eventPageForRegistration } from '../data/eventPages';
 import {
   eventStartsAt,
   formatIst,
   readableRemaining,
-  remainingUntil,
 } from '../data/eventCountdown';
 
 /*
@@ -31,66 +27,6 @@ import {
  * navigation.
  */
 
-const DIGIT_SIZE = 22;
-
-interface UnitProps {
-  value: number;
-  places: number[];
-  label: string;
-  still: boolean;
-}
-
-const Unit = ({
-  value,
-  places,
-  label,
-  still,
-}: UnitProps) => (
-  /*
-   * Centred, not baseline-aligned: the Counter is an inline-block whose
-   * baseline is the bottom of its box, so a baseline-aligned label
-   * hangs well below the digits it belongs to.
-   */
-  <span className="flex items-center gap-1">
-    {still ? (
-      /*
-       * Reduced motion: the same number, without ten copies of every
-       * digit sliding past. Padded by hand to the width the rolling
-       * version reserves, so the row does not shift between the two.
-       */
-      <span
-        className="tabular-nums font-semibold text-brand-accent"
-        style={{
-          fontSize: DIGIT_SIZE,
-          lineHeight: 1,
-        }}
-      >
-        {String(value).padStart(
-          places.length,
-          '0',
-        )}
-      </span>
-    ) : (
-      <Counter
-        value={value}
-        places={places}
-        fontSize={DIGIT_SIZE}
-        padding={6}
-        gap={1}
-        horizontalPadding={0}
-        fontWeight={600}
-        textColor="#c084fc"
-        gradientHeight={5}
-        gradientFrom="rgba(10,10,12,0.9)"
-      />
-    )}
-
-    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-      {label}
-    </span>
-  </span>
-);
-
 const EventCountdown = () => {
   const { events, loading, failed } =
     useUpcomingEvents(1);
@@ -103,44 +39,18 @@ const EventCountdown = () => {
     [event],
   );
 
-  const [now, setNow] = useState(() =>
-    Date.now(),
-  );
-
-  useEffect(() => {
-    if (target === null) return;
-
-    /*
-     * Ticks every second even though only minutes are shown, so the
-     * minute turns over when it actually turns over rather than up to
-     * a minute late. Date.now() is re-read each tick rather than
-     * accumulated, so a throttled background tab catches up correctly
-     * on return.
-     */
-    const id = window.setInterval(
-      () => setNow(Date.now()),
-      1000,
-    );
-
-    return () =>
-      window.clearInterval(id);
-  }, [target]);
-
+  const remaining = useCountdown(target);
   const still = useReducedMotion();
 
   if (
     loading ||
     failed ||
     !event ||
-    target === null
+    target === null ||
+    !remaining
   ) {
     return null;
   }
-
-  const remaining = remainingUntil(
-    target,
-    now,
-  );
 
   const page = eventPageForRegistration(
     event.slug,
@@ -149,12 +59,6 @@ const EventCountdown = () => {
   const href = page
     ? `/${page.slug}`
     : '/events';
-
-  /* Keeps its own width as it counts down, so the row never reflows. */
-  const dayPlaces =
-    remaining.days >= 100
-      ? [100, 10, 1]
-      : [10, 1];
 
   const live = remaining.total <= 0;
 
@@ -176,10 +80,10 @@ const EventCountdown = () => {
 
         {/*
           * The digits are decoration for a screen reader — ten stacked
-          * copies of every numeral read as gibberish — so the whole
-          * group is hidden and a written sentence stands in. No
-          * aria-live: this changes every minute, and announcing it
-          * every minute would make the site unusable.
+          * copies of every numeral read as gibberish — so they are
+          * hidden and a written sentence stands in. No aria-live: this
+          * changes every minute, and announcing it every minute would
+          * make the site unusable.
           */}
         <div
           className="flex items-center gap-3"
@@ -208,31 +112,10 @@ const EventCountdown = () => {
                 Starts in
               </span>
 
-              <span
-                aria-hidden
-                className="flex items-center gap-3"
-              >
-                <Unit
-                  value={remaining.days}
-                  places={dayPlaces}
-                  label="days"
-                  still={!!still}
-                />
-                <Unit
-                  value={remaining.hours}
-                  places={[10, 1]}
-                  label="hrs"
-                  still={!!still}
-                />
-                <Unit
-                  value={
-                    remaining.minutes
-                  }
-                  places={[10, 1]}
-                  label="min"
-                  still={!!still}
-                />
-              </span>
+              <CountdownDigits
+                remaining={remaining}
+                size={22}
+              />
             </>
           )}
         </div>

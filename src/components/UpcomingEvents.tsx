@@ -4,6 +4,7 @@ import { ArrowRight, Calendar, MapPin } from 'lucide-react';
 import { useUpcomingEvents } from '../hooks/useUpcomingEvents';
 import { orFallback } from '../data/eventsApi';
 import { eventPageForRegistration } from '../data/eventPages';
+import EventStartsIn from './EventStartsIn';
 
 /*
  * Upcoming events on the home page, read live from D1.
@@ -90,6 +91,22 @@ const UpcomingEvents = () => {
           </Link>
 
         </motion.div>
+
+        {/*
+          * Mobile only. The strip in the masthead drops the event name
+          * and the link on a phone to stay one line tall, leaving bare
+          * digits with nothing to attach them to — so the full
+          * countdown sits here instead, under the heading and above the
+          * cards. On wider screens the masthead strip already says all
+          * of this with room to spare.
+          */}
+        <div className="mb-10 border border-dark-700 bg-dark-800/40 p-5 md:hidden">
+          <EventStartsIn
+            event={events[0]}
+            size={30}
+            ground="rgba(19,19,22,0.95)"
+          />
+        </div>
 
         <motion.div
           initial="hidden"

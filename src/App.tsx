@@ -15,6 +15,8 @@ import EventRegistration from './pages/EventRegistration';
 
 import AdminDashboard from './pages/AdminDashboard';
 
+import AdminRestricted from './pages/AdminRestricted';
+
 import NotFound from './pages/NotFound';
 
 import { eventPageRoutes } from './data/eventPages';
@@ -63,6 +65,13 @@ function App() {
           <Route path="/events/:slug/register" element={<EventRegistration />} />
 
           <Route path="/admin" element={<AdminDashboard />} />
+
+          {/*
+            * Where the Worker sends a browser whose sign-in did not go
+            * through. Before this existed, a failed OAuth left the person
+            * on a JSON body at events.oscvitap.com with no way back.
+            */}
+          <Route path="/admin/restricted" element={<AdminRestricted />} />
 
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} />

@@ -165,6 +165,25 @@ function rateLimited(request: Request, env: Env): Response {
 	});
 }
 
+/*
+ * EXPIRY_NOTE — why every expiry comparison wraps both sides in
+ * datetime().
+ *
+ * expires_at is written with Date#toISOString(), which produces
+ * "2026-08-26T07:00:00.000Z". SQLite's datetime('now') produces
+ * "2026-08-26 07:00:00". Comparing those two directly is a STRING
+ * comparison, and at the eleventh character it compares "T" (0x54)
+ * against " " (0x20) — so an ISO timestamp always sorts after a SQLite
+ * one for the same date, whatever the time says.
+ *
+ * The effect was that a session which expired at midnight still passed
+ * `expires_at > datetime('now')` for the rest of that day: eight-hour
+ * sessions stayed usable for up to thirty-two hours, and ten-minute
+ * OAuth states stayed replayable until the date rolled over.
+ *
+ * datetime() parses both into the same format, so the comparison is a
+ * real one.
+ */
 function randomToken(): string {
 	return crypto.randomUUID() + crypto.randomUUID();
 }
@@ -190,6 +209,49 @@ function isLocalRequest(request: Request): boolean {
 	return hostname === '127.0.0.1' || hostname === 'localhost';
 }
 
+/* Where the browser belongs once the Worker is done with it. */
+function siteOrigin(request: Request): string {
+	return isLocalRequest(request) ? 'http://localhost:5173' : 'https://www.oscvitap.com';
+}
+
+/*
+ * Reasons a sign-in did not go through. Mirrored in
+ * src/data/adminAuth.ts, which turns each code into the copy shown on
+ * the restricted page — add a code in one place and it needs adding in
+ * the other.
+ */
+type AuthFailure =
+	| 'denied'
+	| 'no-code'
+	| 'bad-state'
+	| 'github-error'
+	| 'not-allowed'
+	| 'not-a-member'
+	| 'pending-invite'
+	| 'signed-out';
+
+/*
+ * A failed sign-in belongs back on the site, not on a JSON body at the
+ * Worker's own domain. Someone who is simply not in the organisation
+ * used to be left looking at {"error":"Access denied..."} on
+ * events.oscvitap.com with no way back; now they land on a page that
+ * says what happened.
+ *
+ * The reason is a fixed code from the union above, never anything
+ * echoed from the request, so this cannot be turned into an open
+ * redirect or a way to render attacker text on the site.
+ */
+function authFailureRedirect(request: Request, reason: AuthFailure): Response {
+	return new Response(null, {
+		status: 302,
+		headers: {
+			Location: `${siteOrigin(request)}/admin/restricted?reason=${reason}`,
+			/* A failure must not leave a half-made session behind. */
+			'Set-Cookie': clearedSessionCookie(request),
+		},
+	});
+}
+
 function sessionCookie(sessionId: string, request: Request): string {
 	const secure = !isLocalRequest(request);
 
@@ -199,6 +261,25 @@ function sessionCookie(sessionId: string, request: Request): string {
 		'HttpOnly',
 		'SameSite=Lax',
 		'Max-Age=28800',
+		secure ? 'Secure' : '',
+	]
+		.filter(Boolean)
+		.join('; ');
+}
+
+/*
+ * The same cookie with an immediate expiry. Attributes have to match
+ * the ones it was set with or the browser keeps the original.
+ */
+function clearedSessionCookie(request: Request): string {
+	const secure = !isLocalRequest(request);
+
+	return [
+		'osc_admin_session=',
+		'Path=/',
+		'HttpOnly',
+		'SameSite=Lax',
+		'Max-Age=0',
 		secure ? 'Secure' : '',
 	]
 		.filter(Boolean)
@@ -221,7 +302,7 @@ async function getAdminSession(request: Request, env: Env) {
         expires_at
       FROM admin_sessions
       WHERE id = ?
-        AND expires_at > datetime('now')
+        AND datetime(expires_at) > datetime('now')
     `,
 	)
 		.bind(sessionId)
@@ -288,9 +369,38 @@ async function requireAdmin(
 	};
 }
 
+/*
+ * Names, years of study and team names arrive from the unauthenticated
+ * registration endpoint, and the export is written with a BOM so that
+ * Excel is the expected reader. A value starting =, +, - or @ is
+ * treated by Excel, Sheets and LibreOffice as a formula, so a
+ * registrant calling themselves `=cmd|'/c calc'!A1` runs when an admin
+ * opens the export.
+ *
+ * Prefixing with an apostrophe is the standard neutraliser: the cell
+ * reads as text, and the apostrophe is not part of the value.
+ */
 function csvEscape(value: unknown): string {
 	const text = value === null || value === undefined ? '' : String(value);
-	return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+
+	const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+
+	return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+}
+
+/*
+ * The R2 object holding an event's registrations.
+ *
+ * Keyed on the event's immutable id, never on its slug. The slug went
+ * through `replace(/[^a-zA-Z0-9_-]/g, '-')`, which is many-to-one:
+ * "dumbathon-2.0" and "dumbathon-2-0" both became "dumbathon-2-0", so
+ * archiving the second event overwrote the first's object — and the
+ * cron then deleted the first event's rows from D1, having "verified"
+ * that an object existed at that key. Renaming an event had the mirror
+ * problem: the key moved and the old archive became unreachable.
+ */
+function archiveKeyFor(eventId: string): string {
+	return `events/${eventId}/registrations.csv.gz`;
 }
 
 async function buildRegistrationCsv(
@@ -303,6 +413,12 @@ async function buildRegistrationCsv(
 		title: string;
 	};
 	csv: string;
+	/*
+	 * Data rows, excluding the header. An empty registration set is
+	 * otherwise indistinguishable from a full one at the call site,
+	 * which is how a header-only CSV came to overwrite a good archive.
+	 */
+	rowCount: number;
 } | null> {
 	const event = await env.DB.prepare(
 		`
@@ -392,6 +508,7 @@ async function buildRegistrationCsv(
 	return {
 		event,
 		csv: `\uFEFF${lines.join('\r\n')}\r\n`,
+		rowCount: results.length,
 	};
 }
 
@@ -439,9 +556,14 @@ async function archiveEventAfterCompletion(
 		return;
 	}
 
-	const safeSlug = event.slug.replace(/[^a-zA-Z0-9_-]/g, '-');
+	const objectKey = archiveKeyFor(event.id);
 
-	const objectKey = `events/${safeSlug}/registrations.csv.gz`;
+	/*
+	 * Whether this run got as far as removing the D1 rows. Past that
+	 * point R2 holds the only copy, so a retry must never be allowed to
+	 * rebuild the CSV from an empty table and overwrite it.
+	 */
+	let d1Purged = false;
 
 	try {
 		/*
@@ -451,6 +573,30 @@ async function archiveEventAfterCompletion(
 
 		if (!registrationCsv) {
 			throw new Error('Event not found while creating archive.');
+		}
+
+		/*
+		 * An event nobody registered for has nothing to preserve. Writing
+		 * a header-only object would spend a write and, worse, would look
+		 * exactly like a successful archive to anyone reading the bucket
+		 * later. Mark it archived and leave R2 alone.
+		 */
+		if (registrationCsv.rowCount === 0) {
+			await env.DB.prepare(
+				`
+          UPDATE events
+          SET
+            archive_status = 'archived',
+            is_open = 0,
+            archived_at = ?
+          WHERE id = ?
+            AND archive_status = 'archiving'
+        `,
+			)
+				.bind(new Date().toISOString(), event.id)
+				.run();
+
+			return;
 		}
 
 		/*
@@ -469,21 +615,53 @@ async function archiveEventAfterCompletion(
 				contentEncoding: 'gzip',
 			},
 			customMetadata: {
+				eventId: event.id,
 				eventSlug: event.slug,
 				eventTitle: event.title,
+				rowCount: String(registrationCsv.rowCount),
 				archivedBy: 'scheduled-worker',
 				archivedAt: new Date().toISOString(),
 			},
 		});
 
 		/*
-		 * Verify the R2 object exists before deleting D1 registration data.
+		 * Verify the object we just wrote, not merely that something
+		 * exists at the key. The old check passed as long as ANY object
+		 * was there — including another event's, back when the key was
+		 * derived from a lossy slug transform — and the D1 delete went
+		 * ahead on that basis.
 		 */
-		const archive = await env.osc_events_archives.get(objectKey);
+		const archive = await env.osc_events_archives.head(objectKey);
 
 		if (!archive) {
-			throw new Error('R2 archive verification failed.');
+			throw new Error('R2 archive verification failed: no object at key.');
 		}
+
+		if (archive.customMetadata?.eventId !== event.id) {
+			throw new Error('R2 archive verification failed: object belongs to a different event.');
+		}
+
+		if (archive.size !== compressedBody.byteLength) {
+			throw new Error('R2 archive verification failed: size does not match the upload.');
+		}
+
+		/*
+		 * Record where the archive lives BEFORE removing the rows it
+		 * replaces, so a crash between the two still leaves a pointer to
+		 * the surviving copy.
+		 */
+		await env.DB.prepare(
+			`
+        UPDATE events
+        SET
+          archive_key = ?,
+          archived_at = ?
+        WHERE id = ?
+          AND archive_status = 'archiving'
+      `,
+		)
+			.bind(objectKey, new Date().toISOString(), event.id)
+			.run();
 
 		/*
 		 * Delete members first, then registrations.
@@ -505,6 +683,8 @@ async function archiveEventAfterCompletion(
 			).bind(event.id),
 		]);
 
+		d1Purged = true;
+
 		/*
 		 * Mark the event archived only after the R2 archive and D1
 		 * cleanup have succeeded.
@@ -514,32 +694,52 @@ async function archiveEventAfterCompletion(
         UPDATE events
         SET
           archive_status = 'archived',
-          is_open = 0,
-          archive_key = ?,
-          archived_at = ?
-        WHERE id = ?
-          AND archive_status = 'archiving'
-      `,
-		)
-			.bind(objectKey, new Date().toISOString(), event.id)
-			.run();
-	} catch (error) {
-		console.error('Automatic event archive failed:', event.slug, error);
-
-		/*
-		 * A failed archive must NEVER leave registration data deleted
-		 * without a retry path.
-		 */
-		await env.DB.prepare(
-			`
-        UPDATE events
-        SET archive_status = 'pending'
+          is_open = 0
         WHERE id = ?
           AND archive_status = 'archiving'
       `,
 		)
 			.bind(event.id)
 			.run();
+	} catch (error) {
+		console.error('Automatic event archive failed:', event.slug, error);
+
+		/*
+		 * Retrying is only safe while the rows still exist. Once they are
+		 * gone R2 is the sole copy, and a retry would rebuild an empty
+		 * CSV over it — so that case goes to a state the cron does not
+		 * select, to be looked at by a human.
+		 */
+		const nextStatus = d1Purged ? 'needs_attention' : 'pending';
+
+		if (d1Purged) {
+			console.error(
+				'Archive left needing attention: D1 rows for',
+				event.slug,
+				'are deleted and the archive is at',
+				objectKey,
+			);
+		}
+
+		try {
+			await env.DB.prepare(
+				`
+          UPDATE events
+          SET archive_status = ?
+          WHERE id = ?
+            AND archive_status = 'archiving'
+        `,
+			)
+				.bind(nextStatus, event.id)
+				.run();
+		} catch (rollbackError) {
+			/*
+			 * The event stays claimed as 'archiving', which the cron does
+			 * not select — safe, but it needs a human. Swallowing this
+			 * keeps one stuck event from aborting the whole run.
+			 */
+			console.error('Archive rollback failed, event left claimed:', event.slug, rollbackError);
+		}
 	}
 }
 
@@ -567,8 +767,16 @@ async function processCompletedEvents(env: Env): Promise<void> {
 		title: string;
 	}>();
 
+	/*
+	 * One event that throws must not take the rest of the batch — or the
+	 * expired-row purge that runs after it — down with it.
+	 */
 	for (const event of results) {
-		await archiveEventAfterCompletion(env, event);
+		try {
+			await archiveEventAfterCompletion(env, event);
+		} catch (error) {
+			console.error('Archive threw for event, continuing:', event.slug, error);
+		}
 	}
 }
 
@@ -576,11 +784,13 @@ async function processCompletedEvents(env: Env): Promise<void> {
  * Expired sessions and OAuth states are dead on read — the lookups all
  * filter on expires_at — but the rows themselves used to accumulate
  * forever. Sweeping them hourly keeps the tables at working-set size.
+ *
+ * datetime() on both sides for the reason described at EXPIRY_NOTE.
  */
 async function purgeExpiredAuthRows(env: Env): Promise<void> {
 	await env.DB.batch([
-		env.DB.prepare(`DELETE FROM admin_sessions WHERE expires_at <= datetime('now')`),
-		env.DB.prepare(`DELETE FROM admin_oauth_states WHERE expires_at <= datetime('now')`),
+		env.DB.prepare(`DELETE FROM admin_sessions WHERE datetime(expires_at) <= datetime('now')`),
+		env.DB.prepare(`DELETE FROM admin_oauth_states WHERE datetime(expires_at) <= datetime('now')`),
 	]);
 }
 
@@ -678,15 +888,22 @@ export default {
 
 				const state = url.searchParams.get('state');
 
-				if (!code || !state) {
-					return json(
-						{
-							error: 'Missing GitHub OAuth code or state',
-						},
-						400,
+				/*
+				 * GitHub sends the user back with ?error=access_denied when
+				 * they press Cancel on the authorise screen. That arrives
+				 * without a code, so it used to be reported as "missing
+				 * code" — telling someone who deliberately cancelled that
+				 * something was broken.
+				 */
+				if (url.searchParams.get('error')) {
+					return authFailureRedirect(
 						request,
-						env,
+						url.searchParams.get('error') === 'access_denied' ? 'denied' : 'github-error',
 					);
+				}
+
+				if (!code || !state) {
+					return authFailureRedirect(request, 'no-code');
 				}
 
 				/*
@@ -700,7 +917,7 @@ export default {
 	              expires_at
 	            FROM admin_oauth_states
 	            WHERE state = ?
-	              AND expires_at > datetime('now')
+	              AND datetime(expires_at) > datetime('now')
 	          `,
 				)
 					.bind(state)
@@ -710,14 +927,7 @@ export default {
 					}>();
 
 				if (!oauthState) {
-					return json(
-						{
-							error: 'Invalid or expired OAuth state',
-						},
-						400,
-						request,
-						env,
-					);
+					return authFailureRedirect(request, 'bad-state');
 				}
 
 				/*
@@ -753,14 +963,7 @@ export default {
 				});
 
 				if (!tokenResponse.ok) {
-					return json(
-						{
-							error: 'Failed to authenticate with GitHub',
-						},
-						502,
-						request,
-						env,
-					);
+					return authFailureRedirect(request, 'github-error');
 				}
 
 				const tokenData = (await tokenResponse.json()) as {
@@ -772,14 +975,7 @@ export default {
 				};
 
 				if (!tokenData.access_token) {
-					return json(
-						{
-							error: tokenData.error_description || 'GitHub did not return an access token',
-						},
-						401,
-						request,
-						env,
-					);
+					return authFailureRedirect(request, tokenData.error === 'access_denied' ? 'denied' : 'github-error');
 				}
 
 				const accessToken = tokenData.access_token;
@@ -798,14 +994,7 @@ export default {
 				});
 
 				if (!githubUserResponse.ok) {
-					return json(
-						{
-							error: 'Unable to verify GitHub account',
-						},
-						502,
-						request,
-						env,
-					);
+					return authFailureRedirect(request, 'github-error');
 				}
 
 				const githubUser = (await githubUserResponse.json()) as {
@@ -825,14 +1014,7 @@ export default {
 				if (!isAllowedAdmin(githubUser.login, env)) {
 					console.log('Admin allow list rejected:', githubUser.login);
 
-					return json(
-						{
-							error: 'Access denied. This GitHub account is not on the events admin allow list.',
-						},
-						403,
-						request,
-						env,
-					);
+					return authFailureRedirect(request, 'not-allowed');
 				}
 
 				/*
@@ -860,14 +1042,7 @@ export default {
 
 					console.log('GitHub org membership check:', githubUser.login, membershipResponse.status, githubError);
 
-					return json(
-						{
-							error: 'Access denied. You are not a member of the OSC VIT-AP GitHub organisation.',
-						},
-						403,
-						request,
-						env,
-					);
+					return authFailureRedirect(request, 'not-a-member');
 				}
 
 				const membership = (await membershipResponse.json()) as {
@@ -880,14 +1055,7 @@ export default {
 				 * as 'pending'.
 				 */
 				if (membership.state !== 'active') {
-					return json(
-						{
-							error: 'Your OSC VIT-AP organisation membership is not active yet. Accept the invitation on GitHub and try again.',
-						},
-						403,
-						request,
-						env,
-					);
+					return authFailureRedirect(request, 'pending-invite');
 				}
 
 				/*
@@ -932,6 +1100,86 @@ export default {
 						'Set-Cookie': sessionCookie(sessionId, request),
 					},
 				});
+			}
+
+			/*
+			 * ============================================================
+			 * SIGN OUT
+			 * ============================================================
+			 *
+			 * There was no way to end a session at all: the only
+			 * terminator was expires_at, and that comparison was broken
+			 * (see EXPIRY_NOTE), so a session on a shared club laptop
+			 * outlived its owner's use of it by a day or more.
+			 *
+			 * The row is deleted rather than flagged, so the session is
+			 * dead server-side even if the browser keeps the cookie.
+			 * Unauthenticated callers get the same answer as authenticated
+			 * ones — signing out something that is already signed out is
+			 * not an error, and it stops this becoming a probe for whether
+			 * a given session id is live.
+			 */
+			if (request.method === 'POST' && url.pathname === '/auth/logout') {
+				const sessionId = getCookie(request, 'osc_admin_session');
+
+				if (sessionId) {
+					await env.DB.prepare(`DELETE FROM admin_sessions WHERE id = ?`).bind(sessionId).run();
+				}
+
+				return new Response(JSON.stringify({ success: true, signed_out: true }), {
+					status: 200,
+					headers: {
+						...corsHeaders(request, env),
+						'Content-Type': 'application/json',
+						'Set-Cookie': clearedSessionCookie(request),
+					},
+				});
+			}
+
+			/*
+			 * ============================================================
+			 * REVOKE EVERY SESSION FOR A HANDLE
+			 * ============================================================
+			 *
+			 * Organisation membership is checked once, during the OAuth
+			 * callback, using an access token that migration 0004
+			 * deliberately does not persist — so it cannot be rechecked
+			 * per request. Removing someone from the GitHub organisation
+			 * therefore does not, on its own, end a session they already
+			 * hold.
+			 *
+			 * This is the lever that closes that gap without storing
+			 * tokens: any current admin can kill every session belonging
+			 * to a handle immediately.
+			 */
+			const revokeMatch = url.pathname.match(/^\/api\/admin\/sessions\/([^/]+)$/);
+
+			if (request.method === 'DELETE' && revokeMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const handle = decodeURIComponent(revokeMatch[1]).toLowerCase();
+
+				const result = await env.DB.prepare(`DELETE FROM admin_sessions WHERE LOWER(github_username) = ?`)
+					.bind(handle)
+					.run();
+
+				console.log('Admin sessions revoked:', handle, 'by', auth.session.github_username);
+
+				return json(
+					{
+						success: true,
+						github_username: handle,
+						sessions_revoked: result.meta.changes,
+						revoked_by: auth.session.github_username,
+					},
+					200,
+					request,
+					env,
+				);
 			}
 
 			/*
@@ -1186,9 +1434,46 @@ export default {
 					return json({ error: 'Event not found' }, 404, request, env);
 				}
 
-				const safeSlug = registrationCsv.event.slug.replace(/[^a-zA-Z0-9_-]/g, '-');
+				/*
+				 * This endpoint takes a snapshot; the cron takes the
+				 * archive of record. Calling it after the cron has run used
+				 * to rebuild the CSV from a table the cron had already
+				 * emptied, and put that header-only result over the real
+				 * archive at the same key — destroying the only remaining
+				 * copy and answering {"success": true}.
+				 *
+				 * Two guards, either of which is enough on its own.
+				 */
+				if (registrationCsv.rowCount === 0) {
+					return json(
+						{
+							error:
+								'Refusing to archive: this event has no registrations in the database. If it has already been archived, the existing archive is the copy of record — download it instead.',
+						},
+						409,
+						request,
+						env,
+					);
+				}
 
-				const objectKey = `events/${safeSlug}/registrations.csv.gz`;
+				const existing = await env.DB.prepare(`SELECT archive_status, archive_key FROM events WHERE slug = ?`)
+					.bind(registrationCsv.event.slug)
+					.first<{ archive_status: string; archive_key: string | null }>();
+
+				if (existing?.archive_status === 'archived' && url.searchParams.get('overwrite') !== '1') {
+					return json(
+						{
+							error:
+								'This event is already archived. Overwriting would replace the stored copy. Pass ?overwrite=1 if that is genuinely what you want.',
+							archive_key: existing.archive_key,
+						},
+						409,
+						request,
+						env,
+					);
+				}
+
+				const objectKey = archiveKeyFor(registrationCsv.event.id);
 
 				const source = new Blob([registrationCsv.csv]).stream();
 
@@ -1205,24 +1490,33 @@ export default {
 						contentEncoding: 'gzip',
 					},
 					customMetadata: {
+						eventId: registrationCsv.event.id,
 						eventSlug: registrationCsv.event.slug,
 						eventTitle: registrationCsv.event.title,
+						rowCount: String(registrationCsv.rowCount),
 						archivedBy: auth.session.github_username,
 						archivedAt: new Date().toISOString(),
 					},
 				});
 
+				/*
+				 * A snapshot records where the copy is, but it does not
+				 * retire the event. Setting archive_status = 'archived'
+				 * here hid a live event from the public list while the
+				 * registration handler — which only reads is_open — kept
+				 * accepting entries the cron would never preserve, because
+				 * processCompletedEvents only selects 'pending'.
+				 */
 				await env.DB.prepare(
 					`
 	      UPDATE events
 	      SET
-	        archive_status = 'archived',
 	        archive_key = ?,
 	        archived_at = ?
-	      WHERE slug = ?
+	      WHERE id = ?
 	    `,
 				)
-					.bind(objectKey, new Date().toISOString(), registrationCsv.event.slug)
+					.bind(objectKey, new Date().toISOString(), registrationCsv.event.id)
 					.run();
 
 				return json(
@@ -1231,6 +1525,7 @@ export default {
 						message: 'Registration CSV archived successfully',
 						event: registrationCsv.event.slug,
 						object_key: objectKey,
+						rows_archived: registrationCsv.rowCount,
 						archived_by: auth.session.github_username,
 					},
 					200,
@@ -1262,14 +1557,16 @@ export default {
 				}
 
 				const event = await env.DB.prepare(
-					`SELECT slug, title
+					`SELECT id, slug, title, archive_key
 	       FROM events
 	       WHERE slug = ?`,
 				)
 					.bind(slug)
 					.first<{
+						id: string;
 						slug: string;
 						title: string;
+						archive_key: string | null;
 					}>();
 
 				if (!event) {
@@ -1278,7 +1575,17 @@ export default {
 
 				const safeSlug = event.slug.replace(/[^a-zA-Z0-9_-]/g, '-');
 
-				const objectKey = `events/${safeSlug}/registrations.csv.gz`;
+				/*
+				 * Prefer the stored key. Recomputing it from the current
+				 * slug meant that renaming an archived event pointed the
+				 * download at a key nothing had ever been written to, and
+				 * the archive became unreachable through the API while
+				 * still sitting in the bucket.
+				 *
+				 * The id-derived key is the fallback for events archived
+				 * before archive_key was recorded ahead of the delete.
+				 */
+				const objectKey = event.archive_key ?? archiveKeyFor(event.id);
 
 				const archive = await env.osc_events_archives.get(objectKey);
 

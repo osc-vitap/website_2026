@@ -1,6 +1,6 @@
 import { Github, Instagram, Linkedin, Mail, Terminal } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { config } from '../data/config';
+import { config, isConfigured } from '../data/config';
 
 const Footer = () => {
   return (
@@ -19,12 +19,29 @@ const Footer = () => {
             <p className="text-gray-400 text-sm leading-relaxed max-w-sm mb-6">
               Building a robust open-source culture at VIT-AP. We code, collaborate, and create solutions for the real world.
             </p>
+            {/*
+              * Only rendered once a real invite is configured.
+              *
+              * These shipped as discord.gg/placeholder and
+              * chat.whatsapp.com/placeholder, and the Discord one
+              * resolves: every visitor who clicked "Join Discord" was
+              * sent to a stranger's server called "<Placeholder>
+              * Community". No button is better than a button that sends
+              * the club's members somewhere it does not control.
+              */}
             <div className="flex flex-wrap gap-3 sm:gap-4">
-              <a href={config.socials.discord} target="_blank" rel="noreferrer" className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-semibold min-h-[44px] py-2 px-4 transition-colors inline-flex items-center gap-2">
-                Join Discord
-              </a>
-              <a href={config.socials.whatsapp} target="_blank" rel="noreferrer" className="bg-[#25D366] hover:bg-[#1DA851] text-white text-sm font-semibold min-h-[44px] py-2 px-4 transition-colors inline-flex items-center gap-2">
-                WhatsApp
+              {isConfigured(config.socials.discord) && (
+                <a href={config.socials.discord} target="_blank" rel="noreferrer" className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-semibold min-h-[44px] py-2 px-4 transition-colors inline-flex items-center gap-2">
+                  Join Discord
+                </a>
+              )}
+              {isConfigured(config.socials.whatsapp) && (
+                <a href={config.socials.whatsapp} target="_blank" rel="noreferrer" className="bg-[#25D366] hover:bg-[#1DA851] text-white text-sm font-semibold min-h-[44px] py-2 px-4 transition-colors inline-flex items-center gap-2">
+                  WhatsApp
+                </a>
+              )}
+              <a href={config.socials.github} target="_blank" rel="noreferrer" className="bg-dark-700 hover:bg-dark-600 border border-dark-600 text-white text-sm font-semibold min-h-[44px] py-2 px-4 transition-colors inline-flex items-center gap-2">
+                GitHub
               </a>
             </div>
           </div>
@@ -33,7 +50,8 @@ const Footer = () => {
           <div>
             <h4 className="text-white font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-0.5">
-              <li><Link to="/about" className="inline-flex items-center min-h-[36px] text-gray-400 hover:text-brand-accent transition-colors text-sm">About Us</Link></li>
+              {/* /about has no route; the SPA rewrite answered it with a 200 and the 404 page. */}
+              <li><Link to="/contributors" className="inline-flex items-center min-h-[36px] text-gray-400 hover:text-brand-accent transition-colors text-sm">Contributors</Link></li>
               <li><Link to="/events" className="inline-flex items-center min-h-[36px] text-gray-400 hover:text-brand-accent transition-colors text-sm">Events</Link></li>
               <li><Link to="/projects" className="inline-flex items-center min-h-[36px] text-gray-400 hover:text-brand-accent transition-colors text-sm">Projects</Link></li>
               <li><Link to="/team" className="inline-flex items-center min-h-[36px] text-gray-400 hover:text-brand-accent transition-colors text-sm">Our Team</Link></li>

@@ -15,7 +15,10 @@ import {
   Mail,
   Trash2,
   AlertTriangle,
+  LogOut,
 } from 'lucide-react';
+import AdminAuthSplash from '../components/AdminAuthSplash';
+import { clearOauthLoopMarker } from '../data/adminAuth';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -186,6 +189,20 @@ const AdminDashboard = () => {
   const [user, setUser] =
     useState<AdminUser | null>(null);
 
+  /*
+   * Set when the Worker says we are not signed in. The dashboard used
+   * to assign window.location.href straight to the OAuth URL from five
+   * different places, which showed a flash of empty dashboard and then
+   * an unexplained bounce to github.com — and looped forever if the
+   * session cookie never stuck. Rendering the splash instead puts a
+   * screen in front of the redirect and gives the loop a way out.
+   */
+  const [needsSignIn, setNeedsSignIn] =
+    useState(false);
+
+  const [signingOut, setSigningOut] =
+    useState(false);
+
   const [events, setEvents] =
     useState<Event[]>([]);
 
@@ -256,8 +273,7 @@ const AdminDashboard = () => {
       );
 
       if (meResponse.status === 401) {
-        window.location.href =
-          `${API_BASE_URL}/auth/github`;
+        setNeedsSignIn(true);
         return;
       }
 
@@ -272,6 +288,13 @@ const AdminDashboard = () => {
 
       setUser(me);
 
+      /*
+       * A session that works clears the loop marker, so the next sign-in
+       * starts from a clean slate rather than opening on the
+       * cookies-are-blocked warning.
+       */
+      clearOauthLoopMarker();
+
       const eventsResponse =
         await fetch(
           `${API_BASE_URL}/api/admin/events`,
@@ -281,8 +304,7 @@ const AdminDashboard = () => {
         );
 
       if (eventsResponse.status === 401) {
-        window.location.href =
-          `${API_BASE_URL}/auth/github`;
+        setNeedsSignIn(true);
         return;
       }
 
@@ -310,6 +332,42 @@ const AdminDashboard = () => {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  /*
+   * Ends the session server-side rather than only dropping the cookie,
+   * so the row cannot be reused by anyone holding the old value. The
+   * page is then sent to the restricted screen, which explains what
+   * just happened instead of bouncing straight back into sign-in.
+   */
+  const signOut = async () => {
+    setSigningOut(true);
+
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      /*
+       * The cookie is host-only on the Worker's domain, so the browser
+       * cannot clear it from here. Sending them to the restricted page
+       * anyway would imply a sign-out that did not happen.
+       */
+      console.error(err);
+
+      setSigningOut(false);
+
+      setError(
+        'Could not reach the server to sign out. Check your connection and try again.',
+      );
+
+      return;
+    }
+
+    clearOauthLoopMarker();
+
+    window.location.href = '/admin/restricted?reason=signed-out';
+  };
 
   const updateForm = <
     K extends keyof EventForm,
@@ -492,8 +550,7 @@ const AdminDashboard = () => {
       );
 
       if (response.status === 401) {
-        window.location.href =
-          `${API_BASE_URL}/auth/github`;
+        setNeedsSignIn(true);
         return;
       }
 
@@ -540,8 +597,7 @@ const AdminDashboard = () => {
       );
 
       if (response.status === 401) {
-        window.location.href =
-          `${API_BASE_URL}/auth/github`;
+        setNeedsSignIn(true);
         return;
       }
 
@@ -593,8 +649,7 @@ setRegistrations(
       );
 
       if (response.status === 401) {
-        window.location.href =
-          `${API_BASE_URL}/auth/github`;
+        setNeedsSignIn(true);
         return;
       }
 
@@ -814,6 +869,19 @@ setRegistrations(
     }
   };
 
+  /*
+   * Checked before `loading`, because the sign-in screen is the answer
+   * to "not signed in" — showing "Loading admin dashboard…" first would
+   * be describing work that is not going to happen.
+   */
+  if (needsSignIn) {
+    return (
+      <AdminAuthSplash
+        authUrl={`${API_BASE_URL}/auth/github`}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
@@ -889,6 +957,23 @@ setRegistrations(
               size={18}
               className="text-green-400"
             />
+
+            {/*
+              * There was no way to end a session at all — on a shared
+              * club laptop the next person inherited the dashboard.
+              */}
+            <button
+              type="button"
+              onClick={signOut}
+              disabled={signingOut}
+              className="flex items-center gap-2 border-l border-dark-600 pl-4 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+              title="End this admin session"
+            >
+              <LogOut size={16} />
+              <span className="text-sm font-semibold">
+                {signingOut ? 'Signing out…' : 'Sign out'}
+              </span>
+            </button>
           </div>
         )}
       </div>

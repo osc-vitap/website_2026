@@ -28,8 +28,16 @@ export const config: SiteConfig = {
     ctaLink: "/events" // Update this link when there's an actual external registration form
   },
   socials: {
-    discord: "https://discord.gg/placeholder",
-    whatsapp: "https://chat.whatsapp.com/placeholder",
+    /*
+     * Leave these empty until the real invites exist.
+     *
+     * They previously held ".../placeholder", and discord.gg/placeholder
+     * is a live invite to an unrelated server — the footer was sending
+     * the club's own members there. isConfigured() below is what the
+     * footer checks, so an unset link renders no button at all.
+     */
+    discord: "",
+    whatsapp: "",
     instagram: "https://instagram.com/osc_vitap",
     linkedin: "https://linkedin.com/company/osc-vitap",
     github: "https://github.com/osc-vitap",
@@ -41,3 +49,15 @@ export const config: SiteConfig = {
     eventsHosted: 120
   }
 };
+
+/*
+ * Whether a social link is real enough to render a button for.
+ *
+ * Guards against the two ways an unset link used to reach production:
+ * an empty string, and a ".../placeholder" URL that happens to resolve
+ * to somebody else's server.
+ */
+export const isConfigured = (link: string | undefined): boolean =>
+  typeof link === 'string' &&
+  link.trim() !== '' &&
+  !/placeholder/i.test(link);

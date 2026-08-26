@@ -500,6 +500,98 @@ describe("registration identity", () => {
 	});
 });
 
+describe("OAuth failure handling", () => {
+	/*
+	 * Every one of these used to answer a top-level browser navigation
+	 * with a JSON body on the Worker's own domain, leaving the person on
+	 * a white page at events.oscvitap.com with no way back.
+	 */
+	it("sends a cancelled sign-in to the restricted page", async () => {
+		const response = await fetchWorker("/auth/github/callback?error=access_denied&state=x");
+
+		expect(response.status).toBe(302);
+		expect(response.headers.get("Location")).toBe("https://www.oscvitap.com/admin/restricted?reason=denied");
+	});
+
+	it("sends a callback with no code to the restricted page", async () => {
+		const response = await fetchWorker("/auth/github/callback");
+
+		expect(response.status).toBe(302);
+		expect(response.headers.get("Location")).toContain("reason=no-code");
+	});
+
+	it("sends an unknown OAuth state to the restricted page", async () => {
+		const response = await fetchWorker("/auth/github/callback?code=abc&state=never-issued");
+
+		expect(response.status).toBe(302);
+		expect(response.headers.get("Location")).toContain("reason=bad-state");
+	});
+
+	it("clears any session cookie on a failed sign-in", async () => {
+		const response = await fetchWorker("/auth/github/callback?error=access_denied&state=x");
+
+		expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0");
+	});
+
+	it("never sends the browser off this site", async () => {
+		for (const query of ["?error=access_denied&state=x", "", "?code=a&state=b"]) {
+			const response = await fetchWorker(`/auth/github/callback${query}`);
+
+			expect(response.headers.get("Location")).toMatch(
+				/^https:\/\/www\.oscvitap\.com\/admin\/restricted\?reason=[a-z-]+$/,
+			);
+		}
+	});
+});
+
+describe("CSV export safety", () => {
+	it("neutralises spreadsheet formulas coming from registration input", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+        VALUES (?, ?, ?, ?)
+      `,
+		)
+			.bind("csv-session", "1", "admin", new Date(Date.now() + 3600_000).toISOString())
+			.run();
+
+		await seedEvent({ slug: "csv-event", title: "CSV Event" });
+
+		/*
+		 * A name Excel would otherwise execute. It reaches the database
+		 * through the unauthenticated registration endpoint, and the
+		 * export is written with a BOM so Excel is the expected reader.
+		 */
+		await seedRegistration("csv-event", [
+			{
+				name: "=cmd|'/c calc'!A1",
+				college_registration_number: "22BCE4321",
+				email: "formula@example.com",
+			},
+		]);
+
+		const response = await fetchWorker("/api/admin/events/csv-event/registrations.csv", {
+			headers: { Cookie: "osc_admin_session=csv-session" },
+		});
+
+		expect(response.status).toBe(200);
+
+		const csv = await response.text();
+
+		/*
+		 * Prefixed with an apostrophe so the cell reads as text. No
+		 * quoting here because the value happens to contain no comma —
+		 * quoting is a separate concern from formula neutralisation.
+		 */
+		expect(csv).toContain(`,'=cmd|'/c calc'!A1,`);
+		expect(csv).not.toContain(`,=cmd`);
+
+		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+	});
+});
+
 describe("rate limiting", () => {
 	function register(slug: string, registrationNumber: string, ip: string): Promise<Response> {
 		return fetchWorker(`/api/events/${slug}/register`, {
@@ -616,6 +708,103 @@ describe("admin access", () => {
 		env.ADMIN_GITHUB_USERS = originalAllowList;
 
 		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+	});
+
+	/*
+	 * expires_at is written by the Worker with toISOString(), so a test
+	 * that seeds SQLite's own datetime() format cannot see the
+	 * string-comparison bug described at EXPIRY_NOTE. These seed the real
+	 * format.
+	 */
+	async function seedSessionExpiring(username: string, expiresAt: string): Promise<void> {
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+        VALUES (?, ?, ?, ?)
+      `,
+		)
+			.bind(SESSION_ID, "1", username, expiresAt)
+			.run();
+	}
+
+	it("rejects a session that expired earlier today", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		/*
+		 * Expired an hour ago, but with today's date. The old comparison
+		 * matched "2026-08-26T..." against "2026-08-26 ..." as raw
+		 * strings, where "T" sorts after " ", so this passed as valid
+		 * until the date rolled over — eight-hour sessions lived up to
+		 * thirty-two hours.
+		 */
+		await seedSessionExpiring("admin", new Date(Date.now() - 60 * 60 * 1000).toISOString());
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(401);
+	});
+
+	it("accepts a session that has not expired yet", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSessionExpiring("admin", new Date(Date.now() + 60 * 60 * 1000).toISOString());
+
+		expect((await asAdmin("/api/admin/events")).status).toBe(200);
+	});
+
+	it("signs out by deleting the session row, not just the cookie", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+
+		expect((await asAdmin("/api/admin/me")).status).toBe(200);
+
+		const response = await asAdmin("/auth/logout", { method: "POST" });
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0");
+
+		const rows = await env.DB.prepare(`SELECT COUNT(*) AS n FROM admin_sessions`).first<{ n: number }>();
+
+		expect(rows?.n).toBe(0);
+
+		/* The cookie value is now useless even if the browser kept it. */
+		expect((await asAdmin("/api/admin/me")).status).toBe(401);
+	});
+
+	it("treats signing out without a session as a no-op rather than an error", async () => {
+		const response = await fetchWorker("/auth/logout", { method: "POST" });
+
+		expect(response.status).toBe(200);
+	});
+
+	it("revokes every session belonging to a handle", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+
+		/* A second session for someone who has left the organisation. */
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+        VALUES (?, ?, ?, ?)
+      `,
+		)
+			.bind("departed-session", "2", "Departed-Member", new Date(Date.now() + 3600_000).toISOString())
+			.run();
+
+		const response = await asAdmin("/api/admin/sessions/departed-member", { method: "DELETE" });
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ sessions_revoked: 1 });
+
+		const left = await env.DB.prepare(`SELECT github_username FROM admin_sessions`).all<{ github_username: string }>();
+
+		expect(left.results.map((r) => r.github_username)).toEqual(["admin"]);
+	});
+
+	it("requires a session to revoke sessions", async () => {
+		const response = await fetchWorker("/api/admin/sessions/someone", { method: "DELETE" });
+
+		expect(response.status).toBe(401);
 	});
 
 	it("allows any signed-in admin when the allow list is empty", async () => {

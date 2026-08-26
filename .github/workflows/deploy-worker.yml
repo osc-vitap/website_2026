@@ -9,6 +9,18 @@ on:
       - ".github/workflows/deploy-worker.yml"
   workflow_dispatch:
 
+# Migrations are not idempotent — 0002 is five bare ALTER TABLE ADD
+# COLUMN and 0004 drops and recreates admin_sessions — so two pushes
+# landing together could interleave `migrations apply` against the one
+# production database and wedge the schema.
+#
+# cancel-in-progress is false on purpose: cancelling a run between the
+# migrate step and the deploy step would leave the database ahead of the
+# Worker, which is the exact state this ordering exists to prevent.
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
 jobs:
   deploy-worker:
     runs-on: ubuntu-latest

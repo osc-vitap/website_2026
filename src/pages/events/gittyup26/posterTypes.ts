@@ -106,6 +106,20 @@ export interface PosterVariant {
   /** Chrome posters fill the wordmark with a gradient instead of a flat colour. */
   inkGradient?: string;
 
+  /*
+   * The rest of the wordmark's fill, for the sheets whose type is not
+   * filled with a gradient alone.
+   *
+   * The prism poster stacks the glass photograph over a dispersion
+   * gradient and screens the two together inside the glyphs, which is
+   * where its blue and peach tints come from. That needs a size, a
+   * position and a blend mode as well as the image list, so they are
+   * separate fields rather than one unparseable shorthand.
+   */
+  inkSize?: string;
+  inkPosition?: string;
+  inkBlend?: string;
+
   /** Body copy colour. */
   text: string;
 

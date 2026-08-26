@@ -217,6 +217,18 @@ const PosterPage = ({
   const wordmarkFill = variant.inkGradient
     ? {
         backgroundImage: variant.inkGradient,
+        /*
+          * no-repeat because a fill sized past 100% — the prism sheet
+          * runs its photograph at 210% so one bright facet lands in the
+          * type — would otherwise tile a second copy into the glyphs.
+          */
+        backgroundSize: variant.inkSize,
+        backgroundPosition:
+          variant.inkPosition,
+        backgroundRepeat: variant.inkSize
+          ? ('no-repeat' as const)
+          : undefined,
+        backgroundBlendMode: variant.inkBlend,
         WebkitBackgroundClip: 'text' as const,
         backgroundClip: 'text' as const,
         color: 'transparent',

@@ -93,16 +93,39 @@ export const posterVariants: PosterVariant[] = [
 		"image": "/events/gittyup26/glass-x.webp",
 		"dispersion": true,
 		/*
-		 * Empty on purpose. The printed sheet is bare black behind the
-		 * glass artwork, and everything that used to be here fought it:
+		 * One vignette, taken from the print source rather than
+		 * invented. Everything that used to be here fought the artwork:
 		 * three layers pinned to `0 68%/100% 18%` rebuilt a chrome strip
 		 * the print does not have, which landed as a pinstriped bar
 		 * ruled across the middle of the page, and a flat 50% black
 		 * scrim over the full bleed greyed out the prismatic edges that
 		 * are the whole point of this one.
+		 *
+		 * What the print actually does is the opposite of a scrim: it
+		 * leaves the glass untouched where it is bright and crushes
+		 * everything around it to black, so the object reads as lit in
+		 * a dark room instead of as a photograph laid on a dark page.
 		 */
-		"layers": [],
+		"layers": [
+			"radial-gradient(64% 40% at 62% 50%,rgba(0,0,0,0) 0%,rgba(0,0,0,.5) 62%,rgba(0,0,0,.9) 92%)"
+		],
 		"ink": "#ffffff",
+		/*
+		 * The prism fill, copied from design 2d.
+		 *
+		 * The glyphs are not filled with a gradient — they are filled
+		 * with the glass photograph itself, screened over a dispersion
+		 * ramp, so the blue and peach in the type are the same refraction
+		 * as the object beside it. A flat white wordmark on this sheet
+		 * throws that away, which is what the web version was doing.
+		 *
+		 * 210% with the position off-centre is what lands one bright
+		 * facet inside the letterforms rather than an even wash.
+		 */
+		"inkGradient": "url(/events/gittyup26/glass-x.webp), linear-gradient(102deg,#ffffff 0%,#7fb0ff 16%,#ffffff 32%,#e08a5a 48%,#f4f8ff 64%,#6f9ce0 82%,#ffffff 100%)",
+		"inkSize": "210% auto, 100% 100%",
+		"inkPosition": "38% 44%, center",
+		"inkBlend": "screen",
 		"text": "rgba(255,255,255,.72)",
 		"accent": "#b79dff",
 		"rows": 2,

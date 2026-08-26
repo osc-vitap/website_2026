@@ -7,6 +7,7 @@ import { gridFontSize } from './posterGrid';
 import { PosterVariant } from './posterTypes';
 import { POSTER_COUNT } from './posterVariants';
 import PosterRegisterForm from './PosterRegisterForm';
+import PosterAboutDialog from './PosterAboutDialog';
 import { glassTint, textHalo } from './posterColor';
 import { rowMetrics, useFittingRows } from './useFittingRows';
 import { ApiEvent, fetchEvent } from '../../../data/eventsApi';
@@ -96,6 +97,14 @@ const PosterPage = ({
   variant,
 }: PosterPageProps) => {
   const [showForm, setShowForm] = useState(false);
+
+  /* What the session is, asked for from the footnote under the panel. */
+  const [showAbout, setShowAbout] =
+    useState(false);
+
+  /* Held so the dialog can put focus back where it came from. */
+  const aboutTriggerRef =
+    useRef<HTMLButtonElement>(null);
 
   /*
    * Whether the event is taking registrations, read from the event
@@ -539,6 +548,37 @@ const PosterPage = ({
             </div>
             )}
 
+            {/*
+              * A footnote, under the panel rather than inside it.
+              *
+              * Outside so it survives the panel being replaced by the
+              * registration form, and small so it never reads as a
+              * second call to action — the poster has one of those. The
+              * halo is the same one the footline uses: this line sits on
+              * the artwork, which on several of the thirty is at its
+              * brightest right here.
+              */}
+            <button
+              ref={aboutTriggerRef}
+              type="button"
+              onClick={() => setShowAbout(true)}
+              className="mt-4 inline-block font-postermono text-[10px] uppercase tracking-[0.18em] underline decoration-dotted underline-offset-4 opacity-85 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 md:text-[11px]"
+              style={{
+                /*
+                  * Set in the body colour, not the accent. Two of the
+                  * accents are dark enough that they measure near 3:1
+                  * on their own poster's ground — the accent stays on
+                  * the underline, where being quiet is the point.
+                  */
+                color: variant.text,
+                textDecorationColor: withAlpha(variant.accent, 70),
+                textShadow: textHalo(variant.text),
+                outlineColor: variant.accent,
+              }}
+            >
+              What is GITTY UP?
+            </button>
+
           </aside>
 
         </main>
@@ -612,6 +652,14 @@ const PosterPage = ({
         </footer>
 
       </div>
+
+      {showAbout && (
+        <PosterAboutDialog
+          variant={variant}
+          returnFocusTo={aboutTriggerRef}
+          onClose={() => setShowAbout(false)}
+        />
+      )}
     </>
   );
 };

@@ -60,6 +60,16 @@ const GRID_SIZE =
   'text-[length:var(--wm-sm)] lg:text-[length:var(--wm-lg)]';
 
 /*
+ * A hero of one word runs at full height. A hero that is a whole phrase
+ * wraps inside its 15ch column instead, so it sets smaller — at the
+ * single-word size a sentence would leave the page sideways.
+ */
+const heroFontSize = (text: string) =>
+  text.trim().length <= 8
+    ? 'clamp(3.5rem, 22vw, 9rem)'
+    : 'clamp(2.1rem, 10.5vw, 6.2rem)';
+
+/*
  * Accent colours arrive as either hex or rgba(). Appending hex alpha to
  * an rgba() string produces invalid CSS, so the declaration is dropped
  * and the rule falls back to the browser default — a near-white hairline
@@ -221,9 +231,19 @@ const PosterPage = ({
             {variant.layout === 'hero-word' && (
               <div
                 aria-hidden="true"
-                className="poster-rise select-none font-black leading-[0.9] tracking-[-0.03em] text-[clamp(3.5rem,22vw,9rem)] lg:text-[min(15vw,15rem)]"
+                /*
+                  * Sized by how long the hero is. A single word can run
+                  * at full height, but a whole phrase at that size would
+                  * leave the page horizontally — so the size comes down
+                  * as the character count goes up, and it is allowed to
+                  * wrap rather than being clipped.
+                  */
+                className="poster-rise max-w-[15ch] select-none font-black leading-[0.88] tracking-[-0.03em]"
                 style={{
                   ...wordmarkFill,
+                  fontSize: heroFontSize(
+                    variant.heroWord ?? variant.emphasis ?? '',
+                  ),
                   animationDelay: '0.12s',
                 }}
               >
@@ -570,12 +590,15 @@ const PosterPage = ({
             Open Source Community · VIT-AP University
           </span>
 
-          <span
-            className="tabular-nums opacity-60"
-            title={`Poster ${variant.id} of ${POSTER_COUNT}`}
-          >
-            {String(variant.id).padStart(2, '0')}/{POSTER_COUNT}
-          </span>
+          {/* The counter is of the printed run, so a sheet outside it has none. */}
+          {!variant.unlisted && (
+            <span
+              className="tabular-nums opacity-60"
+              title={`Poster ${variant.id} of ${POSTER_COUNT}`}
+            >
+              {String(variant.id).padStart(2, '0')}/{POSTER_COUNT}
+            </span>
+          )}
         </footer>
 
       </div>

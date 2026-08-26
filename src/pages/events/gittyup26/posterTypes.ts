@@ -97,6 +97,15 @@ export interface PosterVariant {
   /** How many times the wordmark repeats. */
   rows: number;
 
+  /**
+   * A sheet outside the printed run.
+   *
+   * Reachable by its own QR and by nothing else: it is kept out of the
+   * random pool, so opening /gittyup26 with no query never lands on it,
+   * and out of the NN/30 footline, which counts the print run.
+   */
+  unlisted?: boolean;
+
   /** Mono kicker above the wordmark, where the poster has one. */
   eyebrow?: string;
 

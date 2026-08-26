@@ -271,6 +271,27 @@
   }
 
   /*
+   * The About dialog is the same material as the details panel, and it
+   * says so by wearing the same class. It used to rebuild the shell by
+   * hand — its own radius, its own pair of inset hairlines — which is
+   * how it came to be square while the panel behind it was round, both
+   * on screen at once behind a backdrop of only rgba(0,0,0,0.72).
+   *
+   * Two things genuinely differ at dialog size, and only these two are
+   * overridden. It is nearly opaque, so a backdrop blur underneath it
+   * is GPU work that nobody can see; and it is the largest box on the
+   * page rather than a card inside one, so it takes the deeper shadow.
+   */
+  .poster-glass-modal {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
+      inset 0 -1px 0 0 rgba(0, 0, 0, 0.22),
+      0 24px 60px -20px rgba(0, 0, 0, 0.75);
+  }
+
+  /*
    * A chromatic fringe on the panel's hairline, for the sheets whose
    * artwork is dispersed glass or liquid chrome.
    *
@@ -285,12 +306,13 @@
    * seconds — a plate that has slipped in the press, a signal that has
    * not locked. Deliberately not scanlines and not blocks.
    *
-   * Two channels rather than the full spectrum, though the artwork has
-   * the full spectrum: carkey.webp and crying-emoji-web.webp both fringe
-   * green and yellow along every contour. That is the reason, not an
-   * excuse for it — a rainbow hairline over a rainbow photograph reads
-   * as a second rainbow competing with it, while a warm/cool split reads
-   * as the panel itself being out of register.
+   * Two channels rather than a rainbow, because two channels is what
+   * the artwork is. Counting the saturated fringe pixels of the two
+   * dispersion plates by hue: carkey.webp runs 64% blue and 21% orange,
+   * crying-emoji-web.webp 67% blue and 15% orange, and green is under
+   * 2% of the fringe on both. These photographs throw warm one way and
+   * cool the other; a rainbow hairline would be answering a rainbow
+   * that is not in the picture.
    *
    * Rings moved by transform and opacity, which the compositor does
    * without repainting, and steps(1) rather than a tween, so each ring
@@ -302,12 +324,14 @@
    * the compositor can animate, and a single clip-path step drags the
    * whole animation — transforms included — back onto the main thread,
    * where it then runs a style recalc, a prepaint, a layerize and a
-   * commit every frame for as long as the page is open. Traced on a
-   * 430x932 phone profile, the two versions of this same page over four
-   * seconds: ~576 of each and ~1152 AnimationFrame::StyleAndLayout with
-   * the clip-path steps in, 6 and 12 with them out. That is the
-   * sixty-times-a-second wake this design was picked over canvas to
-   * avoid, so the tear bands below are clipped statically instead.
+   * commit every frame for as long as the page is open. Re-traced on a
+   * 430x932 phone profile at 6x CPU throttle, four seconds of steady
+   * state, renderer main thread only: moving one clip-path step into a
+   * keyframe gives 576 UpdateLayoutTree, 576 PrePaint, 576 Commit and
+   * 569 Layerize, and 1447ms of main thread. As it stands here: 6, 6,
+   * 6, 6, and 28ms — against 6ms with the fringe removed entirely. That
+   * is the sixty-times-a-second wake this design was picked over canvas
+   * to avoid, so the tear bands below are clipped statically instead.
    *
    * The canvas version was built and measured against this. Drawing the
    * same two rounded-rect strokes at 422x202 CSS px costs 0.002ms of
@@ -369,10 +393,20 @@
    * misregistration is an event, and something that never settles reads
    * as a broken page instead of a printing accident.
    *
-   * These two rings are never clipped. Both channels stay unbroken all
-   * the way round the panel for the whole cycle, which is what makes
-   * the tears below read as a slipped band rather than as the border
-   * changing colour.
+   * The pair jumps together and the gap between the two rings never
+   * opens past 1.6px. They used to be thrown in opposite directions,
+   * up to 2.5px each, and 5px apart is well past the distance at which
+   * screening can rebuild them into one hairline: at those two beats
+   * each vertical edge was left carrying one channel and nothing else.
+   * Measured by summing what the fringe adds over a fringe-free render
+   * of the same frame, the left edge of poster 4 went to a warm/cool
+   * balance of +1.02 at 73% of the cycle — pure red, no cool component
+   * at all — and -0.44 at 35%. A strobe, not a slipped plate.
+   *
+   * A plate that slips carries both channels with it; what changes is
+   * the registration between them, which is why the split below varies
+   * from 1.0px to 1.6px across the beats instead of the rings moving
+   * independently.
    */
   @keyframes poster-fringe-warm {
     0%,
@@ -380,23 +414,33 @@
       transform: translate3d(0.5px, 0, 0);
     }
     34% {
-      transform: translate3d(-2px, 0.5px, 0);
+      transform: translate3d(-1.3px, 0.5px, 0);
     }
     35% {
-      transform: translate3d(2.5px, -0.5px, 0);
+      transform: translate3d(3.3px, -0.5px, 0);
     }
     37% {
-      transform: translate3d(-1px, 0, 0);
+      transform: translate3d(-0.4px, 0, 0);
     }
     38%,
+    55% {
+      transform: translate3d(0.5px, 0, 0);
+    }
+    56% {
+      transform: translate3d(-0.8px, 0, 0);
+    }
+    58% {
+      transform: translate3d(1.1px, 0, 0);
+    }
+    59%,
     71% {
       transform: translate3d(0.5px, 0, 0);
     }
     72% {
-      transform: translate3d(1.5px, 0, 0);
+      transform: translate3d(1.4px, 0, 0);
     }
     73% {
-      transform: translate3d(-2.5px, 0, 0);
+      transform: translate3d(-1.7px, 0, 0);
     }
     75% {
       transform: translate3d(0.5px, 0.5px, 0);
@@ -407,21 +451,25 @@
     }
   }
 
-  /* Offset from the warm channel on purpose — two rings snapping in
-     lockstep read as one ring wobbling. */
+  /*
+   * The same beats as the warm ring, one split behind it. Matching beats
+   * is the point: a beat one ring takes alone is a beat where the other
+   * is not there to screen against it, which is the single-channel edge
+   * described above.
+   */
   @keyframes poster-fringe-cool {
     0%,
     33% {
       transform: translate3d(-0.5px, 0, 0);
     }
     34% {
-      transform: translate3d(2px, -0.5px, 0);
+      transform: translate3d(-2.7px, -0.5px, 0);
     }
     35% {
-      transform: translate3d(-2.5px, 0.5px, 0);
+      transform: translate3d(1.7px, 0.5px, 0);
     }
     37% {
-      transform: translate3d(1px, 0, 0);
+      transform: translate3d(-1.6px, 0, 0);
     }
     38%,
     55% {
@@ -431,17 +479,17 @@
       transform: translate3d(-2px, 0, 0);
     }
     58% {
-      transform: translate3d(1px, 0, 0);
+      transform: translate3d(0.1px, 0, 0);
     }
     59%,
     71% {
       transform: translate3d(-0.5px, 0, 0);
     }
     72% {
-      transform: translate3d(-1.5px, 0, 0);
+      transform: translate3d(0.2px, 0, 0);
     }
     73% {
-      transform: translate3d(2.5px, 0, 0);
+      transform: translate3d(-3.1px, 0, 0);
     }
     75% {
       transform: translate3d(-0.5px, -0.5px, 0);
@@ -626,6 +674,54 @@
     .poster-shine::after {
       animation: none;
       opacity: 0;
+    }
+  }
+
+  /*
+   * The pill that stands in while the event is still being read.
+   *
+   * The box is in the layout from the first paint and only its contents
+   * fade in, 200ms late, so a Worker that answers in 80ms never paints a
+   * spinner at all. A spinner that appears and vanishes inside a tenth
+   * of a second reads as a glitch rather than as progress. The wait is
+   * what is delayed, deliberately, rather than the resolution being held
+   * back to a minimum display time — a minimum hold punishes exactly the
+   * connections that were already fast.
+   */
+  @keyframes poster-checking-in {
+    to {
+      opacity: 1;
+    }
+  }
+
+  .poster-checking {
+    opacity: 0;
+    animation: poster-checking-in 0.18s ease-out 0.2s both;
+  }
+
+  @keyframes poster-checking-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  .poster-checking-spin {
+    animation: poster-checking-spin 0.9s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /*
+     * Still and immediate rather than absent: someone who asked for less
+     * motion still has to be told the answer is not in yet, and this is
+     * the one state on the page that means something.
+     */
+    .poster-checking {
+      opacity: 1;
+      animation: none;
+    }
+
+    .poster-checking-spin {
+      animation: none;
     }
   }
 

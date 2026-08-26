@@ -1,6 +1,6 @@
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Clock } from 'lucide-react';
+import { ArrowRight, Clock, HelpCircle, Loader2 } from 'lucide-react';
 import PosterGround from './PosterGround';
 import PosterWordmark from './PosterWordmark';
 import { gridFontSize } from './posterGrid';
@@ -14,6 +14,33 @@ import { ApiEvent, fetchEvent } from '../../../data/eventsApi';
 
 /* The D1 event these poster pages register for. */
 const REGISTRATION_SLUG = 'gittyup26';
+
+/*
+ * How long the page is willing to say "checking" before it gives up and
+ * falls back to closed. Long enough for a bad campus connection to still
+ * get an answer through, short enough that nobody is left watching a
+ * spinner decide their afternoon.
+ */
+const REGISTRATION_TIMEOUT_MS = 8000;
+
+type RegistrationState =
+  | 'checking'
+  | 'open'
+  | 'closed';
+
+/*
+ * One box, three states.
+ *
+ * The height of this box is padding plus line box plus border, so the
+ * three states hold all three equal and the panel cannot change height
+ * underneath the reader at the exact moment the answer lands — which is
+ * the moment they are most likely to be looking at it. The open state
+ * used to carry no border at all while the closed one carried two
+ * pixels of it, which was already a 4px jump between the two outcomes
+ * before a third state existed.
+ */
+const CTA_BOX =
+  'mt-7 inline-flex w-full items-center gap-3 rounded-full border-2 px-7 py-4 text-base font-bold sm:w-auto md:text-lg';
 
 /*
  * A handful of layouts, thirty palettes.
@@ -109,13 +136,20 @@ const PosterPage = ({
    * Whether the event is taking registrations, read from the event
    * itself rather than hardcoded here.
    *
-   * Starts closed on purpose. Offering a form for a closed event wastes
-   * someone's time and ends in a rejection from the Worker, while
-   * showing "opening soon" for a second longer than necessary costs
-   * nothing — so an unread or unreachable API keeps the safe answer.
+   * Three states rather than a boolean. It was a boolean that started
+   * false, so for the whole of the fetch — and permanently if the fetch
+   * never came back — the page said "Registration opening soon" in the
+   * same confident type it uses when that is actually true. On campus
+   * wifi that is long enough to read, believe and walk away from. Not
+   * knowing yet is a different thing from knowing it is shut, and only
+   * one of them is worth telling somebody.
+   *
+   * `closed` is still where an unread or unreachable API lands, because
+   * the property that matters has not changed: never offer a form the
+   * Worker is going to reject.
    */
-  const [registrationOpen, setRegistrationOpen] =
-    useState(false);
+  const [registration, setRegistration] =
+    useState<RegistrationState>('checking');
 
   /* Kept whole, not just its is_open flag: the confirmation screen
      counts down to this event's own start. */
@@ -124,19 +158,41 @@ const PosterPage = ({
 
   useEffect(() => {
     let live = true;
+    let timer = 0;
 
-    fetchEvent(REGISTRATION_SLUG).then((found) => {
+    /*
+     * fetchEvent takes no AbortSignal, so the request cannot be called
+     * off from here — what this bounds is the wait. Without it a
+     * connection that opens and then hangs leaves the pill spinning for
+     * as long as the page is open, which is the same lie as before with
+     * a spinner on it.
+     */
+    const timeout = new Promise<null>(
+      (resolve) => {
+        timer = window.setTimeout(
+          () => resolve(null),
+          REGISTRATION_TIMEOUT_MS,
+        );
+      },
+    );
+
+    Promise.race([
+      fetchEvent(REGISTRATION_SLUG),
+      timeout,
+    ]).then((found) => {
+      window.clearTimeout(timer);
+
       if (!live) return;
 
       setEvent(found);
-
-      if (found?.is_open) {
-        setRegistrationOpen(true);
-      }
+      setRegistration(
+        found?.is_open ? 'open' : 'closed',
+      );
     });
 
     return () => {
       live = false;
+      window.clearTimeout(timer);
     };
   }, []);
 
@@ -285,7 +341,15 @@ const PosterPage = ({
                 />
               </div>
 
+              {/*
+                * Display type, and the date line below already says
+                * 2026 — so it is the poster's mark rather than a fact,
+                * and it is announced as one. Several sheets set it in a
+                * near-transparent ink on purpose, which is a ghost
+                * numeral in print and an unreadable one to a checker.
+                */}
               <div
+                aria-hidden="true"
                 className="font-black leading-none text-[clamp(2.5rem,8vw,5.5rem)] lg:text-[min(5.5vw,8vh)]"
                 style={{ color: variant.ink }}
               >
@@ -296,10 +360,17 @@ const PosterPage = ({
                 * Sits with the numeral rather than down in the details,
                 * so it is on the first screen at any viewport — on a
                 * phone the details block starts below the fold.
+                *
+                * It carries its own ground for the same reason the
+                * details panel does: out here it is on bare artwork, and
+                * the accent alone over the brightest sheets measured
+                * 2.99:1. Filled, the ground under it is the poster's own
+                * and the accent clears 5:1 on all thirty.
                 */}
               <span
                 className="rounded-full border-2 px-3.5 py-1.5 font-postermono text-[11px] font-bold tracking-[0.1em] md:px-4 md:text-sm"
                 style={{
+                  backgroundColor: glassTint(variant.ground, 0.95),
                   borderColor: variant.accent,
                   color: variant.accent,
                 }}
@@ -342,9 +413,16 @@ const PosterPage = ({
 
             {/* The quieter line the printed sheet sets under the headline */}
 
+            {/*
+              * No opacity utility on top of the colour. variant.text is
+              * already translucent on most of the run — .72 on poster 4,
+              * .66 on poster 19 — and an opacity-75 over that landed the
+              * subline at an effective .5 and 3.59:1. The colour carries
+              * the whole of how quiet this line is, in one place.
+              */}
             {variant.subline && (
               <p
-                className="poster-fade-up mt-5 max-w-xl text-[clamp(0.85rem,1.6vw,1rem)] leading-relaxed opacity-75"
+                className="poster-fade-up mt-5 max-w-xl text-[clamp(0.85rem,1.6vw,1rem)] leading-relaxed"
                 style={{
                   color: variant.text,
                   textShadow: textHalo(variant.text),
@@ -364,7 +442,13 @@ const PosterPage = ({
                 className="poster-fade-up mt-7 max-w-xl rounded-2xl border p-5 font-postermono text-[clamp(0.7rem,1.5vw,0.9rem)] leading-relaxed md:p-6"
                 style={{
                   borderColor: withAlpha(variant.accent, 30),
-                  backgroundColor: withAlpha(variant.ground, 55),
+                  /*
+                    * Reserved ground, not a 55% wash of it. A terminal is
+                    * the one thing on these pages that is genuinely a
+                    * box with its own background, and at 55% the artwork
+                    * came through it: the output lines measured 2.98:1.
+                    */
+                  backgroundColor: glassTint(variant.ground, 0.95),
                   animationDelay: '0.5s',
                 }}
               >
@@ -374,9 +458,13 @@ const PosterPage = ({
                     index === (variant.terminal?.length ?? 0) - 1;
 
                   return (
+                    /* The output steps back from the prompt by colour
+                       alone. An opacity utility on top of variant.text,
+                       which is already translucent, put these at an
+                       effective half strength. */
                     <div
                       key={index}
-                      className={isPrompt ? 'font-bold' : 'opacity-70'}
+                      className={isPrompt ? 'font-bold' : undefined}
                       style={{
                         color: isPrompt
                           ? variant.accent
@@ -385,7 +473,7 @@ const PosterPage = ({
                       }}
                     >
                       {isPrompt && (
-                        <span className="mr-2 opacity-60">$</span>
+                        <span className="mr-2">$</span>
                       )}
                       {line}
                     </div>
@@ -429,9 +517,18 @@ const PosterPage = ({
                   * belongs to each design rather than greying all thirty
                   * towards the same slab. --glass-solid is the opaque
                   * fallback for browsers without backdrop-filter.
+                  *
+                  * Held at 0.9 rather than the helper's 0.74. The printed
+                  * sheets do not float their details over the artwork and
+                  * then fight it back — they stop the artwork and set the
+                  * type on clean ground. At 0.74 the picture came through
+                  * far enough that the smallest mono line in here
+                  * measured 2.35:1 on the busiest sheet, with a halo
+                  * holding it up. Reserved ground is cheaper than a halo
+                  * and it is what the print does.
                   */
-                backgroundColor: glassTint(variant.ground),
-                ['--glass-solid' as string]: glassTint(variant.ground, 0.94),
+                backgroundColor: glassTint(variant.ground, 0.95),
+                ['--glass-solid' as string]: glassTint(variant.ground, 0.96),
                 borderColor: withAlpha(variant.accent, 22),
               }}
             >
@@ -506,8 +603,10 @@ const PosterPage = ({
                   </div>
 
                   {variant.venueLine && (
+                    /* Same reason as the subline: the colour is already
+                       carrying the step down from the date above it. */
                     <div
-                      className="mt-3 font-postermono text-xs opacity-80 md:text-sm"
+                      className="mt-3 font-postermono text-xs md:text-sm"
                       style={{ color: variant.text }}
                     >
                       {variant.venueLine}
@@ -521,83 +620,173 @@ const PosterPage = ({
                 * page: someone who scanned a poster should not be
                 * dropped out of the design they scanned into.
                 */}
-              {registrationOpen ? (
-                <button
-                  type="button"
-                  onClick={() => setShowForm(true)}
-                  className="poster-shine group mt-7 inline-flex w-full items-center justify-between gap-4 rounded-full px-7 py-4 text-base font-bold transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 sm:w-auto md:text-lg"
-                  style={{
-                    backgroundColor: variant.accent,
-                    color: variant.ground,
-                    outlineColor: variant.accent,
-                  }}
+              <div aria-busy={registration === 'checking'}>
+                {registration === 'checking' && (
+                  /*
+                    * The box is in the layout immediately and only its
+                    * ink is late — see .poster-checking. A Worker that
+                    * answers in 80ms is never seen to have been asked.
+                    */
+                  <div
+                    className={`${CTA_BOX} poster-checking justify-center`}
+                    style={{
+                      borderColor: withAlpha(variant.accent, 40),
+                      color: variant.text,
+                    }}
+                  >
+                    <Loader2
+                      size={18}
+                      aria-hidden="true"
+                      className="poster-checking-spin shrink-0"
+                    />
+                    Checking registration
+                  </div>
+                )}
+
+                {registration === 'open' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className={`${CTA_BOX} poster-shine group justify-between transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4`}
+                    style={{
+                      backgroundColor: variant.accent,
+                      borderColor: variant.accent,
+                      color: variant.ground,
+                      outlineColor: variant.accent,
+                    }}
+                  >
+                    Register Now
+                    <ArrowRight
+                      size={20}
+                      className="shrink-0 transition-transform group-hover:translate-x-1"
+                    />
+                  </button>
+                )}
+
+                {registration === 'closed' && (
+                  /*
+                    * Registration is closed on the event, so the form is
+                    * not offered. It used to be: someone scanned a poster,
+                    * filled in every field, and only then got "Registration
+                    * is closed" back from the Worker.
+                    *
+                    * This follows the event's is_open flag, so opening
+                    * registration in the admin dashboard turns the button
+                    * back on without a deploy.
+                    */
+                  <div
+                    className={`${CTA_BOX} justify-center`}
+                    style={{
+                      borderColor: withAlpha(variant.accent, 55),
+                      color: variant.accent,
+                    }}
+                  >
+                    <Clock size={18} className="shrink-0" />
+                    Registration opening soon
+                  </div>
+                )}
+
+                {/*
+                  * The resolution is announced, not the wait. A live
+                  * region that fired on "checking" would interrupt a
+                  * screen reader to say nothing had happened yet;
+                  * aria-busy above already carries that. This speaks
+                  * once, when there is an answer.
+                  */}
+                <p
+                  aria-live="polite"
+                  className="sr-only"
                 >
-                  Register Now
-                  <ArrowRight
-                    size={20}
-                    className="transition-transform group-hover:translate-x-1"
-                  />
-                </button>
-              ) : (
-                /*
-                  * Registration is closed on the event, so the form is
-                  * not offered. It used to be: someone scanned a poster,
-                  * filled in every field, and only then got "Registration
-                  * is closed" back from the Worker.
-                  *
-                  * This follows the event's is_open flag, so opening
-                  * registration in the admin dashboard turns the button
-                  * back on without a deploy.
-                  */
-                <div
-                  className="mt-7 inline-flex w-full items-center justify-center gap-3 rounded-full border-2 px-7 py-4 text-base font-bold sm:w-auto md:text-lg"
-                  style={{
-                    borderColor: withAlpha(variant.accent, 55),
-                    color: variant.accent,
-                  }}
-                >
-                  <Clock size={18} />
-                  Registration opening soon
-                </div>
-              )}
+                  {registration === 'open' &&
+                    'Registration is open.'}
+                  {registration === 'closed' &&
+                    'Registration is not open yet.'}
+                </p>
+              </div>
 
             </div>
             )}
 
             {/*
-              * A footnote, under the panel rather than inside it.
+              * Under the panel rather than inside it, so it survives the
+              * panel being replaced by the registration form.
               *
-              * Outside so it survives the panel being replaced by the
-              * registration form, and small so it never reads as a
-              * second call to action — the poster has one of those. The
-              * halo is the same one the footline uses: this line sits on
-              * the artwork, which on several of the thirty is at its
-              * brightest right here.
+              * This was a 10px letter-spaced mono footnote and nobody
+              * could see it — which is the whole problem with setting a
+              * question nobody has asked yet in the quietest type on the
+              * page. Most people arriving here scanned a poster in a
+              * corridor and have no idea what the event is, so this is
+              * the second most useful thing on the screen after the
+              * register button, and it now looks like it.
+              *
+              * A bordered chip rather than a bare link: on a phone an
+              * underlined line of text is a guess, a bordered box is a
+              * target. min-h-[44px] is the tap size the old one missed
+              * by half.
               */}
             <button
               ref={aboutTriggerRef}
               type="button"
               onClick={() => setShowAbout(true)}
-              className="mt-4 inline-block font-postermono text-[10px] uppercase tracking-[0.18em] underline decoration-dotted underline-offset-4 opacity-85 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 md:text-[11px]"
+              className="poster-glass group mt-5 inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 px-5 py-3 text-sm font-semibold transition-colors sm:w-auto md:text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
               style={{
                 /*
-                  * Set in the body colour, not the accent. Two of the
-                  * accents are dark enough that they measure near 3:1
-                  * on their own poster's ground — the accent stays on
-                  * the underline, where being quiet is the point.
+                  * The label stays in the body colour and the accent goes
+                  * on the border and the fill. The accent is not
+                  * dependable as body ink across the run: on the
+                  * purple-ground sheet it measures 3.28:1 against its own
+                  * poster, where every other sheet clears 5:1. One
+                  * failure is enough, and it is the one sheet nobody
+                  * would have checked.
+                  *
+                  * The fill is the panel's, not a half-strength wash. At
+                  * 0.55 the artwork still came through and the label
+                  * measured 1.60:1 on the brightest sheet; the halo that
+                  * was here was covering for that, so it is gone with it.
                   */
                 color: variant.text,
-                textDecorationColor: withAlpha(variant.accent, 70),
-                textShadow: textHalo(variant.text),
+                backgroundColor: glassTint(variant.ground, 0.95),
+                borderColor: withAlpha(variant.accent, 55),
                 outlineColor: variant.accent,
               }}
             >
+              <HelpCircle
+                size={18}
+                aria-hidden="true"
+                className="shrink-0 transition-transform group-hover:scale-110"
+                style={{ color: variant.accent }}
+              />
               What is GITTY UP?
             </button>
 
           </aside>
 
         </main>
+
+        {/*
+          * The bottom matter, on ground the artwork does not reach.
+          *
+          * This is the print's method rather than the web's. On the
+          * printed sheets the picture stops and the whole details stack
+          * — rule, date, venue, URL, the row of past marks — is set on
+          * flat black; not one line of it is over the artwork and there
+          * is no scrim anywhere in the run. Here both rows sat directly
+          * on the poster image, and the two smallest things on the page
+          * measured 2.32:1 and 2.27:1 against the sheets that are bright
+          * down here, propped up by a halo that was losing.
+          *
+          * Ground first. The halo then has nothing to do, and the ink
+          * can come back up to the colour the variant actually asked
+          * for instead of a fraction of it.
+          */}
+
+        <div
+          className="poster-fade-up mt-6 rounded-[12px] px-5 pb-4 pt-5 md:px-7"
+          style={{
+            backgroundColor: glassTint(variant.ground, 0.95),
+            animationDelay: '0.6s',
+          }}
+        >
 
         {/*
           * Previous builds. Every printed sheet carries this row of past
@@ -607,11 +796,10 @@ const PosterPage = ({
           */}
 
         <div
-          className="poster-fade-up mb-3 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 md:gap-x-9"
-          style={{ animationDelay: '0.6s' }}
+          className="mb-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 md:gap-x-9"
         >
           <span
-            className="font-postermono text-[8px] uppercase tracking-[0.22em] opacity-60 md:text-[9px]"
+            className="font-postermono text-[9px] uppercase tracking-[0.22em] md:text-[10px]"
             style={{ color: variant.text }}
           >
             Some of our events that you might recognise
@@ -634,38 +822,48 @@ const PosterPage = ({
 
         {/* Footline */}
 
+        {/*
+          * No halo on any of this now. A halo is what you reach for when
+          * type has to survive a photograph underneath it; on reserved
+          * ground it only thickens the smallest type on the page.
+          */}
         <footer
-          className="poster-fade-up flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-5 font-postermono text-[10px] md:text-xs"
+          className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-4 font-postermono text-[10px] md:text-xs"
           style={{
             borderColor: withAlpha(variant.accent, 25),
             color: variant.text,
-            /*
-              * The footline sits at the bottom of the page where the
-              * background photographs are often at their brightest, and
-              * it is the smallest type on the poster. The halo holds it
-              * apart from whatever is behind it.
-              */
-            textShadow: textHalo(variant.text),
           }}
         >
-          <span style={{ color: variant.accent }}>
+          {/*
+            * The URL is set in the body colour and carried by its
+            * weight, which is what the printed run does with it. Sampled
+            * off the artwork: on sheet 4 the URL prints #ffffff against
+            * #05030c and on sheet 2 #cccccc against black — 20.5:1 and
+            * 13.1:1, achromatic on both. It is the eyebrow that takes
+            * the colour up in the details, not the footline. In the
+            * accent here it was the darkest thing on the page: 2.17:1 on
+            * poster 9, whose accent is a deep teal.
+            */}
+          <span className="font-bold">
             oscvitap.com/gittyup26
           </span>
 
-          <span className="opacity-80">
+          <span>
             Open Source Community · VIT-AP University
           </span>
 
           {/* The counter is of the printed run, so a sheet outside it has none. */}
           {!variant.unlisted && (
             <span
-              className="tabular-nums opacity-60"
+              className="tabular-nums"
               title={`Poster ${variant.id} of ${POSTER_COUNT}`}
             >
               {String(variant.id).padStart(2, '0')}/{POSTER_COUNT}
             </span>
           )}
         </footer>
+
+        </div>
 
       </div>
 

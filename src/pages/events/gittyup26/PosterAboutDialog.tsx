@@ -209,26 +209,25 @@ const PosterAboutDialog = ({
           * the copy under it moves. max-h in dvh so a phone's address
           * bar cannot push the bottom of the dialog off screen.
           */
-        className="poster-fade-up relative flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden font-poster outline-none md:max-h-[88dvh]"
+        /*
+          * The details panel's own shell, not a rebuilt copy of it: the
+          * radius, the two inset hairlines and the grain all arrive with
+          * .poster-glass. The backdrop is only rgba(0,0,0,0.72), so the
+          * panel this replaces stays visible beside it, and anything
+          * this one draws differently is read as a second material.
+          * overflow-hidden clips the header and the scroller to the
+          * shell's curve.
+          */
+        className="poster-fade-up poster-glass poster-glass-modal relative flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden font-poster outline-none md:max-h-[88dvh]"
         style={{
           backgroundColor: panelInk,
+          /*
+            * The opaque fallback .poster-glass reaches for where there is
+            * no backdrop-filter. Without it that rule drops to a flat
+            * black default and this dialog loses the poster's hue.
+            */
+          ['--glass-solid' as string]: panelInk,
           border: `1px solid ${withAlpha(variant.accent, 22)}`,
-          /*
-            * The panel's own token, not a repeated 16px. The backdrop is
-            * only rgba(0,0,0,0.72), so the rounded details panel stays
-            * visible beside this one — left square, the largest box on
-            * the page was the only sharp-cornered one on screen.
-            * overflow-hidden above clips the header and the scroller to
-            * the same curve.
-            */
-          borderRadius: 'var(--glass-r)',
-          /*
-            * The hairlines .poster-glass draws, repeated here by hand.
-            * Without them a panel this large next to the frosted details
-            * block reads as a different material.
-            */
-          boxShadow:
-            'inset 0 1px 0 0 rgba(255,255,255,0.16), inset 0 -1px 0 0 rgba(0,0,0,0.22), 0 24px 60px -20px rgba(0,0,0,0.75)',
         }}
       >
 
@@ -382,8 +381,10 @@ const PosterAboutDialog = ({
                 {variant.dateLine}
               </span>
 
+              {/* No opacity utility on top of variant.text, which
+                  already carries its own alpha on most of the run. */}
               {variant.venueLine && (
-                <span className="opacity-80">
+                <span>
                   {variant.venueLine}
                 </span>
               )}

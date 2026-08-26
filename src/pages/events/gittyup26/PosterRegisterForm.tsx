@@ -223,9 +223,12 @@ const PosterRegisterForm = ({
     return (
       <div
         className="poster-slide-in poster-glass p-5 md:p-6"
+        /* The tints match the details panel exactly. This card replaces
+           that one in place, so any difference in them reads as the card
+           changing material at the moment somebody registers. */
         style={{
-          backgroundColor: glassTint(variant.ground),
-          ['--glass-solid' as string]: glassTint(variant.ground, 0.94),
+          backgroundColor: glassTint(variant.ground, 0.95),
+          ['--glass-solid' as string]: glassTint(variant.ground, 0.96),
           borderColor: `color-mix(in srgb, ${variant.accent} 22%, transparent)`,
         }}
       >
@@ -257,7 +260,7 @@ const PosterRegisterForm = ({
         </div>
 
         <p
-          className="mt-4 max-w-md text-xs font-light leading-relaxed opacity-80 md:text-sm"
+          className="mt-4 max-w-md text-xs font-light leading-relaxed md:text-sm"
           style={{ color: variant.text }}
         >
           See you on 29 August at the AB-2 Auditorium.
@@ -295,8 +298,8 @@ const PosterRegisterForm = ({
       onSubmit={submit}
       className="poster-slide-in poster-glass p-5 md:p-6"
       style={{
-        backgroundColor: glassTint(variant.ground),
-        ['--glass-solid' as string]: glassTint(variant.ground, 0.94),
+        backgroundColor: glassTint(variant.ground, 0.95),
+        ['--glass-solid' as string]: glassTint(variant.ground, 0.96),
         borderColor: `color-mix(in srgb, ${variant.accent} 22%, transparent)`,
       }}
     >
@@ -336,8 +339,12 @@ const PosterRegisterForm = ({
             key={field.name}
             className="flex flex-col gap-1.5"
           >
+            {/* No opacity on top of the colour: variant.text is already
+                translucent on most of the run, and 0.7 of that put these
+                labels at an effective 0.5 — the smallest type in the one
+                box on the page a stranger has to fill in. */}
             <span
-              className="font-postermono text-[10px] uppercase tracking-[0.18em] opacity-70"
+              className="font-postermono text-[11px] uppercase tracking-[0.18em]"
               style={{ color: variant.text }}
             >
               {field.label}

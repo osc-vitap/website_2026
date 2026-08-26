@@ -70,9 +70,12 @@ const LetterGrid = ({
 const Stack = ({
   rows,
   fill,
+  single,
 }: {
   rows: number;
   fill: CSSProperties;
+  /** One row with nothing under it, so its descenders must not be cut. */
+  single?: boolean;
 }) => (
   <>
     {Array.from({ length: rows }, (_, index) => (
@@ -81,7 +84,20 @@ const Stack = ({
         className={`overflow-hidden ${index > 0 ? '-mt-[0.26em]' : ''}`}
       >
         <div
-          className="poster-rise flex whitespace-nowrap leading-[1.2]"
+          /*
+            * overflow-hidden on the row is what masks the rise: each row
+            * starts translated fully below its own box and slides up
+            * into it. That mask also cuts anything the line box does not
+            * contain — and Objectivity's descenders fall past 1.2em.
+            *
+            * In a stack the next row covers the cut, which is the look
+            * the printed sheets have. A single row has nothing beneath
+            * it, so the g, y and p were sliced flat. It gets a line box
+            * deep enough to hold them.
+            */
+          className={`poster-rise flex whitespace-nowrap ${
+            single ? 'leading-[1.46]' : 'leading-[1.2]'
+          }`}
           style={{ ...fill, animationDelay: `${index * 0.07}s` }}
         >
           <span className={index % 2 === 0 ? 'font-thin' : 'font-black'}>
@@ -117,7 +133,11 @@ const PosterWordmark = ({
     {variant.layout === 'letter-grid' ? (
       <LetterGrid rows={rows} fill={fill} />
     ) : (
-      <Stack rows={rows} fill={fill} />
+      <Stack
+        rows={rows}
+        fill={fill}
+        single={variant.layout === 'hero-word'}
+      />
     )}
   </div>
 );

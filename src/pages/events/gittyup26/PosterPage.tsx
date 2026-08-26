@@ -238,7 +238,7 @@ const PosterPage = ({
                   * as the character count goes up, and it is allowed to
                   * wrap rather than being clipped.
                   */
-                className="poster-rise max-w-[15ch] select-none font-black leading-[0.88] tracking-[-0.03em]"
+                className="poster-rise mt-3 max-w-[13ch] select-none font-black leading-[0.94] tracking-[-0.03em] md:mt-4"
                 style={{
                   ...wordmarkFill,
                   fontSize: heroFontSize(

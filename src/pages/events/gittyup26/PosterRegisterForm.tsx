@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import { API_BASE_URL } from '../../../data/eventsApi';
+import { registrationNumberError } from '../../../data/registrationNumber';
 import { PosterVariant } from './posterTypes';
 
 /*
@@ -103,6 +104,20 @@ const PosterRegisterForm = ({
     event.preventDefault();
 
     setError('');
+
+    /*
+     * Same check the Worker runs, so a typo is caught before the
+     * request instead of coming back as a 400.
+     */
+    const regNoError = registrationNumberError(
+      values.college_registration_number,
+    );
+
+    if (regNoError) {
+      setError(regNoError);
+      return;
+    }
+
     setSubmitting(true);
 
     try {

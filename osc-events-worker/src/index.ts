@@ -96,7 +96,15 @@ function normalizeRegistrationNumber(value: string): string {
 	return value.toUpperCase().replace(/\s+/g, '');
 }
 
-const REGISTRATION_NUMBER_PATTERN = /^[A-Z0-9]{4,20}$/;
+/*
+ * The VIT-AP format exactly: admission year 22 to 26, a three-letter
+ * programme code, a four-digit roll — 22BCE1234. Tested after
+ * normalisation, so casing and stray spaces have already been handled.
+ *
+ * Mirrored client-side in src/data/registrationNumber.ts; change both
+ * together. The year range needs widening for the 2027 intake.
+ */
+const REGISTRATION_NUMBER_PATTERN = /^2[2-6][A-Z]{3}[0-9]{4}$/;
 
 /*
  * Not a full RFC 5322 validator — just enough to reject values that

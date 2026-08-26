@@ -460,6 +460,37 @@ describe("registration identity", () => {
 		expect(response.status).toBe(400);
 	});
 
+	/*
+	 * The format exactly: admission year 22–26, three letters, four
+	 * digits. One case per way of getting it wrong, so a regex edit
+	 * that loosens any segment fails a named test.
+	 */
+	it.each([
+		["21BCE1234", "an admission year before 22"],
+		["27BCE1234", "an admission year after 26"],
+		["22BC1234", "a two-letter programme code"],
+		["22BCEE1234", "a four-letter programme code"],
+		["22BCE123", "a three-digit roll"],
+		["22BCE12345", "a five-digit roll"],
+		["22BCE12A4", "a letter inside the roll"],
+		["2BCE1234", "a one-digit year"],
+	])("rejects %s (%s)", async (registrationNumber) => {
+		await seedEvent({ slug: `bad-${registrationNumber.toLowerCase()}`, title: "Format Event" });
+
+		const response = await register(`bad-${registrationNumber.toLowerCase()}`, [student(registrationNumber)]);
+
+		expect(response.status).toBe(400);
+		expect(((await response.json()) as { error: string }).error).toContain("22BCE1234");
+	});
+
+	it.each(["22BCE0001", "26MIS9999", "24bce 1234"])("accepts %s", async (registrationNumber) => {
+		const slug = `good-${registrationNumber.replace(/\s+/g, "").toLowerCase()}`;
+
+		await seedEvent({ slug, title: "Format Event" });
+
+		expect((await register(slug, [student(registrationNumber)])).status).toBe(201);
+	});
+
 	it("rejects oversized fields instead of storing them", async () => {
 		await seedEvent({ slug: "bloat-event", title: "Bloat Event" });
 

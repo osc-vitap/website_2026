@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useId, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Github, Mail, User, Users } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
+import { registrationNumberError } from '../data/registrationNumber';
 
 const API_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -146,6 +147,25 @@ const EventRegistration = () => {
     e.preventDefault();
 
     if (!event || !slug) return;
+
+    /*
+     * Same check the Worker runs, per member, so a typo is caught
+     * before the request instead of coming back as a 400.
+     */
+    for (const [index, member] of members.entries()) {
+      const regNoError = registrationNumberError(
+        member.college_registration_number,
+      );
+
+      if (regNoError) {
+        setMessage(
+          members.length > 1
+            ? `Member ${index + 1}: ${regNoError}`
+            : regNoError,
+        );
+        return;
+      }
+    }
 
     setSubmitting(true);
     setMessage('');

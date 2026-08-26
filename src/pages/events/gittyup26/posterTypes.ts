@@ -85,9 +85,11 @@ export interface PosterVariant {
    * closest to the ground. Taken from the poster's own overlays,
    * plus a replacement for the photograph where there was one.
    *
-   * Empty on the sheets the print leaves as ground plus artwork and
-   * nothing else. That is a finished background, not a gap the
-   * generator failed to fill, so it should be left alone.
+   * Never empty. Every sheet needs at least the scrim or vignette that
+   * holds its own body copy above 4.5:1, because the web layout sets
+   * type over the artwork where the print reserves clean ground for
+   * it — page 4 was emptied on the print's authority and its headline
+   * fell to 1.46:1.
    */
   layers: string[];
 

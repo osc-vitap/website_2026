@@ -93,21 +93,38 @@ export const posterVariants: PosterVariant[] = [
 		"image": "/events/gittyup26/glass-x.webp",
 		"dispersion": true,
 		/*
-		 * One vignette, taken from the print source rather than
-		 * invented. Everything that used to be here fought the artwork:
-		 * three layers pinned to `0 68%/100% 18%` rebuilt a chrome strip
-		 * the print does not have, which landed as a pinstriped bar
-		 * ruled across the middle of the page, and a flat 50% black
-		 * scrim over the full bleed greyed out the prismatic edges that
-		 * are the whole point of this one.
+		 * A vignette taken from the print source, and a scrim the
+		 * printed sheet itself does not carry.
 		 *
-		 * What the print actually does is the opposite of a scrim: it
-		 * leaves the glass untouched where it is bright and crushes
-		 * everything around it to black, so the object reads as lit in
-		 * a dark room instead of as a photograph laid on a dark page.
+		 * The vignette is the print's own method: leave the glass
+		 * untouched where it is bright and crush everything around it
+		 * to black, so the object reads as lit in a dark room instead
+		 * of as a photograph laid on a dark page. It replaced three
+		 * layers pinned to `0 68%/100% 18%` that rebuilt a chrome strip
+		 * the print does not have and landed as a pinstriped bar ruled
+		 * across the middle of the page.
+		 *
+		 * The scrim covers what the vignette cannot. The print can set
+		 * its type at full strength because it never puts type over the
+		 * artwork at all — it reserves clean ground for it. This page
+		 * runs the headline straight across glass-x, which peaks near
+		 * white halfway down the sheet, and the vignette is transparent
+		 * at exactly that point. Measured against the isolated
+		 * background, the headline fell to 1.46:1 there and missed the
+		 * 4.5:1 floor at twelve of fourteen viewports; at .62 the worst
+		 * is 5.27:1 and none miss. The halo in posterColor does not
+		 * cover it — "lost the work" and "git" sit on the bright edge.
+		 *
+		 * Even, rather than a band reserving ground under the type
+		 * alone: the headline lands anywhere from a third to three
+		 * quarters of the way down depending on how the page flows,
+		 * there is no artwork outside that range for a band to spare,
+		 * and a band dark enough to clear the floor across all of it
+		 * measured darker overall than this does.
 		 */
 		"layers": [
-			"radial-gradient(64% 40% at 62% 50%,rgba(0,0,0,0) 0%,rgba(0,0,0,.5) 62%,rgba(0,0,0,.9) 92%)"
+			"radial-gradient(64% 40% at 62% 50%,rgba(0,0,0,0) 0%,rgba(0,0,0,.5) 62%,rgba(0,0,0,.9) 92%)",
+			"linear-gradient(rgba(3,2,10,.62), rgba(3,2,10,.62))"
 		],
 		"ink": "#ffffff",
 		/*

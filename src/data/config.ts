@@ -36,7 +36,7 @@ export const config: SiteConfig = {
      * the club's own members there. isConfigured() below is what the
      * footer checks, so an unset link renders no button at all.
      */
-    discord: "",
+    discord: "https://discord.gg/6QtYDd6Eh",
     whatsapp: "",
     instagram: "https://instagram.com/osc_vitap",
     linkedin: "https://linkedin.com/company/osc-vitap",

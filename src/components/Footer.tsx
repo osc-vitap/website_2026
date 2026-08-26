@@ -1,4 +1,4 @@
-import { Github, Instagram, Linkedin, Mail, Terminal } from 'lucide-react';
+import { Github, Instagram, Linkedin, Mail, MessageCircle, Terminal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { config, isConfigured } from '../data/config';
 
@@ -62,6 +62,9 @@ const Footer = () => {
           <div>
             <h4 className="text-white font-semibold mb-4">Connect</h4>
             <div className="flex flex-col items-start space-y-1">
+              <a href={config.socials.discord} target="_blank" rel="noreferrer" className="inline-flex items-center min-h-[36px] gap-3 text-gray-400 hover:text-[#5865F2] transition-colors text-sm">
+                <MessageCircle size={18} className="shrink-0" /> Discord
+              </a>
               <a href={config.socials.github} target="_blank" rel="noreferrer" className="inline-flex items-center min-h-[36px] gap-3 text-gray-400 hover:text-white transition-colors text-sm">
                 <Github size={18} className="shrink-0" /> GitHub
               </a>
@@ -79,16 +82,16 @@ const Footer = () => {
         </div>
 
         {/* Partners Placeholder */}
-        <div className="border-t border-dark-600/50 pt-8 mb-8">
+        {/* <div className="border-t border-dark-600/50 pt-8 mb-8">
           <h4 className="text-center text-sm font-semibold text-gray-400 uppercase tracking-widest mb-6">Our Partners &amp; Sponsors</h4>
           <div aria-hidden="true" className="flex flex-wrap justify-center gap-4 sm:gap-8 opacity-50 grayscale hover:grayscale-0 transition-all duration-300">
-            {/* Placeholders for logos */}
+            
             <div className="h-8 w-24 bg-dark-600"></div>
             <div className="h-8 w-32 bg-dark-600"></div>
             <div className="h-8 w-24 bg-dark-600"></div>
             <div className="h-8 w-28 bg-dark-600"></div>
           </div>
-        </div>
+        </div> */}
 
         <div className="text-center text-gray-400 text-sm">
           &copy; {new Date().getFullYear()} Open Source Community VIT-AP. All rights reserved.

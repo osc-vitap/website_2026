@@ -8,6 +8,7 @@ import { PosterVariant } from './posterTypes';
 import { POSTER_COUNT } from './posterVariants';
 import PosterRegisterForm from './PosterRegisterForm';
 import PosterAboutDialog from './PosterAboutDialog';
+import PosterOdDialog from './PosterOdDialog';
 import { glassTint, textHalo } from './posterColor';
 import { rowMetrics, useFittingRows } from './useFittingRows';
 import { ApiEvent, fetchEvent } from '../../../data/eventsApi';
@@ -142,6 +143,12 @@ const PosterPage = ({
 
   /* Held so the dialog can put focus back where it came from. */
   const aboutTriggerRef =
+    useRef<HTMLButtonElement>(null);
+
+  /* What an OD is, asked from the pill that promises them. */
+  const [showOd, setShowOd] = useState(false);
+
+  const odTriggerRef =
     useRef<HTMLButtonElement>(null);
 
   /*
@@ -393,16 +400,29 @@ const PosterPage = ({
                 * 2.99:1. Filled, the ground under it is the poster's own
                 * and the accent clears 5:1 on all thirty.
                 */}
-              <span
-                className="rounded-full border-2 px-3.5 py-1.5 font-postermono text-[11px] font-bold tracking-[0.1em] md:px-4 md:text-sm"
+              {/*
+                * A control, not a label. It reads as a promise — and
+                * "OD" is an acronym a first year has no reason to know,
+                * which is exactly who this session is for. It was a
+                * static span for the whole run, so the one fact that
+                * decides whether somebody can attend was the one fact
+                * they could not ask about.
+                */}
+              <button
+                ref={odTriggerRef}
+                type="button"
+                onClick={() => setShowOd(true)}
+                aria-label="ODs provided — what is an OD?"
+                className="rounded-full border-2 px-3.5 py-1.5 font-postermono text-[11px] font-bold tracking-[0.1em] transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 md:px-4 md:text-sm"
                 style={{
                   backgroundColor: glassTint(variant.ground, 0.95),
                   borderColor: variant.accent,
                   color: variant.accent,
+                  outlineColor: variant.accent,
                 }}
               >
                 ODs Provided
-              </span>
+              </button>
             </div>
 
             {/* The poster's line */}
@@ -929,6 +949,14 @@ const PosterPage = ({
         </div>
 
       </div>
+
+      {showOd && (
+        <PosterOdDialog
+          variant={variant}
+          returnFocusTo={odTriggerRef}
+          onClose={() => setShowOd(false)}
+        />
+      )}
 
       {showAbout && (
         <PosterAboutDialog

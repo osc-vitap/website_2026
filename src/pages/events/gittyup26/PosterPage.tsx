@@ -1,6 +1,6 @@
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Clock, HelpCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, Clock, HelpCircle, Loader2, ShieldCheck } from 'lucide-react';
 import PosterGround from './PosterGround';
 import PosterWordmark from './PosterWordmark';
 import { gridFontSize } from './posterGrid';
@@ -12,6 +12,7 @@ import PosterOdDialog from './PosterOdDialog';
 import { glassTint, textHalo } from './posterColor';
 import { rowMetrics, useFittingRows } from './useFittingRows';
 import { ApiEvent, fetchEvent } from '../../../data/eventsApi';
+import { useStandalone } from '../../../data/standalone';
 
 /* The D1 event these poster pages register for. */
 const REGISTRATION_SLUG = 'gittyup26';
@@ -150,6 +151,17 @@ const PosterPage = ({
 
   const odTriggerRef =
     useRef<HTMLButtonElement>(null);
+
+  /*
+   * The way back to the panel, for the installed app only.
+   *
+   * In a browser tab this renders nothing at all, so the public poster
+   * page never mentions that an admin panel exists. Inside the app the
+   * event page is somewhere an organiser genuinely ends up — it is what
+   * the panel links to — and without this the only way back is the OS
+   * task switcher.
+   */
+  const standalone = useStandalone();
 
   /*
    * Whether the event is taking registrations, read from the event
@@ -841,6 +853,35 @@ const PosterPage = ({
               />
               What is GITTY UP?
             </button>
+
+            {standalone && (
+              <Link
+                to="/admin"
+                className="poster-glass group mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 px-5 py-3 text-sm font-semibold sm:w-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+                style={{
+                  color: variant.text,
+                  backgroundColor: glassTint(
+                    variant.ground,
+                    0.95,
+                  ),
+                  ['--glass-solid' as string]:
+                    glassTint(variant.ground, 0.96),
+                  borderColor: withAlpha(
+                    variant.accent,
+                    40,
+                  ),
+                  outlineColor: variant.accent,
+                }}
+              >
+                <ShieldCheck
+                  size={18}
+                  aria-hidden="true"
+                  className="shrink-0 transition-transform group-hover:scale-110"
+                  style={{ color: variant.accent }}
+                />
+                Admin panel
+              </Link>
+            )}
 
           </aside>
 

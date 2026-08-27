@@ -21,6 +21,7 @@ import AdminAuthSplash from '../components/AdminAuthSplash';
 import { clearOauthLoopMarker } from '../data/adminAuth';
 
 import AdminPosters from '../components/AdminPosters';
+import AdminAppMeta from '../components/AdminAppMeta';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -923,34 +924,52 @@ setRegistrations(
   }
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-10">
+    /*
+     * pb uses the safe-area inset so the last row clears the home
+     * indicator when this is running as the installed app. In a browser
+     * tab the inset is 0 and the padding is just the 40px.
+     */
+    <div
+      className="container mx-auto px-4 md:px-6 pt-6 md:pt-10"
+      style={{
+        paddingBottom:
+          'calc(2.5rem + env(safe-area-inset-bottom))',
+      }}
+    >
+
+      {/* Install metadata, present only while this route is mounted. */}
+      <AdminAppMeta />
 
       {/* Header */}
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6 mb-8 md:mb-10">
         <div>
-          <div className="flex items-center gap-2 text-brand-accent text-sm font-semibold uppercase tracking-widest mb-2">
+          <div className="flex items-center gap-2 text-brand-accent text-xs sm:text-sm font-semibold uppercase tracking-widest mb-2">
             <ShieldCheck size={16} />
             Technical Department
           </div>
 
-          <h1 className="text-4xl font-bold text-white">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
             Admin Dashboard
           </h1>
 
-          <p className="text-gray-400 mt-2">
+          <p className="text-gray-400 mt-2 text-sm md:text-base">
             Manage OSC VIT-AP events and registrations.
           </p>
         </div>
 
         {user && (
-          <div className="glass-card px-5 py-3 flex items-center gap-4">
+          /*
+           * Wraps rather than squeezing. As a single nowrap row the
+           * username and the sign-out button shared 320px with a
+           * divider between them, and the button's label was the part
+           * that lost.
+           */
+          <div className="glass-card px-4 py-3 md:px-5 flex flex-wrap items-center gap-x-4 gap-y-3">
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider">
                 Signed in as
               </div>
-
-      <AdminPosters />
 
               <div className="text-white font-semibold">
                 @{user.github_username}
@@ -970,7 +989,10 @@ setRegistrations(
               type="button"
               onClick={signOut}
               disabled={signingOut}
-              className="flex items-center gap-2 border-l border-dark-600 pl-4 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+              /* min-h-[44px] because this is a real target on a phone,
+                 and the divider only reads as one when the row has not
+                 wrapped underneath it. */
+              className="flex min-h-[44px] items-center gap-2 border-dark-600 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent sm:border-l sm:pl-4"
               title="End this admin session"
             >
               <LogOut size={16} />
@@ -982,12 +1004,21 @@ setRegistrations(
         )}
       </div>
 
+      <AdminPosters />
+
       {/* Statistics */}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+      {/*
+        * Two across on a phone rather than one.
+        *
+        * Stacked, three cards at p-6 filled most of a phone screen with
+        * three numbers, and the registrations table — the reason anyone
+        * opens this on a phone — started below the fold.
+        */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-5 mb-8 md:mb-10">
 
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="glass-card p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <Calendar
               size={22}
               className="text-brand-primary"
@@ -1002,13 +1033,13 @@ setRegistrations(
             {events.length}
           </div>
 
-          <div className="text-sm text-gray-400 mt-1">
+          <div className="text-xs sm:text-sm text-gray-400 mt-1">
             Total events
           </div>
         </div>
 
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="glass-card p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <Calendar
               size={22}
               className="text-green-400"
@@ -1028,13 +1059,15 @@ setRegistrations(
             }
           </div>
 
-          <div className="text-sm text-gray-400 mt-1">
+          <div className="text-xs sm:text-sm text-gray-400 mt-1">
             Registration open
           </div>
         </div>
 
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
+        {/* Odd one out of three, so it takes the whole second row
+            rather than leaving a half-width gap beside it. */}
+        <div className="glass-card p-4 sm:p-6 col-span-2 md:col-span-1">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <Users
               size={22}
               className="text-brand-accent"
@@ -1055,7 +1088,7 @@ setRegistrations(
             }
           </div>
 
-          <div className="text-sm text-gray-400 mt-1">
+          <div className="text-xs sm:text-sm text-gray-400 mt-1">
             Team-based events
           </div>
         </div>
@@ -1066,10 +1099,10 @@ setRegistrations(
 
       <div className="glass-card overflow-hidden">
 
-        <div className="p-6 border-b border-dark-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="p-4 sm:p-6 border-b border-dark-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
           <div>
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-lg sm:text-xl font-bold text-white">
               Events
             </h2>
 
@@ -1084,7 +1117,7 @@ setRegistrations(
               setFormError('');
               setShowCreateModal(true);
             }}
-            className="bg-brand-primary hover:bg-brand-primary/90 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2"
+            className="bg-brand-primary hover:bg-brand-primary/90 text-white px-5 min-h-[44px] py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 shrink-0"
           >
             <Plus size={18} />
             Create Event
@@ -1097,7 +1130,113 @@ setRegistrations(
             No events found.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+
+          {/*
+            * On a phone the same rows as cards.
+            *
+            * Six columns cannot be read on a 390px screen. As a table it
+            * either scrolled sideways — which hides Actions, the only
+            * column anyone taps — or crushed the title to one word per
+            * line. Each event gets a card instead, with the status where
+            * the eye lands first and Manage as a full-width target.
+            */}
+          <ul className="divide-y divide-dark-700/50 md:hidden">
+            {events.map((event) => (
+              <li key={event.id} className="p-4">
+
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-white break-words">
+                      {event.title}
+                    </div>
+
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      /{event.slug}
+                    </div>
+                  </div>
+
+                  <span
+                    className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${
+                      event.is_open === 1
+                        ? 'bg-green-500/10 text-green-400'
+                        : 'bg-dark-700 text-gray-500'
+                    }`}
+                  >
+                    {event.is_open === 1
+                      ? 'Open'
+                      : 'Closed'}
+                  </span>
+                </div>
+
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+
+                  <div>
+                    <dt className="text-[10px] uppercase tracking-wider text-gray-500">
+                      Date
+                    </dt>
+
+                    <dd className="text-sm text-gray-300 mt-0.5">
+                      {event.event_date}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt className="text-[10px] uppercase tracking-wider text-gray-500">
+                      Type
+                    </dt>
+
+                    <dd className="text-sm text-gray-300 mt-0.5 uppercase">
+                      {event.registration_type}
+
+                      {event.registration_type ===
+                        'team' && (
+                        <span className="block text-xs normal-case text-gray-500">
+                          {event.min_team_size}
+                          {'–'}
+                          {event.max_team_size} members
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+
+                  <div className="col-span-2">
+                    <dt className="text-[10px] uppercase tracking-wider text-gray-500">
+                      Registrations
+                    </dt>
+
+                    <dd className="mt-0.5">
+                      {event.archive_status ===
+                      'archived' ? (
+                        <span className="text-sm text-gray-400">
+                          Archived — download the CSV
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-300">
+                          <span className="text-white font-semibold tabular-nums">
+                            {event.registration_count ??
+                              0}
+                          </span>{' '}
+                          {countLabel(event)}
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+
+                </dl>
+
+                <button
+                  onClick={() => openManage(event)}
+                  className="mt-4 flex min-h-[44px] w-full items-center justify-center rounded-lg border border-brand-primary/40 bg-brand-primary/10 text-sm font-semibold text-brand-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+                >
+                  Manage
+                </button>
+
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden md:block overflow-x-auto">
 
             <table className="w-full">
 
@@ -1255,14 +1394,19 @@ setRegistrations(
             </table>
 
           </div>
+
+          </>
         )}
 
       </div>
 
       {/* Create Event Modal */}
 
+      {/* No padding on a phone: the sheet uses the full width and insets
+          itself, so a long form is not read through a 20px letterbox on
+          either side. */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4">
 
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -1284,7 +1428,10 @@ setRegistrations(
               scale: 1,
               y: 0,
             }}
-            className="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto glass-card p-6 md:p-8"
+            /* Full height on a phone, a centred card from sm up. The
+               bottom inset keeps the last field and the save button
+               clear of the home indicator in the installed app. */
+            className="relative z-10 flex h-full w-full max-w-3xl flex-col overflow-y-auto glass-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:h-auto sm:max-h-[90vh] sm:p-6 sm:pb-6 md:p-8"
           >
 
             <div className="flex items-start justify-between mb-8">
@@ -1701,7 +1848,7 @@ setRegistrations(
 
       {showManageModal &&
         selectedEvent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4">
 
             <div
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -1723,7 +1870,9 @@ setRegistrations(
                 scale: 1,
                 y: 0,
               }}
-              className="relative z-10 w-full max-w-6xl max-h-[92vh] overflow-y-auto glass-card p-6 md:p-8"
+              /* Same treatment as the create sheet: full height on a
+                 phone, centred card from sm up. */
+              className="relative z-10 flex h-full w-full max-w-6xl flex-col overflow-y-auto glass-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:h-auto sm:max-h-[92vh] sm:p-6 sm:pb-6 md:p-8"
             >
 
               {/* Manage header */}
@@ -2299,7 +2448,95 @@ setRegistrations(
 
                           </div>
 
-                          <div className="overflow-x-auto">
+                          {/*
+                            * Six columns at a 900px minimum, inside a
+                            * modal, on a 390px screen: the member table
+                            * scrolled sideways within a sheet that was
+                            * already scrolling down, and email — the
+                            * column anyone actually needs — sat off the
+                            * right edge. One block per member instead,
+                            * with the labels beside the values.
+                            */}
+                          <ul className="divide-y divide-dark-700/50 md:hidden">
+                            {registration.members.map(
+                              (member) => (
+                                <li
+                                  key={member.id}
+                                  className="px-4 py-4"
+                                >
+
+                                  <div className="flex items-center gap-2">
+                                    <User
+                                      size={16}
+                                      className="shrink-0 text-gray-500"
+                                    />
+
+                                    <span className="font-medium text-white break-words">
+                                      {member.name}
+                                    </span>
+
+                                    <span className="ml-auto shrink-0 text-xs text-gray-500">
+                                      #
+                                      {
+                                        member.member_number
+                                      }
+                                    </span>
+                                  </div>
+
+                                  <dl className="mt-2.5 space-y-1.5 text-sm">
+
+                                    <div className="flex gap-2">
+                                      <dt className="w-20 shrink-0 text-xs uppercase tracking-wider text-gray-500 pt-0.5">
+                                        Email
+                                      </dt>
+
+                                      <dd className="min-w-0 break-all text-gray-300">
+                                        {member.email}
+                                      </dd>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                      <dt className="w-20 shrink-0 text-xs uppercase tracking-wider text-gray-500 pt-0.5">
+                                        Reg. no.
+                                      </dt>
+
+                                      <dd className="min-w-0 break-all text-gray-300">
+                                        {
+                                          member.college_registration_number
+                                        }
+                                      </dd>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                      <dt className="w-20 shrink-0 text-xs uppercase tracking-wider text-gray-500 pt-0.5">
+                                        Year
+                                      </dt>
+
+                                      <dd className="text-gray-300">
+                                        {
+                                          member.year_of_study
+                                        }
+                                      </dd>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                      <dt className="w-20 shrink-0 text-xs uppercase tracking-wider text-gray-500 pt-0.5">
+                                        GitHub
+                                      </dt>
+
+                                      <dd className="min-w-0 break-all text-gray-300">
+                                        {member.github || '—'}
+                                      </dd>
+                                    </div>
+
+                                  </dl>
+
+                                </li>
+                              ),
+                            )}
+                          </ul>
+
+                          <div className="hidden md:block overflow-x-auto">
 
                             <table className="w-full min-w-[900px]">
 

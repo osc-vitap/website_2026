@@ -3,6 +3,7 @@ import {
   useState,
 } from 'react';
 import {
+  ChevronDown,
   Download,
   FileImage,
   Loader2,
@@ -48,6 +49,17 @@ const AdminPosters = () => {
     useState(true);
 
   const [failed, setFailed] = useState('');
+
+  /*
+   * Shut until asked for.
+   *
+   * Thirty download cards is fifteen rows on a phone and six on a
+   * desktop, and open by default they pushed the events table — the
+   * reason anyone opens this page on any given day — below the fold on
+   * every screen size. Downloading a print sheet is something that
+   * happens before a print run, not daily.
+   */
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -120,27 +132,45 @@ const AdminPosters = () => {
   );
 
   return (
-    <section className="mb-10">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-brand-accent text-sm font-semibold uppercase tracking-widest">
-            <FileImage size={16} />
+    <section className="mb-8 md:mb-10">
+      <button
+        type="button"
+        onClick={() => setOpen((was) => !was)}
+        aria-expanded={open}
+        aria-controls="admin-poster-list"
+        className="glass-card flex min-h-[44px] w-full items-center gap-3 p-4 text-left transition-colors hover:border-brand-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+      >
+        <FileImage
+          size={16}
+          aria-hidden="true"
+          className="shrink-0 text-brand-accent"
+        />
+
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold uppercase tracking-widest text-brand-accent">
             Print posters
-          </div>
+          </span>
 
-          <p className="text-gray-400 mt-2 text-sm">
-            {posters.length} sheets, A3 at 300 dpi.
-            Every QR verified against the page it
-            opens.
-          </p>
-        </div>
+          <span className="mt-1 block text-xs text-gray-500">
+            {posters.length} sheets · A3 at 300 dpi ·{' '}
+            {(total / 1024 / 1024).toFixed(0)} MB
+          </span>
+        </span>
 
-        <div className="font-mono text-xs text-gray-500">
-          {(total / 1024 / 1024).toFixed(0)} MB total
-        </div>
-      </div>
+        <ChevronDown
+          size={18}
+          aria-hidden="true"
+          className={`ml-auto shrink-0 text-gray-500 transition-transform ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {!open ? null : (
+      <div
+        id="admin-poster-list"
+        className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+      >
         {posters.map((poster) => (
           <a
             key={poster.key}
@@ -184,6 +214,13 @@ const AdminPosters = () => {
           </a>
         ))}
       </div>
+      )}
+
+      {open && (
+        <p className="mt-3 text-xs text-gray-500">
+          Every QR verified against the page it opens.
+        </p>
+      )}
     </section>
   );
 };

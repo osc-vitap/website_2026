@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Read while the document parses, before the stylesheet lands, so the
+      first paint of a site that is dark everywhere is not a light one.
+      src/index.css sets the same thing on :root and is the authority.
+    -->
+    <meta name="color-scheme" content="dark" />
     <title>OSC VIT-AP | Open Source Community</title>
     <meta name="description" content="Open Source Community VIT-AP is a community of developers, designers, and tech enthusiasts building the future of open source." />
     <!-- Google Fonts -->

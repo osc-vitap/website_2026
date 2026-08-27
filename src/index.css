@@ -64,6 +64,23 @@
   }
 
   /*
+   * Every surface here is dark, but nothing ever said so, and a browser
+   * with no declaration assumes a light page and draws its own widgets
+   * for a light one. That is why the admin dashboard's date and
+   * datetime-local fields drew their calendar glyph in pure black on a
+   * near-black input — measured at #000 against #0a0a0c, which is no
+   * contrast at all — and why engines outside WebKit paint a light
+   * scrollbar that the rules at the bottom of this file cannot reach.
+   *
+   * index.html repeats this as a meta tag. The tag is read while the
+   * document parses, before this stylesheet has arrived, which is the
+   * window where first paint would otherwise flash light.
+   */
+  :root {
+    color-scheme: dark;
+  }
+
+  /*
    * The poster panel's corner radius, named because everything drawn
    * over or beside the panel has to land on the same curve — including
    * the About dialog, which is portalled to <body> and so cannot pick
@@ -793,19 +810,85 @@
   }
 }
 
-/* Custom Scrollbar */
+/*
+ * Custom Scrollbar
+ *
+ * Reported as a high-contrast purple bar, and it was two faults at
+ * once. The hover was brand-primary neat, which measures more saturated
+ * than any accent the poster sheets themselves use — and dragging the
+ * About dialog's bar means hovering it, so scrolling that panel turned
+ * the scrollbar into the loudest thing on screen. Separately these were
+ * WebKit-only rules, so Firefox never got them and fell back to an
+ * unstyled default instead.
+ */
 ::-webkit-scrollbar {
   width: 8px;
+
+  /*
+   * Only width was ever set here, so the admin dashboard's two
+   * overflow-x-auto tables drew a 15px horizontal bar beside the 8px
+   * vertical ones everywhere else. `thin` below applies to both axes,
+   * so leaving this out also put the engines 7px apart on those tables.
+   */
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0c; 
-}
- 
-::-webkit-scrollbar-thumb {
-  background: #2a2a32; 
+  background: #0a0a0c;
 }
 
+/*
+ * Measured against the track above and nothing else: it is opaque and
+ * unconditional, so #0a0a0c is the ground under the thumb for the whole
+ * run whatever the page is showing, and no poster variant moves it.
+ * 2.27:1 there, where #2a2a32 sank to 1.39:1 and was not findable. The
+ * About dialog's pale accent slab sits beside the gutter and is never
+ * drawn under the thumb, so this grey is pitched to stay findable on
+ * the track without shouting over the slab next to it.
+ */
+::-webkit-scrollbar-thumb {
+  background: #4a4a56;
+}
+
+/*
+ * Still the brand hue, at roughly a third of brand-primary's chroma.
+ * The state change is carried by lifting off the track — 3.43:1 against
+ * it where the resting thumb is 2.27:1 — rather than by out-colouring
+ * the sheet, which is what made the old hover read as an alarm.
+ */
 ::-webkit-scrollbar-thumb:hover {
-  background: #6d28d9; 
+  background: #6b5f8c;
+}
+
+/*
+ * Firefox, and anything else without ::-webkit-scrollbar-thumb, which
+ * would otherwise get no scrollbar styling at all.
+ *
+ * Fenced behind the feature query deliberately. Chromium reads these
+ * standard properties too, and the moment it sees scrollbar-color it
+ * abandons every rule above: measured on the About dialog, the bar went
+ * from 8px to 15px, grew stepper arrows at both ends, reflowed the copy
+ * beside it, and swapped the hover for a grey of its own choosing. The
+ * query keeps Chromium and Safari on the bar this site was drawn with,
+ * and hands Firefox the same two colours instead of a default one.
+ *
+ * The tested selector has to be ::-webkit-scrollbar-thumb, not
+ * ::-webkit-scrollbar. Gecko answers `selector(::-webkit-scrollbar)`
+ * with true for web compatibility, so that fence was false in Firefox
+ * too and the block was dead in every engine — Firefox went on painting
+ * its own #969696 bar, far brighter than the #4a4a56 the rest of this
+ * file draws. -thumb is the one Gecko does report as unsupported.
+ *
+ * `thin` because it is the nearest standard width to the 8px above;
+ * `auto` would be roughly double. It only reaches the root scroller:
+ * scrollbar-width does not inherit, so the About dialog's own scroller
+ * keeps Firefox's default width and takes the colours alone. Firefox
+ * derives its own hover shade from these two and has no equivalent of
+ * the :hover rule.
+ */
+@supports not selector(::-webkit-scrollbar-thumb) {
+  :root {
+    scrollbar-color: #4a4a56 #0a0a0c;
+    scrollbar-width: thin;
+  }
 }

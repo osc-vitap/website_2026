@@ -939,10 +939,10 @@ export const posterVariants: PosterVariant[] = [
 		"layout": "hero-word",
 		/*
 		 * The "rip it down" sheet: one quiet wordmark row, the dare set
-		 * as the largest type in the run across a dashed perforation at
-		 * the exact vertical middle, and the answer below it — so
-		 * tearing along the line destroys the dare and leaves the
-		 * answer, the date, the venue and the QR.
+		 * as the largest type in the run, and the answer under it. The
+		 * print tears along a dashed perforation across the exact
+		 * vertical middle; the web sheet does not carry that rule, so
+		 * the dare and the answer stack down a clear ground instead.
 		 */
 		"ground": "#050505",
 		/*
@@ -963,24 +963,17 @@ export const posterVariants: PosterVariant[] = [
 		 * reach is #0f3a42 on the cyan side and #461319 on the red: the
 		 * body colour reads 10.2:1 and 12.6:1 on them.
 		 *
-		 * Layer four is the perforation, full bleed to both trim edges
-		 * as it is in print, at the vertical middle.
-		 *
-		 * It is at 22% white, not the print's 45%. A 2px rule is not a
-		 * field, but the copy reflows and at some viewport a line of it
-		 * crosses the tear — and at 45% the dashes composite to #769094
-		 * where they cross the cyan bloom, which took the body colour to
-		 * 3.07:1. Swept 45/25/22 on the text-free render: 45% fails at
-		 * every viewport, 25% clears by 0.16, and 22% lands the worst
-		 * dash on the page at #486a70 and 5.13:1. Dashes 18px on and
-		 * 13px off, as printed, so it still reads as something
-		 * perforated rather than as a hairline rule.
+		 * The print's perforation was a fourth layer here, a dashed 2px
+		 * rule full bleed to both trim edges at the vertical middle. It
+		 * is gone: full bleed on the web means it ran through the copy
+		 * column as well as the field, and the copy reflows, so at some
+		 * viewport it always crossed a line of type. These three washes
+		 * are the whole ground now.
 		 */
 		"layers": [
 			"radial-gradient(44% 26% at 0% 50%, rgba(255,59,82,.26) 0%, rgba(255,59,82,.08) 46%, rgba(255,59,82,0) 78%)",
 			"radial-gradient(44% 26% at 100% 50%, rgba(46,226,255,.24) 0%, rgba(46,226,255,.07) 46%, rgba(46,226,255,0) 78%)",
-			"radial-gradient(62% 38% at 50% 50%, rgba(5,5,5,.82) 0%, rgba(5,5,5,.42) 48%, rgba(5,5,5,0) 80%)",
-			"repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 18px, rgba(255,255,255,0) 18px 31px) 0 50% / 100% 2px no-repeat"
+			"radial-gradient(62% 38% at 50% 50%, rgba(5,5,5,.82) 0%, rgba(5,5,5,.42) 48%, rgba(5,5,5,0) 80%)"
 		],
 		"grain": 0.12,
 		"ink": "#ffffff",

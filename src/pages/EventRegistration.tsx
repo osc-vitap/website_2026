@@ -3,8 +3,11 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Github, Mail, User, Users } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
+  githubError,
   registrationNumberError,
   universityEmailError,
+  yearOfStudyError,
+  yearOfStudyRecordedAs,
 } from '../data/registrationNumber';
 import EventStartsIn from '../components/EventStartsIn';
 import RedirectToast from '../components/RedirectToast';
@@ -163,32 +166,26 @@ const EventRegistration = () => {
     if (!event || !slug) return;
 
     /*
-     * Same check the Worker runs, per member, so a typo is caught
+     * The same checks the Worker runs, per member, so a typo is caught
      * before the request instead of coming back as a 400.
+     *
+     * In the Worker's order, so the field named here is the one the
+     * server would have named had this got as far as a request.
      */
     for (const [index, member] of members.entries()) {
-      const regNoError = registrationNumberError(
-        member.college_registration_number,
-      );
+      const memberError =
+        yearOfStudyError(member.year_of_study) ||
+        registrationNumberError(
+          member.college_registration_number,
+        ) ||
+        universityEmailError(member.email) ||
+        githubError(member.github);
 
-      if (regNoError) {
+      if (memberError) {
         setMessage(
           members.length > 1
-            ? `Member ${index + 1}: ${regNoError}`
-            : regNoError,
-        );
-        return;
-      }
-
-      const emailError = universityEmailError(
-        member.email,
-      );
-
-      if (emailError) {
-        setMessage(
-          members.length > 1
-            ? `Member ${index + 1}: ${emailError}`
-            : emailError,
+            ? `Member ${index + 1}: ${memberError}`
+            : memberError,
         );
         return;
       }
@@ -479,6 +476,14 @@ const EventRegistration = () => {
                           required
                         />
 
+                        {/*
+                          * The hint carries the correction rather than
+                          * the field doing it silently: someone who
+                          * answers with the year they joined is
+                          * registered as a first year, and finding
+                          * "2026" replaced by "1" under the cursor
+                          * reads as the form losing the answer.
+                          */}
                         <Field
                           label="Year of Study"
                           value={
@@ -492,6 +497,9 @@ const EventRegistration = () => {
                             )
                           }
                           placeholder="2"
+                          hint={yearOfStudyRecordedAs(
+                            member.year_of_study,
+                          )}
                           required
                         />
 
@@ -511,11 +519,17 @@ const EventRegistration = () => {
                           required
                         />
 
+                        {/*
+                          * A profile link is accepted as well as a
+                          * handle, so the placeholder shows both — it
+                          * used to show only "adalovelace", which read
+                          * as a handle being the one accepted form.
+                          */}
                         <Field
                           icon={
                             <Github size={16} />
                           }
-                          label="GitHub"
+                          label="GitHub (optional)"
                           value={member.github}
                           onChange={(value) =>
                             updateMember(
@@ -524,7 +538,7 @@ const EventRegistration = () => {
                               value,
                             )
                           }
-                          placeholder="adalovelace"
+                          placeholder="adalovelace or github.com/adalovelace"
                         />
 
                         <div className="md:col-span-2">
@@ -629,6 +643,8 @@ interface FieldProps {
   placeholder?: string;
   type?: string;
   required?: boolean;
+  /** Shown under the input. Empty is rendered as nothing. */
+  hint?: string;
 }
 
 const Field = ({
@@ -639,8 +655,11 @@ const Field = ({
   placeholder,
   type = 'text',
   required = false,
+  hint,
 }: FieldProps) => {
   const id = useId();
+
+  const hintId = `${id}-hint`;
 
   return (
     <div>
@@ -661,8 +680,21 @@ const Field = ({
         }
         placeholder={placeholder}
         required={required}
+        aria-describedby={
+          hint ? hintId : undefined
+        }
         className="w-full bg-dark-900/60 border border-dark-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-brand-primary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
       />
+
+      {hint && (
+        <p
+          id={hintId}
+          aria-live="polite"
+          className="text-xs text-brand-accent mt-2"
+        >
+          {hint}
+        </p>
+      )}
     </div>
   );
 };

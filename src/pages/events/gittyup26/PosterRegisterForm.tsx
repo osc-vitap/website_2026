@@ -4,8 +4,11 @@ import { ApiEvent, API_BASE_URL } from '../../../data/eventsApi';
 import EventStartsIn from '../../../components/EventStartsIn';
 import RedirectToast from '../../../components/RedirectToast';
 import {
+  githubError,
   registrationNumberError,
   universityEmailError,
+  yearOfStudyError,
+  yearOfStudyRecordedAs,
 } from '../../../data/registrationNumber';
 import { glassTint } from './posterColor';
 import { PosterVariant } from './posterTypes';
@@ -64,11 +67,17 @@ const FIELDS = [
     required: true,
   },
   {
+    /*
+     * A profile link is accepted as well as a handle, so the
+     * placeholder shows both — it used to show only "adalovelace",
+     * which read as a handle being the one accepted form.
+     */
     name: 'github',
     label: 'GitHub (optional)',
     type: 'text',
     autoComplete: 'off',
-    placeholder: 'adalovelace',
+    placeholder:
+      'adalovelace or github.com/adalovelace',
     required: false,
   },
 ] as const;
@@ -131,24 +140,22 @@ const PosterRegisterForm = ({
     setError('');
 
     /*
-     * Same check the Worker runs, so a typo is caught before the
+     * The same checks the Worker runs, so a typo is caught before the
      * request instead of coming back as a 400.
+     *
+     * In the Worker's order, so the field named here is the one the
+     * server would have named had this got as far as a request.
      */
-    const regNoError = registrationNumberError(
-      values.college_registration_number,
-    );
+    const invalid =
+      yearOfStudyError(values.year_of_study) ||
+      registrationNumberError(
+        values.college_registration_number,
+      ) ||
+      universityEmailError(values.email) ||
+      githubError(values.github);
 
-    if (regNoError) {
-      setError(regNoError);
-      return;
-    }
-
-    const emailError = universityEmailError(
-      values.email,
-    );
-
-    if (emailError) {
-      setError(emailError);
+    if (invalid) {
+      setError(invalid);
       return;
     }
 
@@ -363,6 +370,28 @@ const PosterRegisterForm = ({
               className="w-full rounded-full border-2 bg-transparent px-4 py-2.5 text-sm outline-none transition-colors placeholder:opacity-40 focus:border-current disabled:opacity-50"
               style={fieldStyle}
             />
+
+            {/*
+              * The correction is said out loud rather than written into
+              * the field: someone who answers with the year they joined
+              * is registered as a first year, and finding "2026"
+              * replaced by "1" under the cursor reads as the form
+              * losing the answer.
+              */}
+            {field.name === 'year_of_study' &&
+              yearOfStudyRecordedAs(
+                values.year_of_study,
+              ) && (
+                <span
+                  aria-live="polite"
+                  className="px-4 text-[11px]"
+                  style={{ color: variant.accent }}
+                >
+                  {yearOfStudyRecordedAs(
+                    values.year_of_study,
+                  )}
+                </span>
+              )}
           </label>
         ))}
       </div>

@@ -947,7 +947,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "It's under version control.",
 		"emphasis": "version control",
 		"heroWord": "Rip it down.",
-		"subline": "Go ahead. There's a copy in the repo and another on this wall by morning.",
+		"subline": "Go ahead. There's a copy in the repo and another one on this wall.",
 		"dateLine": "29 August 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true

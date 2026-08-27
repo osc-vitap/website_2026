@@ -12,7 +12,7 @@ import { MapPin, Calendar, ArrowRight } from 'lucide-react';
 
 /*
  * D1 stores event_date as an ISO date, and it was printed straight onto
- * the card — "2026-08-29" next to hand-written entries like
+ * the card — "2026-09-01" next to hand-written entries like
  * "19–21 Apr 2026". Formatted here so both read the same way.
  *
  * A value that is already prose (every hardcoded event) is passed

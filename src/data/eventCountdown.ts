@@ -6,10 +6,10 @@ import { ApiEvent } from './eventsApi';
  * Everything the club schedules is in IST, but nothing the API stores
  * says so, and the two ways a browser guesses are both wrong here:
  *
- *   - Date.parse("2026-08-29") reads a bare date as UTC midnight. Taken
+ *   - Date.parse("2026-09-01") reads a bare date as UTC midnight. Taken
  *     at face value the countdown runs 5h30m fast and claims the event
  *     started at half five in the morning.
- *   - Date.parse("2026-08-29 10:00:00") — a time with no zone — is
+ *   - Date.parse("2026-09-01 10:00:00") — a time with no zone — is
  *     implementation-defined, and Chrome reads it in the *viewer's*
  *     timezone. The same event would then start at a different moment
  *     for someone abroad than for someone on campus.

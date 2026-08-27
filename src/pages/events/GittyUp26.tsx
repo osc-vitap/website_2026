@@ -7,7 +7,7 @@ import PosterPage from './gittyup26/PosterPage';
 import { variantFromParam } from './gittyup26/posterVariants';
 
 /*
- * GITTYUP 26 — 29 August 2026, AB-2 Auditorium.
+ * GITTYUP 26 — 1 September 2026, AB-2 Auditorium.
  *
  * Thirty posters go up around campus, each carrying a QR code for
  * ?pg=1 … ?pg=30. Scanning one lands here on that poster's colours,
@@ -53,7 +53,7 @@ const GittyUp26 = () => {
 
   useEventPageMeta(
     'GITTYUP 26 · Open Source Community, VIT-AP',
-    'GITTYUP 2026 — one day on version control, Git, GitHub and home labs. 29 August 2026, AB-2 Auditorium, VIT-AP University.',
+    'GITTYUP 2026 — one day on version control, Git, GitHub and home labs. 1 September 2026, AB-2 Auditorium, VIT-AP University.',
   );
 
   return (

@@ -37,7 +37,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "You inherited a solution. Come meet the problem.",
 		"emphasis": "problem",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -59,7 +59,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "Undo is a design decision.",
 		"emphasis": "design decision",
-		"dateLine": "29 . 08 . 26",
+		"dateLine": "01 . 09 . 26",
 		"venueLine": "10:00 to 17:00 · AB-2 Auditorium"
 	},
 	{
@@ -83,7 +83,7 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 6,
 		"headline": "Nobody remembers the workaround. Everybody uses the fix.",
 		"emphasis": "fix",
-		"dateLine": "2026-08-29 · 10:00-17:00",
+		"dateLine": "2026-09-01 · 10:00-17:00",
 		"venueLine": "AB-2 Auditorium · VIT-AP"
 	},
 	{
@@ -149,7 +149,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "First they lost the work. Then they built git.",
 		"emphasis": "git",
-		"dateLine": "29 Aug 2026 / 10am to 5pm",
+		"dateLine": "1 Sep 2026 / 10am to 5pm",
 		"venueLine": "AB-2 Auditorium"
 	},
 	{
@@ -186,7 +186,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "Your remote can live in your room.",
 		"emphasis": "your room",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -208,7 +208,7 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 5,
 		"headline": "The graph came before the command.",
 		"emphasis": "command",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -229,7 +229,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "Somebody had to invent undo.",
 		"emphasis": "undo",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -251,7 +251,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "Your history should answer to you.",
 		"emphasis": "history",
-		"dateLine": "29 . 08 . 26",
+		"dateLine": "01 . 09 . 26",
 		"venueLine": "10:00 to 17:00 · AB-2 Auditorium"
 	},
 	{
@@ -274,12 +274,12 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "Someone had to decide what a version was.",
 		"emphasis": "version",
 		"subline": "Where version control came from, and why your history should answer to you.",
-		"dateLine": "2026-08-29",
+		"dateLine": "2026-09-01",
 		"venueLine": "10:00 to 17:00 · AB-2 Auditorium",
 		"specs": [
 			{
 				"label": "DATE",
-				"value": "2026-08-29"
+				"value": "2026-09-01"
 			},
 			{
 				"label": "TIME",
@@ -318,7 +318,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "Every commit has an ancestor.",
 		"emphasis": "commit",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -341,7 +341,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "Copies of copies of copies. Then git.",
 		"emphasis": "git",
 		"subline": "A history of version control, and the case for hosting your own.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -363,7 +363,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "Undo was not always free.",
 		"emphasis": "free",
-		"dateLine": "29 . 08 . 26",
+		"dateLine": "01 . 09 . 26",
 		"venueLine": "10:00 to 17:00 · AB-2 Auditorium"
 	},
 	{
@@ -384,7 +384,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "Every tool you trust was once a workaround.",
 		"emphasis": "workaround",
 		"subline": "We all use the solution. Almost nobody knows the problem.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -404,7 +404,7 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 4,
 		"headline": "Before git, there was a problem worth solving.",
 		"emphasis": "git",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -426,7 +426,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "Undo has an origin story.",
 		"emphasis": "origin story",
 		"subline": "We all use the solution. Almost nobody knows the problem.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -455,7 +455,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "History is a data structure.",
 		"emphasis": "data structure",
 		"subline": "We all use the solution. Almost nobody knows the problem.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -481,7 +481,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "You type it every day. Somebody had to invent it.",
 		"emphasis": "invent",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -505,7 +505,7 @@ export const posterVariants: PosterVariant[] = [
 		"emphasis": "history",
 		"heroWord": "undo",
 		"subline": "We all use the solution. Almost nobody knows the problem.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -523,7 +523,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "Someone had to lose work first.",
 		"emphasis": "work",
 		"subline": "We all use the solution. Almost nobody knows the problem.",
-		"dateLine": "2026-08-29",
+		"dateLine": "2026-09-01",
 		"venueLine": "10:00 to 17:00 · AB-2 Auditorium",
 		"terminal": [
 			"git log",
@@ -551,12 +551,12 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 4,
 		"headline": "The problem came first. The tool came later.",
 		"emphasis": "tool",
-		"dateLine": "2026-08-29",
+		"dateLine": "2026-09-01",
 		"venueLine": "10:00 to 17:00 · AB-2 Auditorium",
 		"specs": [
 			{
 				"label": "DATE",
-				"value": "2026-08-29"
+				"value": "2026-09-01"
 			},
 			{
 				"label": "TIME",
@@ -594,7 +594,7 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 5,
 		"headline": "Every shortcut you type was once an argument.",
 		"emphasis": "argument",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -621,7 +621,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "Merge conflicts are older than you think.",
 		"emphasis": "older",
 		"subline": "We all use the solution. Almost nobody knows the problem.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -647,7 +647,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "Somebody had to name the branch.",
 		"emphasis": "branch",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -672,7 +672,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control",
 		"headline": "The repo is yours. The server can be too.",
 		"emphasis": "server",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -696,7 +696,7 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 5,
 		"headline": "Before the graph, there was only the file.",
 		"emphasis": "file",
-		"dateLine": "29 Aug 2026",
+		"dateLine": "1 Sep 2026",
 		"venueLine": "10am to 5pm · AB-2"
 	},
 	{
@@ -716,7 +716,7 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 4,
 		"headline": "Somebody had to invent history.",
 		"emphasis": "history",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -742,7 +742,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "We all use the solution. Almost nobody knows the problem.",
 		"headline": "The workaround came first.",
 		"emphasis": "workaround",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -766,7 +766,7 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 5,
 		"headline": "Git won. But why?",
 		"emphasis": "why",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10:00 to 17:00 · AB-2 Auditorium"
 	},
 	{
@@ -793,7 +793,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "A history of version control, and why you should be hosting your own git.",
 		"headline": "A remote you own.",
 		"emphasis": "remote",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -816,7 +816,7 @@ export const posterVariants: PosterVariant[] = [
 		"rows": 4,
 		"headline": "The fix is famous. The problem is not.",
 		"emphasis": "problem",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium"
 	},
 	{
@@ -840,7 +840,7 @@ export const posterVariants: PosterVariant[] = [
 		"emphasis": "GITTY UP",
 		"heroWord": "LOOKING FOR CAR KEYS??",
 		"subline": "Not really. But the session is, and so is everything else you have lost track of.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true
 	},
@@ -865,7 +865,7 @@ export const posterVariants: PosterVariant[] = [
 		"emphasis": "GITTY UP",
 		"heroWord": "SHOULD'VE COMMITTED EARLIER.",
 		"subline": "Nothing you never saved is coming back. Everything after this one is up to you.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true
 	},
@@ -929,7 +929,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "You removed the poster. We restored it.",
 		"emphasis": "restored",
 		"subline": "That's the whole event. Nothing you commit is ever really gone.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true
 	},
@@ -1001,7 +1001,7 @@ export const posterVariants: PosterVariant[] = [
 		"emphasis": "version control",
 		"heroWord": "Rip it down.",
 		"subline": "Go ahead. There's a copy in the repo and another one on this wall.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true
 	},
@@ -1099,7 +1099,7 @@ export const posterVariants: PosterVariant[] = [
 		"headline": "Waiting is the problem. git was built by people who hated waiting.",
 		"emphasis": "hated waiting",
 		"subline": "Thirteen minutes for one floor. Somebody once refused to wait that long for a file, and you have been using what they built ever since.",
-		"dateLine": "29 August 2026",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true
 	},
@@ -1180,8 +1180,8 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "lift/arrival · pending",
 		"headline": "The lift is still pending. So is your knowledge of version control.",
 		"emphasis": "pending",
-		"subline": "Some checks haven't completed yet. Neither have you: expected, waiting for 29 August.",
-		"dateLine": "29 August 2026",
+		"subline": "Some checks haven't completed yet. Neither have you: expected, waiting for 1 September.",
+		"dateLine": "1 September 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true
 	},

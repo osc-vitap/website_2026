@@ -270,7 +270,7 @@ const PosterRegisterForm = ({
           className="mt-4 max-w-md text-xs font-light leading-relaxed md:text-sm"
           style={{ color: variant.text }}
         >
-          See you on 29 August at the AB-2 Auditorium.
+          See you on 1 September at the AB-2 Auditorium.
           Bring a laptop if you have one.
         </p>
 

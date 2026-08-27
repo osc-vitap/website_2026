@@ -1453,6 +1453,77 @@ describe("admin access", () => {
 		expect(response.status).toBe(401);
 	});
 
+	/*
+	 * The panel shows the artwork before anyone downloads a 20MB print
+	 * master, which means small renders served from the same bucket
+	 * behind the same gate.
+	 */
+	describe("poster previews", () => {
+		beforeEach(async () => {
+			env.ADMIN_GITHUB_USERS = "";
+			await seedSession("poster-admin");
+
+			await env.osc_events_archives.put("posters/gittyup26-pg01.png", "print-master");
+			await env.osc_events_archives.put("posters/thumb/gittyup26-pg01.webp", "small");
+			await env.osc_events_archives.put("posters/preview/gittyup26-pg01.webp", "medium");
+		});
+
+		afterEach(async () => {
+			const listed = await env.osc_events_archives.list();
+
+			for (const object of listed.objects) {
+				await env.osc_events_archives.delete(object.key);
+			}
+		});
+
+		it("serves a thumbnail inline, not as a download", async () => {
+			const response = await asAdmin("/api/admin/posters/thumb/gittyup26-pg01.webp");
+
+			expect(response.status).toBe(200);
+			expect(response.headers.get("Content-Type")).toBe("image/webp");
+			expect(response.headers.get("Content-Disposition")).toBeNull();
+			expect(await response.text()).toBe("small");
+		});
+
+		it("keeps previews behind the admin gate", async () => {
+			const response = await fetchWorker("/api/admin/posters/preview/gittyup26-pg01.webp");
+
+			expect(response.status).toBe(401);
+		});
+
+		/*
+		 * The variant is a fixed alternation in the route, so a request
+		 * cannot name its own prefix and walk out of posters/.
+		 */
+		it("refuses a variant it does not know", async () => {
+			await env.osc_events_archives.put("posters/secret/leak.webp", "nope");
+
+			const response = await asAdmin("/api/admin/posters/secret/leak.webp");
+
+			expect(response.status).toBe(404);
+		});
+
+		/*
+		 * Ninety objects live under posters/ now and only thirty of them
+		 * are sheets anyone can send to a printer.
+		 */
+		it("lists only the print masters, not their derivatives", async () => {
+			const response = await asAdmin("/api/admin/posters");
+
+			expect(response.status).toBe(200);
+
+			const body = await response.json<{ posters: Array<{ name: string }> }>();
+
+			expect(body.posters.map((poster) => poster.name)).toEqual(["gittyup26-pg01.png"]);
+		});
+
+		it("404s a sheet that is not in the bucket", async () => {
+			const response = await asAdmin("/api/admin/posters/thumb/gittyup26-pg99.webp");
+
+			expect(response.status).toBe(404);
+		});
+	});
+
 	it("allows any signed-in admin when the allow list is empty", async () => {
 		env.ADMIN_GITHUB_USERS = "";
 

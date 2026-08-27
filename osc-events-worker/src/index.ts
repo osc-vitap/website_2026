@@ -2488,6 +2488,12 @@ export default {
 				});
 
 				/*
+				 * Only the print masters, which sit directly under the
+				 * prefix. The thumbnails and previews live in posters/thumb/
+				 * and posters/preview/ and would otherwise arrive here as
+				 * ninety sheets, two thirds of them 16KB and undownloadable
+				 * as print files.
+				 *
 				 * Sorted by name, which is the page order — a listing that
 				 * comes back in whatever order R2 walked its index reads as
 				 * a bug to anyone looking for sheet 14.
@@ -2499,9 +2505,52 @@ export default {
 						size: object.size,
 						uploaded: object.uploaded,
 					}))
+					.filter((poster) => !poster.name.includes('/'))
 					.sort((a, b) => a.name.localeCompare(b.name));
 
 				return json({ posters }, 200, request, env);
+			}
+
+			/*
+			 * The small renders, shown in the panel before anyone commits
+			 * to a download. Inline rather than attachment, and the variant
+			 * is a fixed alternation rather than anything taken from the
+			 * request, so this cannot be pointed at another prefix.
+			 */
+			const previewMatch = url.pathname.match(
+				/^\/api\/admin\/posters\/(thumb|preview)\/([A-Za-z0-9._-]+)$/,
+			);
+
+			if (request.method === 'GET' && previewMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const object = await env.osc_events_archives.get(
+					`posters/${previewMatch[1]}/${previewMatch[2]}`,
+				);
+
+				if (!object) {
+					return json({ error: 'Poster not found' }, 404, request, env);
+				}
+
+				const headers = new Headers(corsHeaders(request, env));
+
+				headers.set('Content-Type', 'image/webp');
+				headers.set('Content-Length', String(object.size));
+
+				/*
+				 * Private, because it is behind the admin gate and must not
+				 * be held by anything between here and the browser. Cached
+				 * for a day all the same: the artwork for a printed sheet
+				 * does not change, and the grid asks for thirty of these
+				 * every time the section is opened.
+				 */
+				headers.set('Cache-Control', 'private, max-age=86400');
+
+				return new Response(object.body, { headers });
 			}
 
 			const posterMatch = url.pathname.match(/^\/api\/admin\/posters\/([A-Za-z0-9._-]+)$/);

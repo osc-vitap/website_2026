@@ -92,6 +92,15 @@ export interface PosterVariant {
   dispersion?: boolean;
 
   /**
+   * This sheet replies to the posters being taken down.
+   *
+   * Only the two that are already about deletion carry it — the restored
+   * diff and the tear-off — so it reads as their punchline rather than
+   * as a notice pinned to sheets that were making a different point.
+   */
+  takedownNote?: boolean;
+
+  /**
    * CSS background values painted over the ground, first entry
    * closest to the ground. Taken from the poster's own overlays,
    * plus a replacement for the photograph where there was one.

@@ -820,6 +820,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 33,
+		"takedownNote": true,
 		"layout": "wordmark-stack",
 		/*
 		 * The "restored" sheet: five wordmark rows down a diff gutter,
@@ -883,6 +884,7 @@ export const posterVariants: PosterVariant[] = [
 	},
 	{
 		"id": 34,
+		"takedownNote": true,
 		"layout": "hero-word",
 		/*
 		 * The "rip it down" sheet: one quiet wordmark row, the dare set

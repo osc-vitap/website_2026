@@ -11,6 +11,7 @@ import {
 } from '../data/registrationNumber';
 import EventStartsIn from '../components/EventStartsIn';
 import RedirectToast from '../components/RedirectToast';
+import DateChangeToast from '../components/DateChangeToast';
 
 const API_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -286,6 +287,10 @@ const EventRegistration = () => {
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-10 sm:py-12 md:px-6">
+
+      {event.slug === 'gittyup26' && !succeeded && (
+        <DateChangeToast />
+      )}
 
       <Link
         to="/events"

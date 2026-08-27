@@ -3,6 +3,7 @@ import { ArrowRight, Check } from 'lucide-react';
 import { ApiEvent, API_BASE_URL } from '../../../data/eventsApi';
 import EventStartsIn from '../../../components/EventStartsIn';
 import RedirectToast from '../../../components/RedirectToast';
+import DateChangeToast from '../../../components/DateChangeToast';
 import {
   githubError,
   registrationNumberError,
@@ -301,6 +302,9 @@ const PosterRegisterForm = ({
   }
 
   return (
+    <>
+    <DateChangeToast accent={variant.accent} />
+
     <form
       onSubmit={submit}
       className="poster-slide-in poster-glass p-5 md:p-6"
@@ -429,6 +433,7 @@ const PosterRegisterForm = ({
         />
       </button>
     </form>
+    </>
   );
 };
 

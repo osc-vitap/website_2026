@@ -20,6 +20,8 @@ import {
 import AdminAuthSplash from '../components/AdminAuthSplash';
 import { clearOauthLoopMarker } from '../data/adminAuth';
 
+import AdminPosters from '../components/AdminPosters';
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   'https://events.oscvitap.com';
@@ -947,6 +949,8 @@ setRegistrations(
               <div className="text-xs text-gray-500 uppercase tracking-wider">
                 Signed in as
               </div>
+
+      <AdminPosters />
 
               <div className="text-white font-semibold">
                 @{user.github_username}

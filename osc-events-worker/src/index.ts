@@ -2461,6 +2461,91 @@ export default {
 			 * ============================================================
 			 */
 
+			/*
+			 * ============================================================
+			 * PRINT POSTERS
+			 * ============================================================
+			 *
+			 * The thirty printed sheets, at A3 300dpi. They live in R2
+			 * rather than in the site's public folder because they total
+			 * 235MB — putting that in git would make every clone of this
+			 * repo carry a quarter of a gigabyte of PNGs forever, and
+			 * Vercel would ship them on every deploy.
+			 *
+			 * Behind the admin gate, not because the artwork is secret —
+			 * it is on walls — but because these are the print masters and
+			 * the people who need them are the people who print them.
+			 */
+			if (request.method === 'GET' && url.pathname === '/api/admin/posters') {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const listing = await env.osc_events_archives.list({
+					prefix: 'posters/',
+				});
+
+				/*
+				 * Sorted by name, which is the page order — a listing that
+				 * comes back in whatever order R2 walked its index reads as
+				 * a bug to anyone looking for sheet 14.
+				 */
+				const posters = listing.objects
+					.map((object) => ({
+						name: object.key.replace('posters/', ''),
+						key: object.key,
+						size: object.size,
+						uploaded: object.uploaded,
+					}))
+					.sort((a, b) => a.name.localeCompare(b.name));
+
+				return json({ posters }, 200, request, env);
+			}
+
+			const posterMatch = url.pathname.match(/^\/api\/admin\/posters\/([A-Za-z0-9._-]+)$/);
+
+			if (request.method === 'GET' && posterMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				/*
+				 * The name is matched against a strict character class
+				 * above rather than sanitised here, so nothing containing
+				 * a slash or a dot-dot ever reaches the bucket. The prefix
+				 * is added on this side, so a caller cannot reach an
+				 * archive object by asking for one.
+				 */
+				const object = await env.osc_events_archives.get(
+					`posters/${posterMatch[1]}`,
+				);
+
+				if (!object) {
+					return json({ error: 'Poster not found' }, 404, request, env);
+				}
+
+				const headers = new Headers(corsHeaders(request, env));
+
+				headers.set('Content-Type', 'image/png');
+				headers.set('Content-Length', String(object.size));
+
+				/*
+				 * Attachment, with the sheet's own name: these are opened
+				 * to be sent to a printer, and a 20MB PNG rendered inline
+				 * in a browser tab helps nobody.
+				 */
+				headers.set(
+					'Content-Disposition',
+					`attachment; filename="${posterMatch[1]}"`,
+				);
+
+				return new Response(object.body, { headers });
+			}
+
 			if (request.method === 'GET' && (url.pathname === '/api/admin/events' || url.pathname === '/api/admin/events/')) {
 				const auth = await requireAdmin(request, env);
 

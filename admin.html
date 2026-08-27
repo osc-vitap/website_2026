@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+
+    <!--
+      The admin panel's own entry document.
+
+      This exists so the install metadata can be in the head at load.
+      Added from JavaScript after mount it was too late: both Chrome and
+      Safari decide what they are installing while the document parses,
+      so a tap on Add to Home Screen produced a plain bookmark, and a
+      bookmark opens in a browser tab with the address bar still there.
+
+      It is a second entry rather than a line in index.html because a
+      manifest in index.html is served to every visitor on every page,
+      which names the admin app in view-source on the home page and
+      offers to install "OSC Admin" to anyone reading about the club.
+      Vercel rewrites /admin here; everything else still gets index.html.
+
+      Both the manifest and the apple-* pair are present because iOS only
+      began honouring a manifest's display mode in 16.4, and the legacy
+      meta is the only thing older iPhones read.
+    -->
+    <link rel="manifest" href="/app/site.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="OSC Admin" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="theme-color" content="#0a0a0c" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/app/apple-touch-icon.png" />
+
+    <title>OSC Admin</title>
+    <meta name="robots" content="noindex, nofollow" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;700&family=Lora:wght@400;500;600&family=Michroma&family=Geist+Mono:wght@400;500;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-dark-900 text-gray-100 font-sans antialiased overflow-x-hidden">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

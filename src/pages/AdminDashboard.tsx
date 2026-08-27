@@ -21,7 +21,7 @@ import AdminAuthSplash from '../components/AdminAuthSplash';
 import { clearOauthLoopMarker } from '../data/adminAuth';
 
 import AdminPosters from '../components/AdminPosters';
-import AdminAppMeta from '../components/AdminAppMeta';
+import { useAdminAppMeta } from '../data/adminAppMeta';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -189,6 +189,13 @@ const emptyForm: EventForm = {
 };
 
 const AdminDashboard = () => {
+  /*
+   * First, and unconditionally. Installing the app happens from the
+   * sign-in screen as often as from the dashboard, and everything below
+   * this line can be skipped by an early return.
+   */
+  useAdminAppMeta();
+
   const [user, setUser] =
     useState<AdminUser | null>(null);
 
@@ -936,9 +943,6 @@ setRegistrations(
           'calc(2.5rem + env(safe-area-inset-bottom))',
       }}
     >
-
-      {/* Install metadata, present only while this route is mounted. */}
-      <AdminAppMeta />
 
       {/* Header */}
 

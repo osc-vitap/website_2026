@@ -3,6 +3,15 @@
 
   "rewrites": [
     {
+      "//": "The admin panel serves its own document, which carries the install metadata in its head. Must precede the catch-all: rewrites are matched in order.",
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/admin/(.*)",
+      "destination": "/admin.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

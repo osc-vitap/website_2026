@@ -818,6 +818,140 @@ export const posterVariants: PosterVariant[] = [
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true
 	},
+	{
+		"id": 33,
+		"layout": "wordmark-stack",
+		/*
+		 * The "restored" sheet: five wordmark rows down a diff gutter,
+		 * two struck out at 35% behind a `-`, three restored at full
+		 * strength behind a `+`. Ground is true #000 rather than the
+		 * run's #050505 — the print took it there to buy the deleted
+		 * rows 2.91 → 3.00:1, which is the ceiling for 35% white.
+		 *
+		 * The stack here cannot carry that fade. `fill` is applied per
+		 * row in PosterWordmark, so a vertical inkGradient fades every
+		 * row through itself rather than fading the top of the stack —
+		 * the ink is flat white and the diff is carried by the copy.
+		 */
+		"ground": "#000000",
+		/*
+		 * Read off gittyup26-restored.png. The sheet uses no figure at
+		 * all: its only ground is a weak violet wash in the top-right
+		 * corner, peaking around #261a3a at roughly 88% across and 13%
+		 * down and reaching pure black by a third of the way down and
+		 * half of the way across. Everything else on the sheet measures
+		 * #000000 exactly.
+		 *
+		 * The third layer is the scrim the print does not need. The
+		 * printed sheet keeps its type in the left column, clear of the
+		 * wash; the web layout reflows, and on a narrow viewport the
+		 * headline and subline stack straight under the corner the wash
+		 * is in. Deepening the ground around the copy holds it on the
+		 * black the print reserved for it and leaves the wash where the
+		 * sheet put it. Measured on a text-free render of this stack at
+		 * 1440x900, 1280x800, 768x1024 and 390x844: the brightest ground
+		 * anywhere in the copy column is #0e0718 and the body colour
+		 * reads 15.2:1 on it, the accent 7.8:1. The brightest pixel on
+		 * the page at all is #392459, at the heart of the wash under the
+		 * details panel — which paints its own ground — and even bare,
+		 * the body colour is 10.7:1 there.
+		 */
+		"layers": [
+			"radial-gradient(64% 40% at 88% 13%, rgba(132,61,232,.30) 0%, rgba(96,44,170,.13) 40%, rgba(0,0,0,0) 74%)",
+			"radial-gradient(34% 20% at 93% 6%, rgba(185,140,255,.16) 0%, rgba(185,140,255,0) 72%)",
+			"radial-gradient(78% 60% at 26% 62%, rgba(0,0,0,.9) 0%, rgba(0,0,0,.6) 46%, rgba(0,0,0,0) 78%)"
+		],
+		/*
+		 * The print grain is a monochrome feTurbulence clipped clear of
+		 * the type column. Overlay over a black ground resolves to
+		 * black, so this is visible only inside the wash — which is
+		 * exactly where the sheet's grain is visible too.
+		 */
+		"grain": 0.18,
+		"ink": "#ffffff",
+		"text": "rgba(255,255,255,.88)",
+		/* Sampled off the sheet's own URL line: #b98cff, 8.3:1 on #000. */
+		"accent": "#b98cff",
+		"rows": 5,
+		"eyebrow": "Commit 4 · restored",
+		"headline": "You removed the poster. We restored it.",
+		"emphasis": "restored",
+		"subline": "That's the whole event. Nothing you commit is ever really gone.",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium",
+		"unlisted": true
+	},
+	{
+		"id": 34,
+		"layout": "hero-word",
+		/*
+		 * The "rip it down" sheet: one quiet wordmark row, the dare set
+		 * as the largest type in the run across a dashed perforation at
+		 * the exact vertical middle, and the answer below it — so
+		 * tearing along the line destroys the dare and leaves the
+		 * answer, the date, the venue and the QR.
+		 */
+		"ground": "#050505",
+		/*
+		 * Read off gittyup26-ripitdown.png. No figure again: the sheet's
+		 * whole ground is the headline's own misregistration bleeding
+		 * into the field along the tear — red left, cyan right, both
+		 * confined to a band across the middle. Measured at 46-54% down:
+		 * #1e090e at the left trim, #09181b at the right, and #0a0809 in
+		 * the centre where the two clear the type. Above 38% and below
+		 * 63% the sheet is #050505 everywhere.
+		 *
+		 * Layer three is that centre. It is the sheet's own behaviour
+		 * rather than an addition — the inks are strongest at the trim
+		 * edges and give the middle up to the type — and it is what
+		 * holds the hero and the headline off the colour. Measured on a
+		 * text-free render of this stack at 1440x900, 1280x800,
+		 * 768x1024 and 390x844, the strongest field the body copy can
+		 * reach is #0f3a42 on the cyan side and #461319 on the red: the
+		 * body colour reads 10.2:1 and 12.6:1 on them.
+		 *
+		 * Layer four is the perforation, full bleed to both trim edges
+		 * as it is in print, at the vertical middle.
+		 *
+		 * It is at 22% white, not the print's 45%. A 2px rule is not a
+		 * field, but the copy reflows and at some viewport a line of it
+		 * crosses the tear — and at 45% the dashes composite to #769094
+		 * where they cross the cyan bloom, which took the body colour to
+		 * 3.07:1. Swept 45/25/22 on the text-free render: 45% fails at
+		 * every viewport, 25% clears by 0.16, and 22% lands the worst
+		 * dash on the page at #486a70 and 5.13:1. Dashes 18px on and
+		 * 13px off, as printed, so it still reads as something
+		 * perforated rather than as a hairline rule.
+		 */
+		"layers": [
+			"radial-gradient(44% 26% at 0% 50%, rgba(255,59,82,.26) 0%, rgba(255,59,82,.08) 46%, rgba(255,59,82,0) 78%)",
+			"radial-gradient(44% 26% at 100% 50%, rgba(46,226,255,.24) 0%, rgba(46,226,255,.07) 46%, rgba(46,226,255,0) 78%)",
+			"radial-gradient(62% 38% at 50% 50%, rgba(5,5,5,.82) 0%, rgba(5,5,5,.42) 48%, rgba(5,5,5,0) 80%)",
+			"repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 18px, rgba(255,255,255,0) 18px 31px) 0 50% / 100% 2px no-repeat"
+		],
+		"grain": 0.12,
+		"ink": "#ffffff",
+		/*
+		 * The print splits the headline into a red plate and a cyan one,
+		 * offset 6px against a 258px line. A fill cannot offset a copy
+		 * of itself, so the split is carried where it is visible anyway:
+		 * as the two inks left standing at the ends of the run, white
+		 * across everything between them.
+		 */
+		"inkGradient": "linear-gradient(100deg,#ff5a6e 0%,#ffb9c2 4%,#ffffff 12%,#ffffff 84%,#a8f0ff 93%,#2ee2ff 100%)",
+		"text": "rgba(255,255,255,.9)",
+		/* The sheet's accent is cyan, not the run's violet: #2ee2ff, 13:1 on #050505. */
+		"accent": "#2ee2ff",
+		"rows": 1,
+		"eyebrow": "Tear along the dotted line",
+		"headline": "It's under version control.",
+		"emphasis": "version control",
+		"heroWord": "Rip it down.",
+		"subline": "Go ahead. There's a copy in the repo and another on this wall by morning.",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium",
+		"unlisted": true
+	},
 ];
 
 /*

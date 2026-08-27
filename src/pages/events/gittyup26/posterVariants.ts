@@ -969,6 +969,9 @@ export const posterVariants: PosterVariant[] = [
 		 * copy of every contour thrown one way and a cool one the other,
 		 * which is what .poster-fringe answers.
 		 */
+		"image": "/events/gittyup26/chrome-lift-web.webp",
+		"imageBlend": "screen",
+		"imagePosition": "center",
 		"dispersion": true,
 		/*
 		 * Read off gittyup26-liftwaiting.webp (1240x1754). The sheet is
@@ -1025,10 +1028,6 @@ export const posterVariants: PosterVariant[] = [
 		 * pixel is #656970 and 4.71:1.
 		 */
 		"layers": [
-			"radial-gradient(30% 34% at 50% 50%, rgba(64,104,168,.22) 0%, rgba(30,56,104,.10) 50%, rgba(5,5,5,0) 82%)",
-			"linear-gradient(90deg, rgba(5,5,5,0) 32%, rgba(178,132,166,.32) 33.2%, rgba(24,29,54,.26) 34.6%, rgba(150,140,202,.38) 36.3%, rgba(92,120,170,.28) 37.4%, rgba(24,32,58,.24) 39.2%, rgba(120,129,155,.32) 41.1%, rgba(60,80,117,.26) 43.0%, rgba(106,133,168,.32) 44.4%, rgba(42,58,98,.26) 46.5%, rgba(36,48,79,.26) 50.0%, rgba(59,74,112,.27) 53.0%, rgba(50,69,115,.27) 55.6%, rgba(119,156,190,.34) 58.1%, rgba(22,31,48,.24) 60.2%, rgba(16,21,47,.22) 62.2%, rgba(136,153,202,.36) 63.7%, rgba(206,220,240,.42) 64.5%, rgba(19,20,33,.22) 65.3%, rgba(88,113,148,.32) 66.9%, rgba(5,5,5,0) 68.4%)",
-			"radial-gradient(15% 4% at 50% 33%, rgba(255,255,255,.34) 0%, rgba(186,214,255,.16) 55%, rgba(5,5,5,0) 100%)",
-			"radial-gradient(20% 6% at 50% 68%, rgba(122,180,240,.22) 0%, rgba(5,5,5,0) 100%)",
 			"linear-gradient(180deg,#050505 0%,#050505 14%,rgba(5,5,5,.55) 19%,rgba(5,5,5,0) 25%,rgba(5,5,5,0) 68%,rgba(5,5,5,.5) 76%,rgba(5,5,5,.95) 84%,#050505 90%)",
 			"linear-gradient(180deg, rgba(5,5,5,0) 28%, rgba(5,5,5,.40) 36%, rgba(5,5,5,.46) 46%, rgba(5,5,5,.40) 54%, rgba(5,5,5,0) 62%)",
 			"radial-gradient(62% 34% at 16% 76%, rgba(5,5,5,.92) 0%, rgba(5,5,5,.58) 50%, rgba(5,5,5,0) 84%)"
@@ -1059,6 +1058,9 @@ export const posterVariants: PosterVariant[] = [
 		 * `you/version-control — pending` against two amber dots.
 		 */
 		"ground": "#050505",
+		"image": "/events/gittyup26/chrome-lift-right.webp",
+		"imageBlend": "screen",
+		"imagePosition": "center",
 		"dispersion": true,
 		/*
 		 * Read off gittyup26-liftpending.webp (1240x1754), sampled in
@@ -1106,10 +1108,6 @@ export const posterVariants: PosterVariant[] = [
 		 * jamb only where the panel was covering it anyway.
 		 */
 		"layers": [
-			"linear-gradient(96deg, rgba(5,5,5,0) 2%, rgba(120,132,160,.07) 22%, rgba(140,152,180,.11) 44%, rgba(118,134,170,.08) 60%, rgba(5,5,5,0) 68%)",
-			"linear-gradient(90deg, rgba(5,5,5,0) 67.4%, rgba(35,62,96,.42) 68.5%, rgba(41,51,70,.34) 69.4%, rgba(136,120,139,.52) 70.2%, rgba(70,91,124,.42) 71.0%, rgba(119,125,150,.50) 71.8%, rgba(58,55,77,.36) 72.6%, rgba(125,151,203,.56) 73.4%, rgba(120,128,167,.48) 74.2%, rgba(5,5,5,0) 75.6%, rgba(5,5,5,0) 77.4%, rgba(36,27,49,.30) 78.2%, rgba(146,98,107,.50) 79.0%, rgba(233,247,248,.72) 79.8%, rgba(125,130,138,.50) 80.6%, rgba(5,5,5,0) 81.6%)",
-			"radial-gradient(4.5% 8% at 93% 66%, rgba(172,180,208,.52) 0%, rgba(62,58,84,.20) 58%, rgba(5,5,5,0) 100%)",
-			"radial-gradient(26% 40% at 76% 46%, rgba(120,150,210,.12) 0%, rgba(5,5,5,0) 78%)",
 			"linear-gradient(180deg,#050505 0%,rgba(5,5,5,.62) 6%,rgba(5,5,5,0) 15%,rgba(5,5,5,0) 83%,rgba(5,5,5,.72) 92%,#050505 100%)",
 			"linear-gradient(180deg, rgba(5,5,5,0) 25%, rgba(5,5,5,.5) 32%, rgba(5,5,5,.74) 44%, rgba(5,5,5,.74) 52%, rgba(5,5,5,.5) 60%, rgba(5,5,5,0) 66%)",
 			"radial-gradient(88% 52% at 24% 64%, rgba(5,5,5,.86) 0%, rgba(5,5,5,.56) 48%, rgba(5,5,5,0) 84%)"
@@ -1127,7 +1125,7 @@ export const posterVariants: PosterVariant[] = [
 		"eyebrow": "lift/arrival · pending",
 		"headline": "The lift is still pending. So is your knowledge of version control.",
 		"emphasis": "pending",
-		"subline": "Some checks haven't completed yet. Neither have you — expected, waiting for 29 August.",
+		"subline": "Some checks haven't completed yet. Neither have you: expected, waiting for 29 August.",
 		"dateLine": "29 August 2026",
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true

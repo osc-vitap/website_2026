@@ -42,7 +42,7 @@ export interface PosterVariant {
   image?: string;
 
   /**
-   * Blend mode for `image`, for the two textures that are not meant to
+   * Blend mode for `image`, for the textures that are not meant to
    * be laid down flat.
    *
    * `multiply` is the halftone screen: a white sheet with black dots, so
@@ -55,8 +55,19 @@ export interface PosterVariant {
    * the printed posters tint each one to its own palette. Taking the
    * texture's lightness and the ground's colour does the same thing, so
    * it paints in its usual place and lets the tints run over it.
+   *
+   * `screen` is for a lit object photographed against black. The two
+   * lift sheets ship the same render the printed poster uses, and it
+   * carries no alpha — 66% of it is near-black field. Laid down flat
+   * that field is a visible rectangle sitting on the ground; screened,
+   * the black drops out and only the glass survives, which is exactly
+   * what the poster does with it. It paints in the usual place, under
+   * `layers`, so the scrims still run over the top.
    */
-  imageBlend?: 'multiply' | 'luminosity';
+  imageBlend?:
+    | 'multiply'
+    | 'luminosity'
+    | 'screen';
 
   /**
    * Where `image` is anchored, as a CSS background-position. Defaults to

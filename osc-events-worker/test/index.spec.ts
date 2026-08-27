@@ -559,6 +559,283 @@ describe("registration identity", () => {
 });
 
 /*
+ * Both rules below come from reading the first 239 participants. Six
+ * of them answered "Year of Study" with the calendar year they joined,
+ * and the GitHub column holds everything from a bare handle to a full
+ * URL — so the Worker now reads all of it and stores one form.
+ */
+/*
+ * REGISTRATION_IP_LIMITER allows 60 registrations a minute per client
+ * IP, and every request in a test run that sends no CF-Connecting-IP
+ * shares the key "unknown". The two blocks below post more than sixty
+ * between them, so each request gets its own IP — otherwise these
+ * tests start returning 429 and take the tests that follow with them.
+ */
+let registrationIp = 0;
+
+function fromFreshIp(): Record<string, string> {
+	registrationIp += 1;
+
+	return { "CF-Connecting-IP": `203.0.113.${registrationIp}` };
+}
+
+describe("year of study", () => {
+	function registerYear(slug: string, yearOfStudy: unknown): Promise<Response> {
+		return fetchWorker(`/api/events/${slug}/register`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json", ...fromFreshIp() },
+			body: JSON.stringify({
+				members: [
+					{
+						name: "Test Student",
+						year_of_study: yearOfStudy,
+						college_registration_number: "22BCE8001",
+						email: "student@vitapstudent.ac.in",
+					},
+				],
+			}),
+		});
+	}
+
+	async function storedYear(slug: string, yearOfStudy: string): Promise<string | undefined> {
+		await seedEvent({ slug, title: "Year Event" });
+
+		expect((await registerYear(slug, yearOfStudy)).status).toBe(201);
+
+		const row = await env.DB.prepare(`SELECT year_of_study FROM registration_members`).first<{
+			year_of_study: string;
+		}>();
+
+		return row?.year_of_study;
+	}
+
+	/*
+	 * The owner's rule: an integer above ten is the year they joined,
+	 * so 2027 minus it is the year they are in.
+	 */
+	it.each([
+		["2026", "1"],
+		["2025", "2"],
+		["2024", "3"],
+		["2023", "4"],
+		["2022", "5"],
+	])("reads the calendar year %s as year %s", async (entered, expected) => {
+		expect(await storedYear(`calendar-${entered}`, entered)).toBe(expected);
+	});
+
+	it.each(["1", "2", "3", "4", "5"])("stores a plain %s unchanged", async (entered) => {
+		expect(await storedYear(`plain-${entered}`, entered)).toBe(entered);
+	});
+
+	it("stores one canonical form, so a padded 02 is the same year as 2", async () => {
+		expect(await storedYear("padded-year", "02")).toBe("2");
+	});
+
+	/*
+	 * One case per way the subtraction goes wrong, so loosening the
+	 * range check fails a named test rather than quietly filing
+	 * somebody under year 2002.
+	 */
+	it.each([
+		["2027", "the subtraction gives 0"],
+		["2028", "the subtraction gives -1"],
+		["25", "the subtraction gives 2002"],
+		["11", "the subtraction gives 2016"],
+		["0", "nobody is in year zero"],
+		["6", "no VIT-AP degree runs to six years"],
+		["10", "ten is below the calendar-year threshold and still not a year"],
+		["abc", "not a number at all"],
+		["1st year", "an ordinal the rule was not written for"],
+		["2025-2026", "an academic year span"],
+		["-1", "negative"],
+		["2.5", "not an integer"],
+	])("rejects %s (%s)", async (entered) => {
+		const slug = `bad-year-${entered.replace(/[^a-z0-9]/gi, "-").toLowerCase()}`;
+
+		await seedEvent({ slug, title: "Year Event" });
+
+		const response = await registerYear(slug, entered);
+
+		expect(response.status).toBe(400);
+		expect(((await response.json()) as { error: string }).error).toContain("Year of study");
+
+		const stored = await env.DB.prepare(`SELECT COUNT(*) AS n FROM registration_members`).first<{ n: number }>();
+
+		expect(stored?.n).toBe(0);
+	});
+
+	/*
+	 * An empty year is caught one check earlier, as missing
+	 * information, so it gets its own case rather than the
+	 * "looks invalid" wording.
+	 */
+	/*
+	 * A client that runs Number(input) before POSTing sends 2026, not
+	 * "2026" — and that used to reach collapseWhitespace as a number
+	 * and come back a 500, from the one field the calendar-year rule
+	 * exists to forgive.
+	 */
+	it("rejects a year of study sent as a JSON number", async () => {
+		await seedEvent({ slug: "numeric-year", title: "Year Event" });
+
+		const response = await registerYear("numeric-year", 2026);
+
+		expect(response.status).toBe(400);
+		expect(((await response.json()) as { error: string }).error).toContain("Missing required information");
+	});
+
+	it.each(["", "   "])("rejects an empty year of study as missing information", async (entered) => {
+		await seedEvent({ slug: "empty-year", title: "Year Event" });
+
+		const response = await registerYear("empty-year", entered);
+
+		expect(response.status).toBe(400);
+		expect(((await response.json()) as { error: string }).error).toContain("Missing required information");
+	});
+});
+
+describe("github handle", () => {
+	function registerGithub(slug: string, github?: unknown): Promise<Response> {
+		return fetchWorker(`/api/events/${slug}/register`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json", ...fromFreshIp() },
+			body: JSON.stringify({
+				members: [
+					{
+						name: "Test Student",
+						year_of_study: "2",
+						college_registration_number: "22BCE8101",
+						email: "student@vitapstudent.ac.in",
+						github,
+					},
+				],
+			}),
+		});
+	}
+
+	function slugFor(prefix: string, value: string): string {
+		return `${prefix}-${value.replace(/[^a-z0-9]/gi, "-").toLowerCase()}`;
+	}
+
+	/*
+	 * Every shape the address bar hands out names the same person, and
+	 * the handle is what the Discord roster renders — escapeDiscord
+	 * backslashes the ':' in a URL, so a stored URL reaches the channel
+	 * as "https\://github.com/ada".
+	 */
+	it.each([
+		["adalovelace", "adalovelace"],
+		["https://github.com/adalovelace", "adalovelace"],
+		["github.com/adalovelace", "adalovelace"],
+		["https://www.github.com/adalovelace/", "adalovelace"],
+		["http://github.com/adalovelace", "adalovelace"],
+		["www.github.com/adalovelace", "adalovelace"],
+		["HTTPS://GitHub.COM/AdaLovelace", "AdaLovelace"],
+		/*
+		 * What the address bar actually holds for someone who copied
+		 * the link from their own Repositories tab.
+		 */
+		["https://github.com/adalovelace?tab=repositories", "adalovelace"],
+		["https://github.com/adalovelace#top", "adalovelace"],
+		["a", "a"],
+		["a-b-c", "a-b-c"],
+		["a1-2b", "a1-2b"],
+		["a".repeat(39), "a".repeat(39)],
+	])("accepts %s and stores the bare handle", async (entered, expected) => {
+		const slug = slugFor("gh", entered);
+
+		await seedEvent({ slug, title: "GitHub Event" });
+
+		expect((await registerGithub(slug, entered)).status).toBe(201);
+
+		const row = await env.DB.prepare(`SELECT github FROM registration_members`).first<{ github: string | null }>();
+
+		expect(row?.github).toBe(expected);
+	});
+
+	/*
+	 * GitHub's own username rule, not \w+ — a loose pattern accepts
+	 * "-" and "--" as handles and the roster then names profiles that
+	 * cannot exist.
+	 *
+	 * FLAGGED FOR THE OWNER: git.meowda.xyz is a real participant's
+	 * self-hosted Git instance, and this is a workshop that closes on
+	 * self-hosting your own Git server. The strict github.com rule is
+	 * what was asked for, and it turns that answer away.
+	 */
+	it.each([
+		["https://github.com/", "a URL with no username after the slash"],
+		["https://github.com", "the bare host"],
+		["github.com/", "the bare host without a scheme"],
+		["-bad", "a leading hyphen"],
+		["bad-", "a trailing hyphen"],
+		["a--b", "two hyphens in a row"],
+		["--", "hyphens only"],
+		["a".repeat(40), "forty characters"],
+		["ada lovelace", "a space inside the handle"],
+		["ada_lovelace", "an underscore"],
+		["adalovelace?tab=repositories", "a query string with no profile URL in front of it"],
+		["https://github.com/adalovelace/some-project", "a repository, not a profile"],
+		["https://gitlab.com/adalovelace", "another host"],
+		["https://git.meowda.xyz/meowda", "a self-hosted Git instance"],
+		/*
+		 * The three below all contain "github.com/" as a substring, so
+		 * they are the only cases that can catch a profile pattern that
+		 * stops being anchored at a host spelled exactly github.com —
+		 * the one thing standing between a stranger's handle and the
+		 * roster. gitlab.com and git.meowda.xyz above pass an unanchored
+		 * or dot-unescaped pattern just as happily as the real one.
+		 */
+		["https://notgithub.com/adalovelace", "a host that merely ends in github.com"],
+		["https://evil.com/github.com/adalovelace", "github.com inside someone else's path"],
+		["githubXcom/adalovelace", "a host with any character where the dot should be"],
+	])("rejects %s (%s)", async (entered, reason) => {
+		const slug = slugFor("bad-gh", reason);
+
+		await seedEvent({ slug, title: "GitHub Event" });
+
+		const response = await registerGithub(slug, entered);
+
+		expect(response.status).toBe(400);
+		expect(((await response.json()) as { error: string }).error).toContain("GitHub");
+
+		const stored = await env.DB.prepare(`SELECT COUNT(*) AS n FROM registration_members`).first<{ n: number }>();
+
+		expect(stored?.n).toBe(0);
+	});
+
+	/*
+	 * The field is optional — 177 of the first 239 participants left it
+	 * blank, so an absent handle can never be an error.
+	 */
+	/*
+	 * A github that is not a string used to throw "value.replace is
+	 * not a function" and come back a 500. The field is optional, so
+	 * it is read as nothing rather than refused — but the registration
+	 * has to survive it.
+	 */
+	it("stores no github when the field arrives as a JSON number", async () => {
+		await seedEvent({ slug: "numeric-github", title: "GitHub Event" });
+
+		expect((await registerGithub("numeric-github", 12345)).status).toBe(201);
+
+		const row = await env.DB.prepare(`SELECT github FROM registration_members`).first<{ github: string | null }>();
+
+		expect(row?.github).toBeNull();
+	});
+
+	it.each([undefined, "", "   "])("accepts a registration with no github (%s)", async (entered) => {
+		await seedEvent({ slug: "no-github", title: "GitHub Event" });
+
+		expect((await registerGithub("no-github", entered)).status).toBe(201);
+
+		const row = await env.DB.prepare(`SELECT github FROM registration_members`).first<{ github: string | null }>();
+
+		expect(row?.github).toBeNull();
+	});
+});
+
+/*
  * The archive path is where irreversible loss lives: once the cron has
  * written R2 and purged D1, that object is the only copy of every
  * participant's name, registration number and email. It had no test

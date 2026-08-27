@@ -261,6 +261,117 @@ function hasAllowedEmailDomain(email: string): boolean {
 }
 
 /*
+ * Degrees at VIT-AP run to five years — B.Tech is four, the integrated
+ * programmes five — so anything outside 1 to 5 is not a year of study,
+ * whatever produced it.
+ */
+const MAX_YEAR_OF_STUDY = 5;
+
+/*
+ * Above this, a plain integer is read as the calendar year the student
+ * joined rather than the year they are in.
+ */
+const CALENDAR_YEAR_THRESHOLD = 10;
+
+/*
+ * The year a first-year is in during the current academic year. Moves
+ * with the intake: once 2027 admissions register, a first-year types
+ * "2027" and this has to become 2028 or they are turned away.
+ */
+const ACADEMIC_YEAR_BASE = 2027;
+
+/*
+ * Six of the first 239 participants answered "Year of Study" with
+ * "2026" — the year they joined, not the year they are in. The rule is
+ * the owner's: an integer above ten is one of those, so 2026 becomes 1
+ * and 2025 becomes 2.
+ *
+ * The subtraction alone invents years for input it was never written
+ * for: 2027 gives 0, 2028 gives -1, and a mistyped "25" gives 2002. So
+ * the result is range-checked afterwards and a bad one is refused
+ * rather than clamped — storing a year nobody entered is worse than
+ * asking for the field again. That check is also what rejects the "0"
+ * already sitting in the table, which the subtraction never touches.
+ *
+ * Digits only. "1st year" and "2025-2026" appear in the existing rows
+ * too, and guessing at those would be a second rule the owner has not
+ * written; the caller is told what to type instead. The rows already
+ * stored are the migration stream's problem, not this function's.
+ *
+ * The registration form has to refuse exactly what this refuses, the
+ * way src/data/registrationNumber.ts mirrors
+ * REGISTRATION_NUMBER_PATTERN. A form that accepts what the Worker
+ * turns away is a submit button that fails with no field marked.
+ */
+function normalizeYearOfStudy(value: string): string | null {
+	if (!/^[0-9]{1,4}$/.test(value)) {
+		return null;
+	}
+
+	const entered = Number(value);
+
+	const year = entered > CALENDAR_YEAR_THRESHOLD ? ACADEMIC_YEAR_BASE - entered : entered;
+
+	if (year < 1 || year > MAX_YEAR_OF_STUDY) {
+		return null;
+	}
+
+	return String(year);
+}
+
+/*
+ * GitHub's own username rule: 1 to 39 characters, letters, digits and
+ * single hyphens, never starting or ending with one. Spelled out
+ * because the obvious \w+ accepts "-", "--" and a 200-character string
+ * as handles, and the roster would then name profiles that cannot
+ * exist.
+ */
+const GITHUB_USERNAME = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
+
+/*
+ * A profile URL, in every shape the address bar hands out: with or
+ * without the scheme, with or without www., with or without a trailing
+ * slash. The username is what is captured.
+ *
+ * A deeper path does not match at all, so "github.com/name/project" is
+ * refused rather than trimmed to its first segment — that is a
+ * repository someone pasted by mistake, and storing half of it would
+ * be a guess.
+ */
+const GITHUB_PROFILE_URL = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/]+)\/?$/i;
+
+/*
+ * Accepts a handle or a profile URL and stores the handle.
+ *
+ * One stored form because the field is asking for a handle and the
+ * Discord roster renders one: escapeDiscord backslashes every ':' it
+ * meets, so a URL reaches the channel as "https\://github.com/ada".
+ * Casing is left as typed — GitHub resolves either way, and lowercasing
+ * "AdaLovelace" only makes the roster read wrong.
+ *
+ * "https://github.com/" names nobody, so it fails the username test
+ * with everything else that has no handle in it.
+ *
+ * An empty github is not this function's business: the field is
+ * optional and 177 of the first 239 participants left it blank.
+ */
+function normalizeGithub(value: string): string | null {
+	/*
+	 * Copying the link while sitting on your own Repositories tab
+	 * gives "github.com/ada?tab=repositories", and the address bar
+	 * hands out "#top" the same way. Both name the user, so cutting
+	 * the query and the fragment is what keeps the error from telling
+	 * a student to paste the profile link they just pasted. Only the
+	 * URL form is cut: a bare handle carrying a '?' is not a handle.
+	 */
+	const url = value.split(/[?#]/)[0];
+
+	const handle = GITHUB_PROFILE_URL.exec(url)?.[1] ?? value;
+
+	return GITHUB_USERNAME.test(handle) ? handle : null;
+}
+
+/*
  * Field length ceilings. These are resource limits, not format
  * validation: without them a single request can park megabytes of
  * garbage in D1 and in every CSV export after it.
@@ -273,6 +384,19 @@ const LIMITS = {
 	teamName: 120,
 	members: 20,
 } as const;
+
+/*
+ * A member field is whatever the client put in the JSON, and a client
+ * that runs Number(input) before POSTing sends year_of_study as 2026
+ * rather than "2026". That number reached collapseWhitespace and threw
+ * "value.replace is not a function" — a 500 for what is an input
+ * problem, and from the one field normalizeYearOfStudy exists to
+ * forgive. A non-string becomes empty here and is refused as missing
+ * information, like a field nobody filled in.
+ */
+function asString(value: unknown): string {
+	return typeof value === 'string' ? value : '';
+}
 
 /*
  * The same fields were length-checked but never character-checked, and
@@ -2970,11 +3094,11 @@ export default {
 						);
 					}
 
-					const name = collapseWhitespace(member.name ?? '');
-					const yearOfStudy = collapseWhitespace(member.year_of_study ?? '');
-					const email = collapseWhitespace(member.email ?? '').toLowerCase();
-					const github = collapseWhitespace(member.github ?? '') || null;
-					const registrationNumber = normalizeRegistrationNumber(member.college_registration_number ?? '');
+					const name = collapseWhitespace(asString(member.name));
+					const yearOfStudy = collapseWhitespace(asString(member.year_of_study));
+					const email = collapseWhitespace(asString(member.email)).toLowerCase();
+					const githubInput = collapseWhitespace(asString(member.github)) || null;
+					const registrationNumber = normalizeRegistrationNumber(asString(member.college_registration_number));
 
 					if (!name || !yearOfStudy || !registrationNumber || !email) {
 						return json(
@@ -2991,7 +3115,7 @@ export default {
 						name.length > LIMITS.name ||
 						yearOfStudy.length > LIMITS.yearOfStudy ||
 						email.length > LIMITS.email ||
-						(github !== null && github.length > LIMITS.github)
+						(githubInput !== null && githubInput.length > LIMITS.github)
 					) {
 						return json(
 							{
@@ -3012,11 +3136,24 @@ export default {
 						FORBIDDEN_FIELD_CHARACTERS.test(name) ||
 						FORBIDDEN_FIELD_CHARACTERS.test(yearOfStudy) ||
 						FORBIDDEN_FIELD_CHARACTERS.test(email) ||
-						(github !== null && FORBIDDEN_FIELD_CHARACTERS.test(github))
+						(githubInput !== null && FORBIDDEN_FIELD_CHARACTERS.test(githubInput))
 					) {
 						return json(
 							{
 								error: `One of the fields for member ${index + 1} contains characters that are not allowed`,
+							},
+							400,
+							request,
+							env,
+						);
+					}
+
+					const year = normalizeYearOfStudy(yearOfStudy);
+
+					if (year === null) {
+						return json(
+							{
+								error: `Year of study for member ${index + 1} looks invalid. Enter the year you are in as a number from 1 to ${MAX_YEAR_OF_STUDY}.`,
 							},
 							400,
 							request,
@@ -3057,9 +3194,26 @@ export default {
 						);
 					}
 
+					/*
+					 * Optional, so an absent handle is not an error — but a
+					 * handle that was typed and does not name anybody is.
+					 */
+					const github = githubInput === null ? null : normalizeGithub(githubInput);
+
+					if (githubInput !== null && github === null) {
+						return json(
+							{
+								error: `GitHub for member ${index + 1} looks invalid. Use your username, e.g. adalovelace, or a link to your profile.`,
+							},
+							400,
+							request,
+							env,
+						);
+					}
+
 					members.push({
 						name,
-						year_of_study: yearOfStudy,
+						year_of_study: year,
 						college_registration_number: registrationNumber,
 						github,
 						email,

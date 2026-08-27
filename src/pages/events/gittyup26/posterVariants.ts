@@ -943,7 +943,7 @@ export const posterVariants: PosterVariant[] = [
 		/* The sheet's accent is cyan, not the run's violet: #2ee2ff, 13:1 on #050505. */
 		"accent": "#2ee2ff",
 		"rows": 1,
-		"eyebrow": "Tear along the dotted line",
+		"eyebrow": "Backups exist",
 		"headline": "It's under version control.",
 		"emphasis": "version control",
 		"heroWord": "Rip it down.",
@@ -1030,10 +1030,12 @@ export const posterVariants: PosterVariant[] = [
 		"layers": [
 			"linear-gradient(180deg,#050505 0%,#050505 14%,rgba(5,5,5,.55) 19%,rgba(5,5,5,0) 25%,rgba(5,5,5,0) 68%,rgba(5,5,5,.5) 76%,rgba(5,5,5,.95) 84%,#050505 90%)",
 			"linear-gradient(180deg, rgba(5,5,5,0) 28%, rgba(5,5,5,.40) 36%, rgba(5,5,5,.46) 46%, rgba(5,5,5,.40) 54%, rgba(5,5,5,0) 62%)",
-			"radial-gradient(62% 34% at 16% 76%, rgba(5,5,5,.92) 0%, rgba(5,5,5,.58) 50%, rgba(5,5,5,0) 84%)"
+			"radial-gradient(62% 34% at 16% 76%, rgba(5,5,5,.92) 0%, rgba(5,5,5,.58) 50%, rgba(5,5,5,0) 84%)",
+			"radial-gradient(110% 70% at 46% 40%,rgba(5,5,5,.16) 0%,rgba(5,5,5,.82) 52%,#050505 84%)"
 		],
 		"grain": 0.14,
-		"ink": "#ffffff",
+		"ink": "#e8eefb",
+		"inkGradient": "linear-gradient(98deg,#e8eefb 0%,#6f7f9e 20%,#f2f7ff 40%,#4e5a75 56%,#e2ebfa 74%,#63718f 88%,#eef4ff 100%)",
 		"text": "rgba(255,255,255,.88)",
 		/* The sheet's own accent, sampled off its footer URL: ice cyan
 		   #7ad4ff pulled from the dispersion in the uprights, 12.3:1 on

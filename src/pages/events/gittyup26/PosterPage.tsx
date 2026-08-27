@@ -458,6 +458,27 @@ const PosterPage = ({
             )}
 
             {/*
+              * Not in the variant data, because it is not about any one
+              * sheet — somebody went round taking the posters down, and
+              * every sheet that went back up says so. It is set in the
+              * accent rather than the body colour: the copy above it is
+              * the poster's own line, and this is the club answering,
+              * which should not read as more of the same paragraph.
+              */}
+            <p
+              className="poster-fade-up mt-4 max-w-xl text-[clamp(0.8rem,1.5vw,0.95rem)] font-semibold leading-relaxed"
+              style={{
+                color: variant.accent,
+                textShadow: textHalo(variant.accent),
+                animationDelay: '0.55s',
+              }}
+            >
+              They tried to remove our posters but just demonstrated
+              {' '}
+              <span className="font-postermono">git restore</span>!
+            </p>
+
+            {/*
               * The terminal poster prints its own git log. The prompt
               * lines take the accent, the output stays quiet.
               */}

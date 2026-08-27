@@ -1,0 +1,78 @@
+-- GittyUp '26 moves from Saturday 29 August 2026 to Tuesday 1 September
+-- 2026. The times and the venue do not change: 10am to 5pm, AB-2
+-- Auditorium, so neither venue nor is_open is touched here.
+--
+-- This row is the one the live surfaces read. GET /api/events and
+-- GET /api/events/:slug serve event_date and event_end_at to the site;
+-- the admin dashboard lists the same columns; the registration handler
+-- refuses a registration once event_end_at has passed; and the hourly
+-- scheduled job archives the event on event_end_at. Nothing in the
+-- Worker carries the date in its source -- it is read from here every
+-- time -- so this file is the whole of the change on this side.
+
+-- The guard is on the date it is moving FROM, not on the slug alone.
+--
+-- The admin dashboard can PATCH event_date and event_end_at at any time,
+-- and a migration file outlives the deploy that applies it -- 0011 says
+-- the same thing about being re-run by hand later. Matching on the slug
+-- alone would mean that a second run, or a run after an organiser had
+-- already moved the row through the dashboard, overwrote whatever they
+-- set with the values below. Matching on '2026-08-29' means that once
+-- the row has moved, this file can no longer reach it.
+--
+-- The cost of that guard is that a mismatch is a SILENT no-op: if
+-- event_date is anything other than '2026-08-29' this file reports
+-- success and moves nothing.
+--
+-- Nothing on the deploy path tells the two apart. deploy-worker.yml runs
+-- `wrangler d1 migrations apply --remote`, which prints a per-file
+-- status table and "N commands executed successfully" -- a count of
+-- statements, not of rows -- and then goes straight to `wrangler
+-- deploy`; there is no verification step between them. `d1 execute`
+-- returns meta.duration and no rows_written either, so a run that moved
+-- the row and a run that matched nothing are the same green CI run.
+--
+-- So the check is on the post-state, not on the exit status or on a row
+-- count that never arrives. Once the deploy has finished, read the row
+-- back:
+--
+--   npx wrangler d1 execute osc-events-db --remote --command
+--     "SELECT slug, event_date, event_end_at, venue, is_open
+--        FROM events WHERE slug = 'gittyup26';"
+--
+-- event_date has to come back '2026-09-01' and event_end_at
+-- '2026-09-01T10:30:00.000Z'. venue and is_open are not written here, so
+-- they have to come back as the pre-state recorded them, 'AB2
+-- Auditorium' and 1; anything else means something other than this file
+-- edited the row. event_date still reading '2026-08-29' means the guard
+-- never matched -- go and look at the row, do not re-run this file,
+-- which would match nothing a second time as well.
+
+-- event_end_at is SHIFTED by three days, not rewritten to a fixed value.
+--
+-- It reads '2026-08-29T10:30:00.000Z'. 10:30Z is 4pm IST, and the
+-- posters say the day ends at 5pm, so the stored end is an hour short of
+-- the printed one -- and it was already an hour short before this move.
+-- Which of the two is correct is the event owner's call and not this
+-- migration's: the registration handler closes on this value, so raising
+-- it admits later registrations and lowering it cuts them off early.
+-- Shifting the date and leaving the time of day exactly as found moves
+-- the event without answering that question. If the answer turns out to
+-- be 5pm, that is a separate migration setting 11:30Z.
+--
+-- Rebuilt with strftime rather than datetime() because the format is
+-- load-bearing, not cosmetic. datetime() returns '2026-09-01 10:30:00'
+-- -- no T, no Z -- and the registration handler reads this column with
+-- Date.parse(), which treats a date-time string carrying no zone as
+-- LOCAL time rather than UTC. Writing the datetime() form would move the
+-- registration cutoff by the reader's UTC offset without changing
+-- anything visible in the value. %f carries the fractional seconds
+-- through, so the result keeps the exact shape Date#toISOString() gives.
+--
+-- A NULL end shifts to NULL, so an event with no end recorded would be
+-- left alone; gittyup26 has one.
+UPDATE events
+SET event_date = '2026-09-01',
+    event_end_at = strftime('%Y-%m-%dT%H:%M:%fZ', event_end_at, '+3 days')
+WHERE slug = 'gittyup26'
+    AND event_date = '2026-08-29';

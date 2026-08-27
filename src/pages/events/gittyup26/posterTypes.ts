@@ -142,6 +142,16 @@ export interface PosterVariant {
   inkPosition?: string;
   inkBlend?: string;
 
+  /**
+   * background-repeat for the wordmark's fill.
+   *
+   * A sized fill defaults to no-repeat, because the prism sheet runs its
+   * photograph at 220% to land one facet in the letterforms and a second
+   * copy tiling in behind it would be a mistake. The hash sheet wants
+   * the opposite: a small tile repeated until it fills every stroke.
+   */
+  inkRepeat?: string;
+
   /** Body copy colour. */
   text: string;
 

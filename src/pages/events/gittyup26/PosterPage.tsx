@@ -237,9 +237,11 @@ const PosterPage = ({
         backgroundSize: variant.inkSize,
         backgroundPosition:
           variant.inkPosition,
-        backgroundRepeat: variant.inkSize
-          ? ('no-repeat' as const)
-          : undefined,
+        backgroundRepeat:
+          variant.inkRepeat ??
+          (variant.inkSize
+            ? ('no-repeat' as const)
+            : undefined),
         backgroundBlendMode: variant.inkBlend,
         WebkitBackgroundClip: 'text' as const,
         backgroundClip: 'text' as const,

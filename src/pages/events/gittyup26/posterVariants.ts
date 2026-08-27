@@ -952,6 +952,186 @@ export const posterVariants: PosterVariant[] = [
 		"venueLine": "10am to 5pm · AB-2 Auditorium",
 		"unlisted": true
 	},
+	{
+		"id": 35,
+		"layout": "wordmark-stack",
+		/*
+		 * The "waiting" sheet: a whole prismatic lift car standing dead
+		 * centre of the page, doors open, empty, with a bracket off its
+		 * call panel annotating `requested: 10:04 / arrived: 10:17`. Two
+		 * wordmark rows above it and one line of copy below.
+		 */
+		"ground": "#050505",
+		/*
+		 * Genuine dispersion. Sampled down the uprights of
+		 * gittyup26-liftwaiting.webp the fringe runs #0f3fff, #0f98f9,
+		 * #19a1ff on one side and mauve #6e5265 on the other — a warm
+		 * copy of every contour thrown one way and a cool one the other,
+		 * which is what .poster-fringe answers.
+		 */
+		"dispersion": true,
+		/*
+		 * Read off gittyup26-liftwaiting.webp (1240x1754). The sheet is
+		 * one object on an otherwise empty field: every column outside
+		 * x 33-68% measures #050505 to #06080c, and every row outside
+		 * y 29-73% the same. So the rebuild is a single centred column
+		 * with nothing else in it, which is also the sheet's argument —
+		 * the lift is the only centred thing on the page and everything
+		 * typographic hangs off one left axis.
+		 *
+		 * Layer 2 is the car itself, mapped column by column off the
+		 * sheet at 10px intervals: mauve at the left corner (#6e5265 at
+		 * 33.1%), the lit uprights (#7e75a9 at 36.3%, #62697e at 41.1%,
+		 * #576d89 at 44.4%), the deep blue back wall between them
+		 * (#1a253f to #333959 across 46-58%), and the bright right corner
+		 * (#6f7da5, then #b6c3d9 at 64.5%). Layers 3 and 4 are the
+		 * ceiling light bar and its reflection in the floor, the two
+		 * places the sheet reaches white.
+		 *
+		 * Each stop is the measured hue at a little over half strength
+		 * rather than the measured colour flat, because these composite
+		 * over each other and over the radial beneath. Set at the sheet's
+		 * own values the stack came out half again as bright as the
+		 * sheet, and the ceiling bar — a hot spot the print puts safely
+		 * above its upper rule — landed on the headline on every phone
+		 * viewport at 3.4:1.
+		 *
+		 * Layer 5 is the print's own pair of hairline rules, translated:
+		 * on the sheet the artwork stops at two ruled lines and every
+		 * word on the page is set on flat black outside them. A gradient
+		 * back to the ground does the same job without ruling a bar
+		 * across a page that reflows.
+		 *
+		 * Layers 6 and 7 are the scrims the print does not carry, and
+		 * they are here for the reason page 4's is: the sheet never sets
+		 * type over the car, and this layout does.
+		 *
+		 * They are two because the copy is in two different places. From
+		 * `lg` up the headline and subline are in the left column at
+		 * x 2.5-56%, y 62-85% — layer 7, the radial, is theirs. Below
+		 * `lg` the page flows and the copy runs the full width at
+		 * y 34-55%, straight across the car's brightest part, and no
+		 * radial anchored to one side reaches it — layer 6, a full-width
+		 * band, is that one. It costs the desktop view nothing visible
+		 * because it lands on the car's own dark interior, which is the
+		 * one part of the sheet that measures #1a253f rather than
+		 * #6f7da5.
+		 *
+		 * Measured on a text-free render of this stack — the content
+		 * layer hidden, the background screenshotted, sampled at the
+		 * headline's and subline's own bounding boxes across fourteen
+		 * viewports from 320x640 to 1920x1080 — the worst case is
+		 * #565b64 at 320x640 and 5.73:1. Without layers 6 and 7 the same
+		 * pixel is #656970 and 4.71:1.
+		 */
+		"layers": [
+			"radial-gradient(30% 34% at 50% 50%, rgba(64,104,168,.22) 0%, rgba(30,56,104,.10) 50%, rgba(5,5,5,0) 82%)",
+			"linear-gradient(90deg, rgba(5,5,5,0) 32%, rgba(178,132,166,.32) 33.2%, rgba(24,29,54,.26) 34.6%, rgba(150,140,202,.38) 36.3%, rgba(92,120,170,.28) 37.4%, rgba(24,32,58,.24) 39.2%, rgba(120,129,155,.32) 41.1%, rgba(60,80,117,.26) 43.0%, rgba(106,133,168,.32) 44.4%, rgba(42,58,98,.26) 46.5%, rgba(36,48,79,.26) 50.0%, rgba(59,74,112,.27) 53.0%, rgba(50,69,115,.27) 55.6%, rgba(119,156,190,.34) 58.1%, rgba(22,31,48,.24) 60.2%, rgba(16,21,47,.22) 62.2%, rgba(136,153,202,.36) 63.7%, rgba(206,220,240,.42) 64.5%, rgba(19,20,33,.22) 65.3%, rgba(88,113,148,.32) 66.9%, rgba(5,5,5,0) 68.4%)",
+			"radial-gradient(15% 4% at 50% 33%, rgba(255,255,255,.34) 0%, rgba(186,214,255,.16) 55%, rgba(5,5,5,0) 100%)",
+			"radial-gradient(20% 6% at 50% 68%, rgba(122,180,240,.22) 0%, rgba(5,5,5,0) 100%)",
+			"linear-gradient(180deg,#050505 0%,#050505 14%,rgba(5,5,5,.55) 19%,rgba(5,5,5,0) 25%,rgba(5,5,5,0) 68%,rgba(5,5,5,.5) 76%,rgba(5,5,5,.95) 84%,#050505 90%)",
+			"linear-gradient(180deg, rgba(5,5,5,0) 28%, rgba(5,5,5,.40) 36%, rgba(5,5,5,.46) 46%, rgba(5,5,5,.40) 54%, rgba(5,5,5,0) 62%)",
+			"radial-gradient(62% 34% at 16% 76%, rgba(5,5,5,.92) 0%, rgba(5,5,5,.58) 50%, rgba(5,5,5,0) 84%)"
+		],
+		"grain": 0.14,
+		"ink": "#ffffff",
+		"text": "rgba(255,255,255,.88)",
+		/* The sheet's own accent, sampled off its footer URL: ice cyan
+		   #7ad4ff pulled from the dispersion in the uprights, 12.3:1 on
+		   this ground. */
+		"accent": "#7ad4ff",
+		"rows": 2,
+		"eyebrow": "requested 10:04 · arrived 10:17",
+		"headline": "Waiting is the problem. git was built by people who hated waiting.",
+		"emphasis": "hated waiting",
+		"subline": "Thirteen minutes for one floor. Somebody once refused to wait that long for a file, and you have been using what they built ever since.",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium",
+		"unlisted": true
+	},
+	{
+		"id": 36,
+		"layout": "wordmark-stack",
+		/*
+		 * The "pending" sheet: the same lift car, but pushed off three
+		 * edges so only the doorframe is lit, with a status block below
+		 * the wordmark reading `lift/arrival — pending` and
+		 * `you/version-control — pending` against two amber dots.
+		 */
+		"ground": "#050505",
+		"dispersion": true,
+		/*
+		 * Read off gittyup26-liftpending.webp (1240x1754), sampled in
+		 * bands the type does not cross — y 200-330, y 855-885 and
+		 * y 1400-1470 — because a naive column mean here is measuring
+		 * the white wordmark, not the sheet.
+		 *
+		 * Measured that way the sheet is far darker than it looks: the
+		 * whole left two-thirds runs #050505 to #1d1d22, and everything
+		 * right of 82% is #050505 exactly apart from the call panel. All
+		 * of the sheet's light is in one narrow jamb between 68% and 82%,
+		 * which is layer 2 — two stripes with a dead column between them,
+		 * mapped at 10px intervals: #233e60, #88788b, #465b7c, #777d96,
+		 * #7d97cb, #7880a7 down the near stripe, then #92626b and a
+		 * near-white core #e9f7f8 at 79.8% down the far one. The warm
+		 * rose and the blue on either side of that core are the same
+		 * dispersion the sibling sheet has, thrown much harder.
+		 *
+		 * Layer 1 is the car's dark interior glass, which is all the left
+		 * field has. Layer 3 is the call panel, floating free to the
+		 * right of the jamb the way it does on the sheet (#221f32 to
+		 * #8c95b1 across 88-96%, y 55-69%) — a radial rather than a
+		 * banded gradient so it stays an object rather than a stripe.
+		 *
+		 * Layer 5 confines the jamb only at the very top and bottom; on
+		 * the sheet it is genuinely full bleed.
+		 *
+		 * Layers 6 and 7 are the scrims, and 6 is the one that matters
+		 * here. From `lg` up the copy is in the left column, which on
+		 * this sheet is already black, and the jamb is behind the details
+		 * panel — nothing needs holding and the desktop measurements are
+		 * all around 15.8:1. Below `lg` the page flows, the copy runs the
+		 * full width at y 34-55%, and it crosses the jamb's near-white
+		 * core head on. Measured on a text-free render — the content
+		 * layer hidden, sampled at the headline's and subline's own
+		 * bounding boxes across fourteen viewports from 320x640 to
+		 * 1920x1080 — the ground there without these two layers is
+		 * #aab4bb and the subline falls to 1.98:1, with thirteen of the
+		 * twenty-eight measurements under the 4.5:1 floor. With them the
+		 * worst case is #4f5456 and 6.61:1, and none miss.
+		 *
+		 * The band sits at y 30-60% because that is where the copy lands
+		 * on every viewport below `lg`, and because from `lg` up it is
+		 * exactly the height the details panel occupies — so it dims the
+		 * jamb only where the panel was covering it anyway.
+		 */
+		"layers": [
+			"linear-gradient(96deg, rgba(5,5,5,0) 2%, rgba(120,132,160,.07) 22%, rgba(140,152,180,.11) 44%, rgba(118,134,170,.08) 60%, rgba(5,5,5,0) 68%)",
+			"linear-gradient(90deg, rgba(5,5,5,0) 67.4%, rgba(35,62,96,.42) 68.5%, rgba(41,51,70,.34) 69.4%, rgba(136,120,139,.52) 70.2%, rgba(70,91,124,.42) 71.0%, rgba(119,125,150,.50) 71.8%, rgba(58,55,77,.36) 72.6%, rgba(125,151,203,.56) 73.4%, rgba(120,128,167,.48) 74.2%, rgba(5,5,5,0) 75.6%, rgba(5,5,5,0) 77.4%, rgba(36,27,49,.30) 78.2%, rgba(146,98,107,.50) 79.0%, rgba(233,247,248,.72) 79.8%, rgba(125,130,138,.50) 80.6%, rgba(5,5,5,0) 81.6%)",
+			"radial-gradient(4.5% 8% at 93% 66%, rgba(172,180,208,.52) 0%, rgba(62,58,84,.20) 58%, rgba(5,5,5,0) 100%)",
+			"radial-gradient(26% 40% at 76% 46%, rgba(120,150,210,.12) 0%, rgba(5,5,5,0) 78%)",
+			"linear-gradient(180deg,#050505 0%,rgba(5,5,5,.62) 6%,rgba(5,5,5,0) 15%,rgba(5,5,5,0) 83%,rgba(5,5,5,.72) 92%,#050505 100%)",
+			"linear-gradient(180deg, rgba(5,5,5,0) 25%, rgba(5,5,5,.5) 32%, rgba(5,5,5,.74) 44%, rgba(5,5,5,.74) 52%, rgba(5,5,5,.5) 60%, rgba(5,5,5,0) 66%)",
+			"radial-gradient(88% 52% at 24% 64%, rgba(5,5,5,.86) 0%, rgba(5,5,5,.56) 48%, rgba(5,5,5,0) 84%)"
+		],
+		"grain": 0.16,
+		"ink": "#ffffff",
+		"text": "rgba(255,255,255,.9)",
+		/* The sheet's URL is amber rather than the run's violet, and it is
+		   the same amber as its two status dots — #d29922 against
+		   #d0a94d sampled off the dots. Keeping it is what stops a second
+		   hue getting onto a sheet whose only warm is those two marks.
+		   8.1:1 on this ground, and the button inverts to 8.1:1 as well. */
+		"accent": "#d29922",
+		"rows": 4,
+		"eyebrow": "lift/arrival · pending",
+		"headline": "The lift is still pending. So is your knowledge of version control.",
+		"emphasis": "pending",
+		"subline": "Some checks haven't completed yet. Neither have you — expected, waiting for 29 August.",
+		"dateLine": "29 August 2026",
+		"venueLine": "10am to 5pm · AB-2 Auditorium",
+		"unlisted": true
+	},
 ];
 
 /*

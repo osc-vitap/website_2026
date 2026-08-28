@@ -1144,8 +1144,12 @@ setRegistrations(
             * column anyone taps — or crushed the title to one word per
             * line. Each event gets a card instead, with the status where
             * the eye lands first and Manage as a full-width target.
+            *
+            * The switch is at lg, not md. md is 768, which is an iPad in
+            * portrait — a touch screen, where the table's Manage was a
+            * 50x20 text link.
             */}
-          <ul className="divide-y divide-dark-700/50 md:hidden">
+          <ul className="divide-y divide-dark-700/50 lg:hidden">
             {events.map((event) => (
               <li key={event.id} className="p-4">
 
@@ -1240,7 +1244,7 @@ setRegistrations(
             ))}
           </ul>
 
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden lg:block overflow-x-auto">
 
             <table className="w-full">
 
@@ -1379,11 +1383,14 @@ setRegistrations(
                       </td>
 
                       <td className="px-6 py-5">
+                        {/* The table shows from lg up, which includes a
+                            touch iPad in landscape, so this is sized as
+                            a finger target rather than a text link. */}
                         <button
                           onClick={() =>
                             openManage(event)
                           }
-                          className="text-brand-primary hover:text-white text-sm font-medium"
+                          className="-mx-2 flex min-h-[44px] items-center px-2 text-brand-primary hover:text-white text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
                         >
                           Manage
                         </button>
@@ -1435,7 +1442,7 @@ setRegistrations(
             /* Full height on a phone, a centred card from sm up. The
                bottom inset keeps the last field and the save button
                clear of the home indicator in the installed app. */
-            className="relative z-10 flex h-full w-full max-w-3xl flex-col overflow-y-auto glass-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:h-auto sm:max-h-[90vh] sm:p-6 sm:pb-6 md:p-8"
+            className="relative z-10 flex h-full w-full max-w-3xl flex-col overflow-y-auto glass-card p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] sm:h-auto sm:max-h-[90vh] sm:p-6 sm:pt-6 sm:pb-6 md:p-8"
           >
 
             <div className="flex items-start justify-between mb-8">
@@ -1876,7 +1883,7 @@ setRegistrations(
               }}
               /* Same treatment as the create sheet: full height on a
                  phone, centred card from sm up. */
-              className="relative z-10 flex h-full w-full max-w-6xl flex-col overflow-y-auto glass-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:h-auto sm:max-h-[92vh] sm:p-6 sm:pb-6 md:p-8"
+              className="relative z-10 flex h-full w-full max-w-6xl flex-col overflow-y-auto glass-card p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] sm:h-auto sm:max-h-[92vh] sm:p-6 sm:pt-6 sm:pb-6 md:p-8"
             >
 
               {/* Manage header */}
@@ -2461,7 +2468,7 @@ setRegistrations(
                             * right edge. One block per member instead,
                             * with the labels beside the values.
                             */}
-                          <ul className="divide-y divide-dark-700/50 md:hidden">
+                          <ul className="divide-y divide-dark-700/50 lg:hidden">
                             {registration.members.map(
                               (member) => (
                                 <li
@@ -2540,7 +2547,7 @@ setRegistrations(
                             )}
                           </ul>
 
-                          <div className="hidden md:block overflow-x-auto">
+                          <div className="hidden lg:block overflow-x-auto">
 
                             <table className="w-full min-w-[900px]">
 

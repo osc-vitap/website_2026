@@ -13,6 +13,7 @@ import {
 } from 'react-router-dom';
 import { useStandalone } from './data/standalone';
 import Navbar from './components/Navbar';
+import AppChrome from './components/AppChrome';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import Gallery from './pages/Gallery';
@@ -55,27 +56,37 @@ import { eventPageRoutes } from './data/eventPages';
 /*
  * The site shell: starfield, navbar and footer around a page.
  * Event poster pages deliberately render outside this.
+ *
+ * Installed as an app it wears different clothes. The marketing navbar,
+ * the countdown and the footer are all for a visitor reading the club
+ * site; in a window with no address bar they are ten links away from the
+ * one screen the app exists for, and there is no back button to undo a
+ * mistap. Standalone gets AppChrome instead — one bar, one link.
  */
-const SiteLayout = () => (
-  <div className="relative min-h-screen flex flex-col">
-    <StarBackground />
+const SiteLayout = () => {
+  const standalone = useStandalone();
 
-    {/* Foreground Content */}
-    <div className="relative z-10 flex flex-col min-h-screen">
-      <Navbar />
+  return (
+    <div className="relative min-h-screen flex flex-col">
+      <StarBackground />
 
-      {/* Sits in the shell so every page carries it, and retires
-          itself once there is nothing upcoming to count down to. */}
-      <EventCountdown />
+      {/* Foreground Content */}
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {standalone ? <AppChrome /> : <Navbar />}
 
-      <main className="flex-grow">
-        <Outlet />
-      </main>
+        {/* Sits in the shell so every page carries it, and retires
+            itself once there is nothing upcoming to count down to. */}
+        {!standalone && <EventCountdown />}
 
-      <Footer />
+        <main className="flex-grow">
+          <Outlet />
+        </main>
+
+        {!standalone && <Footer />}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /*
  * Launching the installed app opens the panel.

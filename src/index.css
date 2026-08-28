@@ -81,6 +81,25 @@
   }
 
   /*
+   * Installed as an app, the page stops behaving like a web page.
+   *
+   * A browser tab that overscrolls shows the page's own background and
+   * bounces back, which reads as the page. In a standalone window there
+   * is no browser above it, so the same rubber-band pulls the whole app
+   * down off its own chrome and exposes the OS behind — and on Android
+   * it arms pull-to-refresh, which in an app with no address bar looks
+   * like the screen crashing and reloading itself.
+   *
+   * The attribute is set from React rather than relying on the media
+   * query alone: iOS Safari has never implemented display-mode, and it
+   * is the platform where the rubber-band is most obvious.
+   */
+  html[data-standalone='true'],
+  html[data-standalone='true'] body {
+    overscroll-behavior-y: none;
+  }
+
+  /*
    * The poster panel's corner radius, named because everything drawn
    * over or beside the panel has to land on the same curve — including
    * the About dialog, which is portalled to <body> and so cannot pick

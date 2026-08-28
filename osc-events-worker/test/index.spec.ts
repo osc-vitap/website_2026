@@ -1298,15 +1298,14 @@ describe("rate limiting", () => {
 	it("stops a flood of fabricated registration numbers from one IP", async () => {
 		await seedEvent({ slug: "flood-event", title: "Flood Event" });
 
-		let throttled = 0;
+		const promises = [];
 
 		for (let attempt = 0; attempt < 61; attempt++) {
-			const response = await register("flood-event", `22BCE${String(1000 + attempt)}`, "203.0.113.12");
-
-			if (response.status === 429) {
-				throttled++;
-			}
+			promises.push(register("flood-event", `22BCE${String(1000 + attempt)}`, "203.0.113.12"));
 		}
+
+		const responses = await Promise.all(promises);
+		const throttled = responses.filter(r => r.status === 429).length;
 
 		expect(throttled).toBeGreaterThan(0);
 	});

@@ -2466,11 +2466,12 @@ export default {
 			 * PRINT POSTERS
 			 * ============================================================
 			 *
-			 * The thirty printed sheets, at A3 300dpi. They live in R2
-			 * rather than in the site's public folder because they total
-			 * 235MB — putting that in git would make every clone of this
-			 * repo carry a quarter of a gigabyte of PNGs forever, and
-			 * Vercel would ship them on every deploy.
+			 * The thirty-six printed sheets, at A3 300dpi — the numbered
+			 * run of thirty plus the six named ones that encode pages 31
+			 * to 36. They live in R2 rather than in the site's public
+			 * folder because they total near half a gigabyte: putting
+			 * that in git would make every clone of this repo carry it
+			 * forever, and Vercel would ship it on every deploy.
 			 *
 			 * Behind the admin gate, not because the artwork is secret —
 			 * it is on walls — but because these are the print masters and
@@ -2545,8 +2546,8 @@ export default {
 				 * Private, because it is behind the admin gate and must not
 				 * be held by anything between here and the browser. Cached
 				 * for a day all the same: the artwork for a printed sheet
-				 * does not change, and the grid asks for thirty of these
-				 * every time the section is opened.
+				 * does not change, and the grid asks for thirty-six of
+				 * these every time the section is opened.
 				 */
 				headers.set('Cache-Control', 'private, max-age=86400');
 

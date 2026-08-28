@@ -2,7 +2,14 @@ import { notePosterSeen, takeNextPosterId } from './posterShuffle';
 import { PosterVariant } from './posterTypes';
 
 /*
- * The thirty GITTYUP 26 posters, as data.
+ * The GITTYUP 26 posters, as data.
+ *
+ * Thirty-six entries: the numbered run of thirty, then the six named
+ * sheets that were designed after it — car keys, committed, restored,
+ * rip it down, lift waiting, lift pending. Those six are `unlisted`,
+ * which keeps them out of the random deal and off the printed counter,
+ * but they are still reachable by the page their own QR encodes, which
+ * is 31 to 36.
  *
  * Generated from the print artwork in the Claude Design project: the
  * design specs were read off each poster into
@@ -16,8 +23,6 @@ import { PosterVariant } from './posterTypes';
  * poster's own overlay gradients plus a stand-in for what the
  * photograph contributed. Edit a variant here to retune one poster.
  */
-
-export const POSTER_COUNT = 30;
 
 export const posterVariants: PosterVariant[] = [
 	{
@@ -1198,6 +1203,17 @@ const randomPool = (): PosterVariant[] =>
 	posterVariants.filter(
 		(variant) => !variant.unlisted,
 	);
+
+/*
+ * The denominator on a sheet's footer counter — "07/30".
+ *
+ * Counted rather than written down. As a hand-kept 30 it was correct
+ * only for as long as nobody added a poster, and six were added: the
+ * named sheets are unlisted so they show no counter and the number
+ * happened to stay right, which is the kind of luck that runs out
+ * silently. Derived, it cannot.
+ */
+export const POSTER_COUNT = randomPool().length;
 
 export const variantFromParam = (
 	value: string | null,

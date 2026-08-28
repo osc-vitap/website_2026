@@ -1,14 +1,16 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 // Dummy data for news
 const newsData = [
   {
-  id: 2,
-  title: "gitty up is moving to September 1",
-  category: "[Urgent]",
-  date: "August 28, 2026",
-  excerpt:
-    "We're rescheduling gitty up. The event, originally planned for Saturday, August 29, will now take place on Tuesday, September 1.",
+    id: 5,
+    title: "gitty up is moving to September 1",
+    category: "[Update]",
+    date: "August 28, 2026",
+    excerpt:
+      "We're rescheduling gitty up. The event, originally planned for Saturday, August 29, will now take place on Tuesday, September 1.",
+    link: "/news/gitty-up-postponed",
   },
   {
     id: 1,
@@ -83,6 +85,14 @@ const News = () => {
                 <p className="text-gray-400 leading-relaxed">
                   {news.excerpt}
                 </p>
+                {news.link && (
+                  <Link 
+                    to={news.link}
+                    className="inline-block mt-5 px-4 py-2 bg-brand-primary/20 border border-brand-primary/50 rounded-md text-brand-primary hover:bg-brand-primary/40 hover:text-white transition-all text-sm font-semibold"
+                  >
+                    Read the full news post
+                  </Link>
+                )}
                 {/*
                   * No "Read more" here. There was a button, but each
                   * item is only a title and an excerpt — there is no

@@ -21,6 +21,7 @@ import Contributors from './pages/Contributors';
 import Events from './pages/Events';
 import Projects from './pages/Projects';
 import News from './pages/News';
+import GittyUpPostponed from './pages/GittyUpPostponed';
 import Contact from './pages/Contact';
 import StarBackground from './components/StarBackground';
 import EventCountdown from './components/EventCountdown';
@@ -170,6 +171,7 @@ function App() {
           <Route path="/events" element={<Events />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/news" element={<News />} />
+          <Route path="/news/gitty-up-postponed" element={<GittyUpPostponed />} />
           <Route path="/contact" element={<Contact />} />
 
           {/* Vercel rewrites every unknown path to index.html, so the

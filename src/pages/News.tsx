@@ -3,6 +3,14 @@ import { motion } from 'framer-motion';
 // Dummy data for news
 const newsData = [
   {
+  id: 2,
+  title: "gitty up is moving to September 1",
+  category: "[Urgent]",
+  date: "August 28, 2026",
+  excerpt:
+    "We're rescheduling gitty up. The event, originally planned for Saturday, August 29, will now take place on Tuesday, September 1.",
+  },
+  {
     id: 1,
     title: "Core Committee Recruitment 2026",
     category: "[Recruitment]",

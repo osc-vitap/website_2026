@@ -14,6 +14,7 @@ import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { getArmchairTexture } from './ArmchairTexture';
 import { getScreenLabelTexture } from './ScreenLabelTexture';
+import { getExitTexture } from './ExitTexture';
 import {
   MAX_SEATS,
   fetchTakenSeats,
@@ -85,15 +86,43 @@ const ROW_WIDTH =
 
 const SEAT_BOTTOM = seatData[seatData.length - 1].y;
 
+/* The two cross aisles are the way out, so they are marked at both
+   side walls */
+const EXIT_ROWS = [12, 3];
+
+const rowTop = new Map<number, number>();
+
+seatData.forEach((seat) => {
+  const row = Number(seat.id.slice(1).split('-')[0]);
+  if (!rowTop.has(row)) rowTop.set(row, seat.y);
+});
+
+const exitMarks = EXIT_ROWS.flatMap((row) => {
+  const near = rowTop.get(row);
+  const far = rowTop.get(row + 1);
+
+  if (near === undefined || far === undefined) return [];
+
+  const y = (near + far) / 2;
+
+  return [-1, 1].map((side) => ({
+    key: `${row}-${side}`,
+    x: side * (ROW_WIDTH / 2 + 3.1),
+    y,
+  }));
+});
+
 const STAGE_TOP = SEAT_BOTTOM - 6.5;
 const STAGE_BOTTOM = STAGE_TOP - 8.5;
 const STAGE_HALF_WIDTH = ROW_WIDTH / 2 + 5.5;
 const STAGE_ARC = 2.2;
 const STAGE_RISER = 1.7;
 
+const EXIT_REACH = ROW_WIDTH / 2 + 4.8;
+
 const BOUNDS = {
-  minX: -STAGE_HALF_WIDTH,
-  maxX: STAGE_HALF_WIDTH,
+  minX: -Math.max(STAGE_HALF_WIDTH, EXIT_REACH),
+  maxX: Math.max(STAGE_HALF_WIDTH, EXIT_REACH),
   minY: STAGE_BOTTOM,
   maxY: 0.75,
 };
@@ -553,6 +582,7 @@ function StageArea() {
   const bezel = useMemo(() => screenShape(SCREEN_BEZEL), []);
   const screen = useMemo(() => screenGeometry(), []);
   const label = useMemo(() => getScreenLabelTexture(), []);
+  const exit = useMemo(() => getExitTexture(), []);
   const labelMesh = useMemo(() => screenLabelGeometry(), []);
 
   return (
@@ -582,6 +612,23 @@ function StageArea() {
       <mesh geometry={screen}>
         <meshBasicMaterial vertexColors toneMapped={false} />
       </mesh>
+
+      {exit &&
+        exitMarks.map((mark) => (
+          <mesh
+            key={mark.key}
+            position={[mark.x, mark.y, 0.05]}
+          >
+            <planeGeometry args={[3.1, 1.16]} />
+            <meshBasicMaterial
+              map={exit}
+              color="#4f9b6a"
+              transparent
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+        ))}
 
       {label && (
         <mesh geometry={labelMesh} position={[0, 0, 0.05]}>
@@ -752,6 +799,8 @@ export default function SeatingLayout() {
   /* The dialog keeps the seats it opened with, so refreshing the map
      underneath can never tear it down mid confirmation */
   const viewRef = useRef<ViewApi | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(96);
   const [dialogSeatIds, setDialogSeatIds] = useState<string[] | null>(null);
 
   const pageRef = useRef<HTMLDivElement>(null);
@@ -807,6 +856,23 @@ export default function SeatingLayout() {
     void loadTaken();
   }, [loadTaken]);
 
+  /* The header grows when its content wraps, so the legend is placed
+     from its measured height rather than a fixed offset */
+  useEffect(() => {
+    const node = headerRef.current;
+    if (!node) return;
+
+    const measure = () =>
+      setHeaderHeight(node.offsetHeight);
+
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, []);
+
   /* The message replaces itself, so two quick clicks do not
      leave an old one on screen */
   useEffect(() => {
@@ -832,7 +898,10 @@ export default function SeatingLayout() {
     >
       
       {/* Native DOM Header Overlay */}
-      <header className="absolute top-0 left-0 w-full z-50 flex items-center justify-between px-8 py-6 pointer-events-none bg-[#0b0b0d]/80 backdrop-blur-md border-b border-[#2e2e33]">
+      <header
+        ref={headerRef}
+        className="absolute top-0 left-0 w-full z-50 flex flex-wrap items-center justify-between gap-y-2 px-5 py-4 md:px-8 md:py-6 pointer-events-none bg-[#0b0b0d]/80 backdrop-blur-md border-b border-[#2e2e33]"
+      >
         
         {/* Left: OSC Logo */}
         <div className="flex items-center flex-1 pointer-events-auto">
@@ -860,7 +929,10 @@ export default function SeatingLayout() {
       </header>
 
       {/* Legend and view controls */}
-      <div className="pointer-events-none absolute left-4 top-24 z-40 flex flex-col gap-2 md:left-8">
+      <div
+        style={{ top: headerHeight + 18 }}
+        className="pointer-events-none absolute left-4 z-40 flex flex-col gap-2 md:left-8"
+      >
         {[
           { color: '#474d5a', label: 'Available' },
           { color: '#3b82f6', label: 'Selected' },

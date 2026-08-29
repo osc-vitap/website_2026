@@ -198,8 +198,8 @@ const AdminSeating = () => {
   const [downloading, setDownloading] =
     useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
     setFailed('');
 
     try {
@@ -265,6 +265,36 @@ const AdminSeating = () => {
     load();
   }, [load]);
 
+  /* Seats are booked while this panel sits open, so the lists refresh
+     when the tab is looked at again */
+  useEffect(() => {
+    let last = 0;
+
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+
+      const now = Date.now();
+      if (now - last < 5000) return;
+
+      last = now;
+      void load(true);
+    };
+
+    window.addEventListener('focus', refresh);
+    document.addEventListener(
+      'visibilitychange',
+      refresh,
+    );
+
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener(
+        'visibilitychange',
+        refresh,
+      );
+    };
+  }, [load]);
+
   const counts = useMemo(() => {
     let available = 0;
     let used = 0;
@@ -285,6 +315,14 @@ const AdminSeating = () => {
       revoked,
     };
   }, [codes]);
+
+  const reservationByCode = useMemo(
+    () =>
+      new Map(
+        reservations.map((one) => [one.code, one]),
+      ),
+    [reservations],
+  );
 
   const sortedReservations = useMemo(
     () =>
@@ -656,7 +694,7 @@ const AdminSeating = () => {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={load}
+              onClick={() => load()}
               disabled={loading}
               className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-dark-600 px-4 text-sm text-gray-300 transition-colors hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
             >
@@ -885,6 +923,11 @@ const AdminSeating = () => {
                     const status =
                       statusOf(code);
 
+                    const seatForCode =
+                      reservationByCode.get(
+                        code.code,
+                      );
+
                     return (
                       <li
                         key={code.code}
@@ -963,6 +1006,64 @@ const AdminSeating = () => {
                             </>
                           )}
                         </dl>
+
+                        {status === 'Used' &&
+                          seatForCode && (
+                            <div className="mt-3">
+                              {confirmRemove ===
+                              seatForCode.id ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs text-gray-400">
+                                    Free this seat
+                                    and its code?
+                                  </span>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      remove(
+                                        seatForCode,
+                                      )
+                                    }
+                                    disabled={
+                                      removing ===
+                                      seatForCode.id
+                                    }
+                                    className="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                                  >
+                                    {removing ===
+                                    seatForCode.id
+                                      ? 'Removing…'
+                                      : 'Yes, free it'}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setConfirmRemove(
+                                        0,
+                                      )
+                                    }
+                                    className="rounded-lg border border-dark-700 px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/5"
+                                  >
+                                    Keep
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setConfirmRemove(
+                                      seatForCode.id,
+                                    )
+                                  }
+                                  className="rounded-lg border border-dark-700 px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/5"
+                                >
+                                  Free the seat
+                                </button>
+                              )}
+                            </div>
+                          )}
 
                         {status ===
                           'Available' && (
@@ -1060,6 +1161,11 @@ const AdminSeating = () => {
                         const status =
                           statusOf(code);
 
+                        const seatForCode =
+                          reservationByCode.get(
+                            code.code,
+                          );
+
                         return (
                           <tr
                             key={code.code}
@@ -1122,10 +1228,64 @@ const AdminSeating = () => {
                             </td>
 
                             <td className="px-5 py-4">
-                              {status !==
-                              'Available' ? (
+                              {status === 'Used' ? (
+                                seatForCode ? (
+                                  confirmRemove ===
+                                  seatForCode.id ? (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          remove(
+                                            seatForCode,
+                                          )
+                                        }
+                                        disabled={
+                                          removing ===
+                                          seatForCode.id
+                                        }
+                                        className="whitespace-nowrap rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                                      >
+                                        {removing ===
+                                        seatForCode.id
+                                          ? 'Removing…'
+                                          : 'Yes, free it'}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setConfirmRemove(
+                                            0,
+                                          )
+                                        }
+                                        className="rounded-lg border border-dark-700 px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/5"
+                                      >
+                                        Keep
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setConfirmRemove(
+                                          seatForCode.id,
+                                        )
+                                      }
+                                      className="whitespace-nowrap rounded-lg border border-dark-700 px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/5"
+                                    >
+                                      Free the seat
+                                    </button>
+                                  )
+                                ) : (
+                                  <span className="text-sm text-gray-600">
+                                    Used
+                                  </span>
+                                )
+                              ) : status ===
+                                'Revoked' ? (
                                 <span className="text-sm text-gray-600">
-                                  Not available
+                                  Revoked
                                 </span>
                               ) : confirmRevoke ===
                                 code.code ? (

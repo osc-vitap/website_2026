@@ -100,6 +100,41 @@
   }
 
   /*
+   * Printing the door test sheet.
+   *
+   * The panel is white type on near-black glass, which prints as a
+   * page of ink and a set of QR codes nobody can scan. This drops
+   * everything except the codes onto a white page.
+   *
+   * visibility rather than display, so the sheet keeps the layout it
+   * was measured in: switching the grid to display:none and back moves
+   * the codes, and a QR that reflows mid-print is a QR that comes out
+   * clipped.
+   */
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+
+    .door-test-sheet,
+    .door-test-sheet * {
+      visibility: visible;
+    }
+
+    .door-test-sheet {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+    }
+
+    html,
+    body {
+      background: #fff !important;
+    }
+  }
+
+  /*
    * The poster panel's corner radius, named because everything drawn
    * over or beside the panel has to land on the same curve — including
    * the About dialog, which is portalled to <body> and so cannot pick

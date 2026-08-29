@@ -101,6 +101,16 @@ const AdminDoorTest = () => {
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
 
+  /*
+   * Defaults sized for a real rehearsal rather than a smoke test: ten
+   * reserved against fifteen seats leaves five for general admission,
+   * so five of the ten registered get in and five are refused, and the
+   * room fills to exactly fifteen.
+   */
+  const [capacity, setCapacity] = useState(15);
+  const [reserved, setReserved] = useState(10);
+  const [registered, setRegistered] = useState(10);
+
   const call = async (method: 'POST' | 'DELETE') => {
     setBusy(true);
     setError('');
@@ -110,7 +120,10 @@ const AdminDoorTest = () => {
         method,
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: method === 'POST' ? JSON.stringify({}) : undefined,
+        body:
+          method === 'POST'
+            ? JSON.stringify({ capacity, reserved, registered })
+            : undefined,
       });
 
       const body = await response.json();
@@ -142,13 +155,34 @@ const AdminDoorTest = () => {
 
       {open && (
         <>
-          <p className="mt-2 text-sm text-gray-400">
-            Builds six passes and a scanner token on a separate, hidden
-            event. Nothing here touches the real auditorium count, so it is
-            safe to run on the day.
+          <p className="mt-2 text-sm text-gray-400 print:hidden">
+            Builds passes and a scanner token on a separate, hidden event.
+            Nothing here touches the real auditorium count, so it is safe to
+            run on the day.
           </p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap items-end gap-3 print:hidden">
+            {([
+              ['Seats', capacity, setCapacity],
+              ['Reserved', reserved, setReserved],
+              ['Registered', registered, setRegistered],
+            ] as const).map(([label, value, set]) => (
+              <label key={label} className="block">
+                <span className="block text-[11px] uppercase tracking-widest text-gray-500">
+                  {label}
+                </span>
+
+                <input
+                  inputMode="numeric"
+                  value={value}
+                  onChange={(e) => set(Math.max(0, Number(e.target.value) || 0))}
+                  className="mt-1 min-h-[44px] w-24 rounded-lg border border-dark-600 bg-dark-800 px-3 font-mono text-white"
+                />
+              </label>
+            ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2 print:hidden">
             <button
               type="button"
               disabled={busy}
@@ -157,6 +191,22 @@ const AdminDoorTest = () => {
             >
               {busy ? 'Working…' : door ? 'Build a fresh one' : 'Build test door'}
             </button>
+
+            {door && (
+              /*
+               * One sheet, printed or saved as a PDF. Twenty separate
+               * downloads get blocked by the browser after the first
+               * few, and a printed sheet is what the real passes will
+               * be anyway, so this tests the paper case too.
+               */
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="min-h-[44px] rounded-lg border border-dark-600 px-4 text-sm font-semibold text-white"
+              >
+                Print / save as PDF
+              </button>
+            )}
 
             {door && (
               <button
@@ -178,8 +228,8 @@ const AdminDoorTest = () => {
           )}
 
           {door && (
-            <div className="mt-5">
-              <ol className="space-y-1 text-sm text-gray-300">
+            <div className="mt-5 door-test-sheet">
+              <ol className="space-y-1 text-sm text-gray-300 print:hidden">
                 <li>
                   1. Open <span className="font-mono text-white">/scan</span> on a phone.
                 </li>

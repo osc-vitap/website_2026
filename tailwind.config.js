@@ -41,10 +41,15 @@ export default {
         lora: ['"Lora"', 'serif'],
       },
       animation: {
+        'shine': 'shine 5s linear infinite',
         'glitch': 'glitch 1s linear infinite',
         'scanlines': 'scanlines 8s linear infinite',
       },
       keyframes: {
+        shine: {
+          '0%': { backgroundPosition: '200% center' },
+          '100%': { backgroundPosition: '-200% center' },
+        },
         glitch: {
           '2%, 64%': { transform: 'translate(2px,0) skew(0deg)' },
           '4%, 60%': { transform: 'translate(-2px,0) skew(0deg)' },

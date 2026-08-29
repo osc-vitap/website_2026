@@ -24,6 +24,7 @@ import Projects from './pages/Projects';
 import News from './pages/News';
 import GittyUpPostponed from './pages/GittyUpPostponed';
 import Contact from './pages/Contact';
+import SeatingPage from './pages/SeatingPage';
 import StarBackground from './components/StarBackground';
 import EventCountdown from './components/EventCountdown';
 
@@ -147,50 +148,52 @@ function App() {
   return (
     <Router>
       <Suspense fallback={<RouteFallback />}>
-      <Routes>
+        <Routes>
 
-        {/* One top-level route per event page and its aliases, e.g.
+          {/* One top-level route per event page and its aliases, e.g.
             /gittyup26 and /gittyup. Declared before the shell so an
             event path wins over the 404. */}
-        {eventPageRoutes().map(
-          ({ path, page }) => (
-            <Route
-              key={path}
-              path={`/${path}`}
-              element={<page.component />}
-            />
-          ),
-        )}
+          {eventPageRoutes().map(
+            ({ path, page }) => (
+              <Route
+                key={path}
+                path={`/${path}`}
+                element={<page.component />}
+              />
+            ),
+          )}
 
-        <Route element={<SiteLayout />}>
+          <Route path="/seat-reservation-gittyup26" element={<SeatingPage />} />
 
-          <Route path="/events/:slug/register" element={<EventRegistration />} />
+          <Route element={<SiteLayout />}>
 
-          <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/events/:slug/register" element={<EventRegistration />} />
 
-          {/*
+            <Route path="/admin" element={<AdminDashboard />} />
+
+            {/*
             * Where the Worker sends a browser whose sign-in did not go
             * through. Before this existed, a failed OAuth left the person
             * on a JSON body at events.oscvitap.com with no way back.
             */}
-          <Route path="/admin/restricted" element={<AdminRestricted />} />
+            <Route path="/admin/restricted" element={<AdminRestricted />} />
 
-          <Route path="/" element={<StandaloneLaunch />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/team" element={<Team />} />
-          <Route path="/contributors" element={<Contributors />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/news/gitty-up-postponed" element={<GittyUpPostponed />} />
-          <Route path="/contact" element={<Contact />} />
+            <Route path="/" element={<StandaloneLaunch />} />
+            <Route path="/gallery" element={<Gallery />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="/contributors" element={<Contributors />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/news" element={<News />} />
+            <Route path="/news/gitty-up-postponed" element={<GittyUpPostponed />} />
+            <Route path="/contact" element={<Contact />} />
 
-          {/* Vercel rewrites every unknown path to index.html, so the
+            {/* Vercel rewrites every unknown path to index.html, so the
               404 is rendered here rather than by the host. */}
-          <Route path="*" element={<NotFound />} />
-        </Route>
+            <Route path="*" element={<NotFound />} />
+          </Route>
 
-      </Routes>
+        </Routes>
       </Suspense>
     </Router>
   );

@@ -113,7 +113,14 @@
 			 * then recompute every digest above under the new value, or
 			 * the people listed there are locked out.
 			 */
-			"ADMIN_HANDLE_PEPPER"
+			"ADMIN_HANDLE_PEPPER",
+
+			/*
+			 * The Gmail account and app password the seat confirmation
+			 * mail is sent from, with either unset sending is skipped.
+			 */
+			"OSC_SMTP_USER",
+			"OSC_SMTP_PASS"
 		]
 	},
 

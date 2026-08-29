@@ -21,6 +21,7 @@ import AdminAuthSplash from '../components/AdminAuthSplash';
 import { clearOauthLoopMarker } from '../data/adminAuth';
 
 import AdminPosters from '../components/AdminPosters';
+import AdminSeating from '../components/AdminSeating';
 import { useAdminAppMeta } from '../data/adminAppMeta';
 
 const API_BASE_URL =
@@ -1009,6 +1010,8 @@ setRegistrations(
       </div>
 
       <AdminPosters />
+
+      <AdminSeating />
 
       {/* Statistics */}
 

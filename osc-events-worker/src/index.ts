@@ -1,3 +1,7 @@
+import { sendMail } from './mail/smtp';
+import { renderSeatReservationEmail } from './mail/seatReservationEmail';
+import { renderSeatCancellationEmail } from './mail/seatCancellationEmail';
+
 /*
  * Local development origins are always allowed. Every other
  * origin comes from the comma-separated ALLOWED_ORIGINS var.
@@ -627,6 +631,222 @@ function announceRegistration(env: Env, ctx: ExecutionContext, announcement: Reg
 			.catch((error) => {
 				console.error('Discord webhook failed:', error);
 			}),
+	);
+}
+
+/*
+ * ============================================================
+ * SEAT RESERVATIONS
+ * ============================================================
+ */
+
+/*
+ * The unambiguous alphabet, no I, no O, no zero, no one. Codes are read
+ * off a screen and typed back in by hand.
+ */
+const SEAT_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+const SEAT_CODE_PATTERN = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
+
+/* 22 rows of 26 seats, the same map the seating page draws. */
+const SEAT_ID_PATTERN = /^R(?:[1-9]|1[0-9]|2[0-2])-S(?:[1-9]|1[0-9]|2[0-6])$/;
+
+/*
+ * The front rows belong to the club. The map hides them, but the map is
+ * only a suggestion, so the rule is enforced here where it counts.
+ */
+const TEAM_ROWS = [1, 2];
+
+function isTeamSeat(seatId: string): boolean {
+	const match = /^R(\d+)-S\d+$/.exec(seatId);
+
+	return match ? TEAM_ROWS.includes(Number(match[1])) : false;
+}
+
+const MAX_SEATS_PER_RESERVATION = 20;
+
+const MAX_SEAT_CODES_PER_BATCH = 200;
+
+const SEAT_EVENT_TIME = '10:00 AM to 5:00 PM';
+
+const SEAT_EVENT_VENUE = 'AB-2 Auditorium, VIT-AP';
+
+const SEAT_REGISTRATION_REQUIRED =
+	'That registration number is not registered for gitty up. Register at oscvitap.com/gittyup26 first.';
+
+/*
+ * The alphabet is 32 characters and a byte holds 256 values, so the
+ * modulo divides evenly and no character is more likely than another.
+ */
+function generateSeatCode(): string {
+	const bytes = new Uint8Array(8);
+
+	crypto.getRandomValues(bytes);
+
+	const characters = [...bytes].map((byte) => SEAT_CODE_ALPHABET[byte % SEAT_CODE_ALPHABET.length]);
+
+	return `${characters.slice(0, 4).join('')}-${characters.slice(4).join('')}`;
+}
+
+function seatLabel(seatId: string): string {
+	const match = /^R([0-9]+)-S([0-9]+)$/.exec(seatId);
+
+	return match ? `Row ${match[1]} Seat ${match[2]}` : seatId;
+}
+
+/*
+ * event_date is stored as a plain date, which Date.parse reads as UTC.
+ * The event is in India, so it is rendered in India time.
+ */
+function formatSeatEventDate(eventDate: string | null): string {
+	const value = (eventDate ?? '').trim();
+
+	if (!value) {
+		return '';
+	}
+
+	const parsed = Date.parse(value.includes('T') ? value : `${value}T00:00:00+05:30`);
+
+	if (Number.isNaN(parsed)) {
+		return value;
+	}
+
+	return new Intl.DateTimeFormat('en-IN', {
+		weekday: 'long',
+		day: 'numeric',
+		month: 'long',
+		year: 'numeric',
+		timeZone: 'Asia/Kolkata',
+	}).format(new Date(parsed));
+}
+
+interface SeatMailEvent {
+	title: string;
+	event_date: string | null;
+	venue: string | null;
+}
+
+interface SeatMailRow {
+	id: number;
+	seat_id: string;
+	name: string;
+	email: string;
+	college_registration_number: string;
+}
+
+/*
+ * One mail per reserved seat, sent one at a time so there is a single
+ * SMTP conversation, and never allowed to fail the reservation.
+ */
+function sendSeatCancellationMail(env: Env, ctx: ExecutionContext, event: SeatMailEvent, row: SeatMailRow): void {
+	const user = env.OSC_SMTP_USER?.trim();
+
+	const pass = env.OSC_SMTP_PASS?.trim();
+
+	if (!user || !pass) {
+		return;
+	}
+
+	const eventDate = formatSeatEventDate(event.event_date);
+
+	const venue = (event.venue ?? '').trim() || SEAT_EVENT_VENUE;
+
+	ctx.waitUntil(
+		(async () => {
+			try {
+				const message = renderSeatCancellationEmail({
+					name: row.name,
+					seatId: row.seat_id,
+					seatLabel: seatLabel(row.seat_id),
+					eventTitle: event.title,
+					eventDate,
+					eventTime: SEAT_EVENT_TIME,
+					venue,
+					registrationNumber: row.college_registration_number,
+				});
+
+				await sendMail(
+					{ host: 'smtp.gmail.com', port: 587, user, pass },
+					{
+						to: row.email,
+						toName: row.name,
+						fromName: 'Open Source Community',
+						replyTo: 'osc@vitap.ac.in',
+						subject: message.subject,
+						html: message.html,
+						text: message.text,
+					},
+				);
+			} catch (error) {
+				console.error('Seat cancellation mail failed:', row.seat_id, error);
+			}
+		})(),
+	);
+}
+
+function sendSeatReservationMails(env: Env, ctx: ExecutionContext, event: SeatMailEvent, rows: SeatMailRow[]): void {
+	const user = env.OSC_SMTP_USER?.trim();
+
+	const pass = env.OSC_SMTP_PASS?.trim();
+
+	if (!user || !pass) {
+		return;
+	}
+
+	const eventDate = formatSeatEventDate(event.event_date);
+
+	const venue = (event.venue ?? '').trim() || SEAT_EVENT_VENUE;
+
+	ctx.waitUntil(
+		(async () => {
+			for (const row of rows) {
+				let status = 'sent';
+
+				try {
+					const message = renderSeatReservationEmail({
+						name: row.name,
+						seatId: row.seat_id,
+						seatLabel: seatLabel(row.seat_id),
+						eventTitle: event.title,
+						eventDate,
+						eventTime: SEAT_EVENT_TIME,
+						venue,
+						registrationNumber: row.college_registration_number,
+					});
+
+					await sendMail(
+						{ host: 'smtp.gmail.com', port: 587, user, pass },
+						{
+							to: row.email,
+							toName: row.name,
+							fromName: 'Open Source Community',
+							replyTo: 'osc@vitap.ac.in',
+							subject: message.subject,
+							html: message.html,
+							text: message.text,
+						},
+					);
+				} catch (error) {
+					console.error('Seat reservation mail failed:', row.seat_id, error);
+
+					status = 'failed';
+				}
+
+				try {
+					await env.DB.prepare(
+						`
+              UPDATE seat_reservations
+              SET email_status = ?
+              WHERE id = ?
+            `,
+					)
+						.bind(status, row.id)
+						.run();
+				} catch (error) {
+					console.error('Seat reservation mail status update failed:', row.id, error);
+				}
+			}
+		})(),
 	);
 }
 
@@ -2196,6 +2416,516 @@ export default {
 
 			/*
 			 * ============================================================
+			 * ADMIN SEAT RESERVATION CODES
+			 * ============================================================
+			 */
+
+			if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/events\/[^/]+\/seat-codes$/)) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const slug = url.pathname.split('/')[4];
+
+				if (!slug) {
+					return json({ error: 'Event slug is required' }, 400, request, env);
+				}
+
+				const event = await env.DB.prepare(
+					`
+	            SELECT id
+	            FROM events
+	            WHERE slug = ?
+	          `,
+				)
+					.bind(slug)
+					.first<{ id: string }>();
+
+				if (!event) {
+					return json({ error: 'Event not found' }, 404, request, env);
+				}
+
+				const { results } = await env.DB.prepare(
+					`
+	            SELECT
+	              c.code,
+	              c.created_at,
+	              c.revoked_at,
+	              s.seat_id,
+	              s.name,
+	              s.college_registration_number,
+	              s.email,
+	              s.created_at AS used_at
+	            FROM seat_reservation_codes c
+	            LEFT JOIN seat_reservations s
+	              ON s.code = c.code
+	            WHERE c.event_id = ?
+	            ORDER BY c.created_at DESC, c.code ASC
+	          `,
+				)
+					.bind(event.id)
+					.all<{
+						code: string;
+						created_at: string;
+						revoked_at: string | null;
+						seat_id: string | null;
+						name: string | null;
+						college_registration_number: string | null;
+						email: string | null;
+						used_at: string | null;
+					}>();
+
+				return json(
+					{
+						codes: results.map((row) => ({
+							code: row.code,
+							created_at: row.created_at,
+							revoked_at: row.revoked_at,
+							used_by:
+								row.seat_id !== null
+									? {
+											seat_id: row.seat_id,
+											name: row.name,
+											college_registration_number: row.college_registration_number,
+											email: row.email,
+											created_at: row.used_at,
+										}
+									: null,
+						})),
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			if (request.method === 'POST' && url.pathname.match(/^\/api\/admin\/events\/[^/]+\/seat-codes$/)) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const slug = url.pathname.split('/')[4];
+
+				if (!slug) {
+					return json({ error: 'Event slug is required' }, 400, request, env);
+				}
+
+				const event = await env.DB.prepare(
+					`
+	            SELECT id
+	            FROM events
+	            WHERE slug = ?
+	          `,
+				)
+					.bind(slug)
+					.first<{ id: string }>();
+
+				if (!event) {
+					return json({ error: 'Event not found' }, 404, request, env);
+				}
+
+				let codeBody: { count?: unknown };
+
+				try {
+					codeBody = await request.json();
+				} catch {
+					return json({ error: 'Invalid JSON body' }, 400, request, env);
+				}
+
+				const count = typeof codeBody.count === 'number' ? codeBody.count : Number.NaN;
+
+				if (!Number.isInteger(count) || count < 1 || count > MAX_SEAT_CODES_PER_BATCH) {
+					return json({ error: `Ask for between 1 and ${MAX_SEAT_CODES_PER_BATCH} codes` }, 400, request, env);
+				}
+
+				const fresh = new Set<string>();
+
+				/*
+				 * A collision is very unlikely, so a few rounds are plenty.
+				 * Each round asks the database once, not once per code.
+				 */
+				for (let round = 0; round < 5 && fresh.size < count; round++) {
+					const candidates = new Set<string>();
+
+					while (candidates.size < count - fresh.size) {
+						const candidate = generateSeatCode();
+
+						if (!fresh.has(candidate)) {
+							candidates.add(candidate);
+						}
+					}
+
+					const list = [...candidates];
+
+					const existing = await env.DB.prepare(
+						`
+	                SELECT code
+	                FROM seat_reservation_codes
+	                WHERE code IN (${list.map(() => '?').join(', ')})
+	              `,
+					)
+						.bind(...list)
+						.all<{ code: string }>();
+
+					const taken = new Set(existing.results.map((row) => row.code));
+
+					for (const candidate of list) {
+						if (!taken.has(candidate)) {
+							fresh.add(candidate);
+						}
+					}
+				}
+
+				if (fresh.size < count) {
+					return json({ error: 'Could not generate that many codes. Try again.' }, 503, request, env);
+				}
+
+				const codes = [...fresh];
+
+				const codeStatements = codes.map((code) =>
+					env.DB.prepare(
+						`
+	                INSERT INTO seat_reservation_codes
+	                  (code, event_id, created_by)
+	                VALUES (?, ?, ?)
+	              `,
+					).bind(code, event.id, auth.session.github_username),
+				);
+
+				try {
+					await env.DB.batch(codeStatements);
+				} catch (error) {
+					console.error('Seat code insert failed:', error);
+
+					return json({ error: 'Could not save the new codes. Try again.' }, 500, request, env);
+				}
+
+				return json({ codes }, 201, request, env);
+			}
+
+			const seatCodeMatch = url.pathname.match(/^\/api\/admin\/events\/([^/]+)\/seat-codes\/([^/]+)$/);
+
+			if (request.method === 'DELETE' && seatCodeMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const slug = decodeURIComponent(seatCodeMatch[1]);
+
+				const code = decodeURIComponent(seatCodeMatch[2]).trim().toUpperCase();
+
+				if (!SEAT_CODE_PATTERN.test(code)) {
+					return json({ error: 'That is not a reservation code' }, 400, request, env);
+				}
+
+				const event = await env.DB.prepare(
+					`
+	            SELECT id
+	            FROM events
+	            WHERE slug = ?
+	          `,
+				)
+					.bind(slug)
+					.first<{ id: string }>();
+
+				if (!event) {
+					return json({ error: 'Event not found' }, 404, request, env);
+				}
+
+				const codeRow = await env.DB.prepare(
+					`
+	            SELECT code
+	            FROM seat_reservation_codes
+	            WHERE event_id = ?
+	              AND code = ?
+	          `,
+				)
+					.bind(event.id, code)
+					.first<{ code: string }>();
+
+				if (!codeRow) {
+					return json({ error: 'Code not found' }, 404, request, env);
+				}
+
+				/*
+				 * A used code stays as it is. Revoking it would leave the
+				 * seat reserved with no code behind it.
+				 */
+				const used = await env.DB.prepare(
+					`
+	            SELECT id
+	            FROM seat_reservations
+	            WHERE code = ?
+	          `,
+				)
+					.bind(code)
+					.first<{ id: number }>();
+
+				if (used) {
+					return json({ error: 'That code has already been used' }, 409, request, env);
+				}
+
+				await env.DB.prepare(
+					`
+	            UPDATE seat_reservation_codes
+	            SET revoked_at = CURRENT_TIMESTAMP
+	            WHERE event_id = ?
+	              AND code = ?
+	              AND revoked_at IS NULL
+	          `,
+				)
+					.bind(event.id, code)
+					.run();
+
+				return json({ ok: true }, 200, request, env);
+			}
+
+			/*
+			 * ============================================================
+			 * ADMIN SEAT RESERVATIONS
+			 * ============================================================
+			 */
+
+			if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/events\/[^/]+\/seats\.csv$/)) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const slug = url.pathname.split('/')[4];
+
+				if (!slug) {
+					return json({ error: 'Event slug is required' }, 400, request, env);
+				}
+
+				const event = await env.DB.prepare(
+					`
+	            SELECT id, slug
+	            FROM events
+	            WHERE slug = ?
+	          `,
+				)
+					.bind(slug)
+					.first<{ id: string; slug: string }>();
+
+				if (!event) {
+					return json({ error: 'Event not found' }, 404, request, env);
+				}
+
+				const { results } = await env.DB.prepare(
+					`
+	            SELECT
+	              id,
+	              seat_id,
+	              code,
+	              name,
+	              college_registration_number,
+	              email,
+	              email_status,
+	              created_at
+	            FROM seat_reservations
+	            WHERE event_id = ?
+	            ORDER BY created_at ASC
+	          `,
+				)
+					.bind(event.id)
+					.all<{
+						id: number;
+						seat_id: string;
+						code: string;
+						name: string;
+						college_registration_number: string;
+						email: string;
+						email_status: string;
+						created_at: string;
+					}>();
+
+				const seatHeaders = [
+					'Reservation ID',
+					'Seat ID',
+					'Seat',
+					'Code',
+					'Name',
+					'College Registration Number',
+					'Email',
+					'Email Status',
+					'Reserved At',
+				];
+
+				const seatLines = [
+					seatHeaders.map(csvEscape).join(','),
+					...results.map((row) =>
+						[
+							row.id,
+							row.seat_id,
+							seatLabel(row.seat_id),
+							row.code,
+							row.name,
+							row.college_registration_number,
+							row.email,
+							row.email_status,
+							row.created_at,
+						]
+							.map(csvEscape)
+							.join(','),
+					),
+				];
+
+				const safeSeatSlug = event.slug.replace(/[^a-zA-Z0-9_-]/g, '-');
+
+				return csvResponse(`\uFEFF${seatLines.join('\r\n')}\r\n`, `${safeSeatSlug}-seats.csv`, request, env);
+			}
+
+			if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/events\/[^/]+\/seats$/)) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const slug = url.pathname.split('/')[4];
+
+				if (!slug) {
+					return json({ error: 'Event slug is required' }, 400, request, env);
+				}
+
+				const event = await env.DB.prepare(
+					`
+	            SELECT id
+	            FROM events
+	            WHERE slug = ?
+	          `,
+				)
+					.bind(slug)
+					.first<{ id: string }>();
+
+				if (!event) {
+					return json({ error: 'Event not found' }, 404, request, env);
+				}
+
+				const { results } = await env.DB.prepare(
+					`
+	            SELECT
+	              id,
+	              seat_id,
+	              code,
+	              name,
+	              college_registration_number,
+	              email,
+	              email_status,
+	              created_at
+	            FROM seat_reservations
+	            WHERE event_id = ?
+	            ORDER BY created_at DESC
+	          `,
+				)
+					.bind(event.id)
+					.all<{
+						id: number;
+						seat_id: string;
+						code: string;
+						name: string;
+						college_registration_number: string;
+						email: string;
+						email_status: string;
+						created_at: string;
+					}>();
+
+				return json({ reservations: results }, 200, request, env);
+			}
+
+			const seatReservationMatch = url.pathname.match(/^\/api\/admin\/events\/([^/]+)\/seats\/([^/]+)$/);
+
+			if (request.method === 'DELETE' && seatReservationMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const slug = decodeURIComponent(seatReservationMatch[1]);
+
+				const reservationId = Number(decodeURIComponent(seatReservationMatch[2]));
+
+				if (!Number.isInteger(reservationId) || reservationId <= 0) {
+					return json({ error: 'That is not a reservation id' }, 400, request, env);
+				}
+
+				const event = await env.DB.prepare(
+					`
+	            SELECT id, title, event_date, venue
+	            FROM events
+	            WHERE slug = ?
+	          `,
+				)
+					.bind(slug)
+					.first<{ id: string; title: string; event_date: string; venue: string | null }>();
+
+				if (!event) {
+					return json({ error: 'Event not found' }, 404, request, env);
+				}
+
+				/* Read before the delete, because the row carries the only
+				   copy of who to tell */
+				const seated = await env.DB.prepare(
+					`
+	            SELECT id, seat_id, name, email, college_registration_number
+	            FROM seat_reservations
+	            WHERE id = ?
+	              AND event_id = ?
+	          `,
+				)
+					.bind(reservationId, event.id)
+					.first<{
+						id: number;
+						seat_id: string;
+						name: string;
+						email: string;
+						college_registration_number: string;
+					}>();
+
+				if (!seated) {
+					return json({ error: 'Reservation not found' }, 404, request, env);
+				}
+
+				/*
+				 * Deleting the row frees the seat and the code again, which
+				 * is the only way back from a wrong or disputed booking.
+				 */
+				const removed = await env.DB.prepare(
+					`
+	            DELETE FROM seat_reservations
+	            WHERE id = ?
+	              AND event_id = ?
+	          `,
+				)
+					.bind(reservationId, event.id)
+					.run();
+
+				if (!removed.meta.changes) {
+					return json({ error: 'Reservation not found' }, 404, request, env);
+				}
+
+				/* A test row or a duplicate should not mail a student, so
+				   the admin can turn the notice off */
+				const notify = url.searchParams.get('notify') !== 'false';
+
+				if (notify) {
+					sendSeatCancellationMail(env, ctx, event, seated);
+				}
+
+				return json({ ok: true, notified: notify }, 200, request, env);
+			}
+
+			/*
+			 * ============================================================
 			 * UPDATE ADMIN EVENT
 			 * ============================================================
 			 */
@@ -3597,6 +4327,601 @@ export default {
 						members_registered: members.length,
 					},
 					201,
+					request,
+					env,
+				);
+			}
+
+			/*
+			 * ============================================================
+			 * PUBLIC SEAT RESERVATION API
+			 * ============================================================
+			 */
+
+			const seatsMatch = url.pathname.match(/^\/api\/events\/([^/]+)\/seats$/);
+
+			if (request.method === 'GET' && seatsMatch) {
+				const slug = seatsMatch[1];
+
+				const event = await env.DB.prepare(
+					`
+	            SELECT id
+	            FROM events
+	            WHERE slug = ?
+	          `,
+				)
+					.bind(slug)
+					.first<{ id: string }>();
+
+				if (!event) {
+					return json(
+						{
+							error: 'Event not found',
+						},
+						404,
+						request,
+						env,
+					);
+				}
+
+				/*
+				 * Seat ids only. This response is public, so no name or email
+				 * or registration number may appear in it.
+				 */
+				const { results } = await env.DB.prepare(
+					`
+	            SELECT seat_id
+	            FROM seat_reservations
+	            WHERE event_id = ?
+	            ORDER BY seat_id
+	          `,
+				)
+					.bind(event.id)
+					.all<{ seat_id: string }>();
+
+				return json(
+					{
+						seats: results.map((row) => row.seat_id),
+						max_per_reservation: MAX_SEATS_PER_RESERVATION,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			const seatReserveMatch = url.pathname.match(/^\/api\/events\/([^/]+)\/seats\/reserve$/);
+
+			if (request.method === 'POST' && seatReserveMatch) {
+				const slug = seatReserveMatch[1];
+
+				/*
+				 * Per-IP ceiling first, before any database work, the same
+				 * way the registration endpoint does it.
+				 */
+				if (!(await withinRateLimit(env.REGISTRATION_IP_LIMITER, `seat-ip:${clientIp(request)}`))) {
+					return rateLimited(request, env);
+				}
+
+				const event = await env.DB.prepare(
+					`
+	            SELECT
+	              id,
+	              slug,
+	              title,
+	              venue,
+	              event_date,
+	              event_end_at,
+	              is_open
+	            FROM events
+	            WHERE slug = ?
+	          `,
+				)
+					.bind(slug)
+					.first<{
+						id: string;
+						slug: string;
+						title: string;
+						venue: string | null;
+						event_date: string | null;
+						event_end_at: string | null;
+						is_open: number;
+					}>();
+
+				if (!event) {
+					return json(
+						{
+							error: 'Event not found',
+							field_errors: [],
+						},
+						404,
+						request,
+						env,
+					);
+				}
+
+				/*
+				 * Closing the event is the kill switch for seating too,
+				 * and it is the only stop when there is no end time set.
+				 */
+				if (!event.is_open) {
+					return json(
+						{
+							error: 'Seat reservations are closed',
+							field_errors: [],
+						},
+						409,
+						request,
+						env,
+					);
+				}
+
+				const seatEventEndsAt = event.event_end_at ? Date.parse(event.event_end_at) : Number.NaN;
+
+				if (!Number.isNaN(seatEventEndsAt) && Date.now() >= seatEventEndsAt) {
+					return json(
+						{
+							error: 'This event has already ended',
+							field_errors: [],
+						},
+						409,
+						request,
+						env,
+					);
+				}
+
+				let seatBody: { seats?: unknown };
+
+				try {
+					seatBody = await request.json();
+				} catch {
+					return json(
+						{
+							error: 'Invalid JSON body',
+							field_errors: [],
+						},
+						400,
+						request,
+						env,
+					);
+				}
+
+				const rawSeats = Array.isArray(seatBody.seats) ? seatBody.seats : null;
+
+				if (!rawSeats || rawSeats.length === 0) {
+					return json(
+						{
+							error: 'Pick at least one seat',
+							field_errors: [],
+						},
+						400,
+						request,
+						env,
+					);
+				}
+
+				if (rawSeats.length > MAX_SEATS_PER_RESERVATION) {
+					return json(
+						{
+							error: `You can reserve at most ${MAX_SEATS_PER_RESERVATION} seats in one request`,
+							field_errors: [],
+						},
+						400,
+						request,
+						env,
+					);
+				}
+
+				interface SeatFieldError {
+					index: number;
+					field: 'code' | 'seat_id' | 'college_registration_number';
+					message: string;
+				}
+
+				const fieldErrors: SeatFieldError[] = [];
+
+				/*
+				 * A conflict is somebody else holding the seat or the code,
+				 * which is a 409. A malformed or unknown value is a 400.
+				 */
+				let hasConflict = false;
+
+				const shaped: {
+					index: number;
+					seat_id: string;
+					code: string;
+					registration_number: string;
+				}[] = [];
+
+				for (const [index, raw] of rawSeats.entries()) {
+					if (typeof raw !== 'object' || raw === null) {
+						fieldErrors.push({
+							index,
+							field: 'seat_id',
+							message: 'This seat request is missing its details.',
+						});
+
+						continue;
+					}
+
+					const row = raw as {
+						seat_id?: unknown;
+						code?: unknown;
+						college_registration_number?: unknown;
+					};
+
+					const seatId = asString(row.seat_id).trim().toUpperCase();
+					const code = asString(row.code).trim().toUpperCase();
+					const registrationNumber = normalizeRegistrationNumber(asString(row.college_registration_number));
+
+					let shapeOk = true;
+
+					if (!SEAT_ID_PATTERN.test(seatId)) {
+						fieldErrors.push({
+							index,
+							field: 'seat_id',
+							message: 'That is not a seat on this map.',
+						});
+
+						shapeOk = false;
+					} else if (isTeamSeat(seatId)) {
+						fieldErrors.push({
+							index,
+							field: 'seat_id',
+							message: 'The first two rows are held for the OSC team and cannot be reserved.',
+						});
+
+						shapeOk = false;
+					}
+
+					if (!SEAT_CODE_PATTERN.test(code)) {
+						fieldErrors.push({
+							index,
+							field: 'code',
+							message: 'Enter the reservation code exactly as it was given to you, like ABCD-2345.',
+						});
+
+						shapeOk = false;
+					}
+
+					if (!REGISTRATION_NUMBER_PATTERN.test(registrationNumber)) {
+						fieldErrors.push({
+							index,
+							field: 'college_registration_number',
+							message: 'Registration number looks invalid. Use the university format, e.g. 22BCE1234.',
+						});
+
+						shapeOk = false;
+					}
+
+					if (shapeOk) {
+						shaped.push({ index, seat_id: seatId, code, registration_number: registrationNumber });
+					}
+				}
+
+				/*
+				 * The same seat or code or number twice in one request is a
+				 * mistake in the form, so it is caught before any lookup.
+				 */
+				const seatCounts = new Map<string, number>();
+				const codeCounts = new Map<string, number>();
+				const numberCounts = new Map<string, number>();
+
+				for (const row of shaped) {
+					seatCounts.set(row.seat_id, (seatCounts.get(row.seat_id) ?? 0) + 1);
+					codeCounts.set(row.code, (codeCounts.get(row.code) ?? 0) + 1);
+					numberCounts.set(row.registration_number, (numberCounts.get(row.registration_number) ?? 0) + 1);
+				}
+
+				const candidates = shaped.filter((row) => {
+					let unique = true;
+
+					if ((seatCounts.get(row.seat_id) ?? 0) > 1) {
+						fieldErrors.push({
+							index: row.index,
+							field: 'seat_id',
+							message: 'That seat is picked more than once in this request.',
+						});
+
+						unique = false;
+					}
+
+					if ((codeCounts.get(row.code) ?? 0) > 1) {
+						fieldErrors.push({
+							index: row.index,
+							field: 'code',
+							message: 'That reservation code is used more than once in this request.',
+						});
+
+						unique = false;
+					}
+
+					if ((numberCounts.get(row.registration_number) ?? 0) > 1) {
+						fieldErrors.push({
+							index: row.index,
+							field: 'college_registration_number',
+							message: 'That registration number is used more than once in this request.',
+						});
+
+						unique = false;
+					}
+
+					return unique;
+				});
+
+				const accepted: {
+					index: number;
+					seat_id: string;
+					code: string;
+					registration_number: string;
+					name: string;
+					email: string;
+					member_id: number;
+				}[] = [];
+
+				/*
+				 * Throttle every identity in the request the way registration
+				 * does, so guessing numbers costs a token per number.
+				 */
+				const throttledNumbers = [...new Set(candidates.map((row) => row.registration_number))];
+
+				const throttleChecks = await Promise.all(
+					throttledNumbers.map((number) =>
+						withinRateLimit(env.REGISTRATION_ID_LIMITER, `seat-regno:${event.id}:${number}`),
+					),
+				);
+
+				if (throttleChecks.some((allowed) => !allowed)) {
+					return rateLimited(request, env);
+				}
+
+				if (candidates.length > 0) {
+					const seatIds = candidates.map((row) => row.seat_id);
+					const codes = candidates.map((row) => row.code);
+					const numbers = candidates.map((row) => row.registration_number);
+
+					const knownCodes = await env.DB.prepare(
+						`
+	                SELECT code, revoked_at
+	                FROM seat_reservation_codes
+	                WHERE event_id = ?
+	                  AND code IN (${codes.map(() => '?').join(', ')})
+	              `,
+					)
+						.bind(event.id, ...codes)
+						.all<{ code: string; revoked_at: string | null }>();
+
+					const codeRows = new Map(knownCodes.results.map((row) => [row.code, row]));
+
+					const usedCodes = await env.DB.prepare(
+						`
+	                SELECT code
+	                FROM seat_reservations
+	                WHERE code IN (${codes.map(() => '?').join(', ')})
+	              `,
+					)
+						.bind(...codes)
+						.all<{ code: string }>();
+
+					const spentCodes = new Set(usedCodes.results.map((row) => row.code));
+
+					const takenSeats = await env.DB.prepare(
+						`
+	                SELECT seat_id
+	                FROM seat_reservations
+	                WHERE event_id = ?
+	                  AND seat_id IN (${seatIds.map(() => '?').join(', ')})
+	              `,
+					)
+						.bind(event.id, ...seatIds)
+						.all<{ seat_id: string }>();
+
+					const seatsGone = new Set(takenSeats.results.map((row) => row.seat_id));
+
+					/*
+					 * Name and email are read from the registration the
+					 * student already made, never from the request body.
+					 */
+					const memberRows = await env.DB.prepare(
+						`
+	                SELECT
+	                  id,
+	                  name,
+	                  email,
+	                  UPPER(TRIM(college_registration_number)) AS registration_number
+	                FROM registration_members
+	                WHERE event_id = ?
+	                  AND UPPER(TRIM(college_registration_number)) IN (${numbers.map(() => '?').join(', ')})
+	              `,
+					)
+						.bind(event.id, ...numbers)
+						.all<{
+							id: number;
+							name: string;
+							email: string;
+							registration_number: string;
+						}>();
+
+					const members = new Map(memberRows.results.map((row) => [row.registration_number, row]));
+
+					const seatedRows = await env.DB.prepare(
+						`
+	                SELECT UPPER(TRIM(college_registration_number)) AS registration_number
+	                FROM seat_reservations
+	                WHERE event_id = ?
+	                  AND UPPER(TRIM(college_registration_number)) IN (${numbers.map(() => '?').join(', ')})
+	              `,
+					)
+						.bind(event.id, ...numbers)
+						.all<{ registration_number: string }>();
+
+					const alreadySeated = new Set(seatedRows.results.map((row) => row.registration_number));
+
+					for (const row of candidates) {
+						let rowOk = true;
+
+						const codeRow = codeRows.get(row.code);
+
+						if (!codeRow) {
+							fieldErrors.push({
+								index: row.index,
+								field: 'code',
+								message: 'That reservation code is not valid for this event.',
+							});
+
+							rowOk = false;
+						} else if (codeRow.revoked_at !== null) {
+							fieldErrors.push({
+								index: row.index,
+								field: 'code',
+								message: 'That reservation code has been revoked.',
+							});
+
+							rowOk = false;
+						} else if (spentCodes.has(row.code)) {
+							fieldErrors.push({
+								index: row.index,
+								field: 'code',
+								message: 'That reservation code has already been used.',
+							});
+
+							hasConflict = true;
+
+							rowOk = false;
+						}
+
+						if (seatsGone.has(row.seat_id)) {
+							fieldErrors.push({
+								index: row.index,
+								field: 'seat_id',
+								message: 'That seat has already been taken.',
+							});
+
+							hasConflict = true;
+
+							rowOk = false;
+						}
+
+						/*
+						 * A row that failed on its code or its seat never
+						 * reaches the identity lookup below.
+						 */
+						if (!rowOk) {
+							continue;
+						}
+
+						const member = members.get(row.registration_number);
+
+						if (!member) {
+							fieldErrors.push({
+								index: row.index,
+								field: 'college_registration_number',
+								message: SEAT_REGISTRATION_REQUIRED,
+							});
+
+							rowOk = false;
+						} else if (alreadySeated.has(row.registration_number)) {
+							fieldErrors.push({
+								index: row.index,
+								field: 'college_registration_number',
+								message: 'That registration number already has a seat for this event.',
+							});
+
+							hasConflict = true;
+
+							rowOk = false;
+						}
+
+						if (rowOk && member) {
+							accepted.push({
+								index: row.index,
+								seat_id: row.seat_id,
+								code: row.code,
+								registration_number: row.registration_number,
+								name: member.name,
+								email: member.email,
+								member_id: member.id,
+							});
+						}
+					}
+				}
+
+				/*
+				 * Every bad row is reported together, and nothing is written
+				 * unless the whole request is good.
+				 */
+				if (fieldErrors.length > 0) {
+					return json(
+						{
+							error: hasConflict
+								? 'Some of those seats are no longer available. Reload the map and pick again.'
+								: 'Some of those seats could not be reserved. Check the highlighted rows.',
+							field_errors: fieldErrors,
+						},
+						hasConflict ? 409 : 400,
+						request,
+						env,
+					);
+				}
+
+				const seatStatements = accepted.map((row) =>
+					env.DB.prepare(
+						`
+	                INSERT INTO seat_reservations
+	                  (
+	                    event_id,
+	                    seat_id,
+	                    code,
+	                    college_registration_number,
+	                    name,
+	                    email,
+	                    registration_member_id
+	                  )
+	                VALUES (?, ?, ?, ?, ?, ?, ?)
+	              `,
+					).bind(event.id, row.seat_id, row.code, row.registration_number, row.name, row.email, row.member_id),
+				);
+
+				let seatInserts;
+
+				try {
+					seatInserts = await env.DB.batch(seatStatements);
+				} catch (error) {
+					console.error('Seat reservation insert failed:', error);
+
+					/*
+					 * The checks above raced another request and a unique
+					 * index caught it, so somebody got there first.
+					 */
+					return json(
+						{
+							error: 'Someone took one of those seats first. Reload the map and pick again.',
+							field_errors: [],
+						},
+						409,
+						request,
+						env,
+					);
+				}
+
+				const mailRows = accepted
+					.map((row, position) => ({
+						id: Number(seatInserts[position]?.meta?.last_row_id ?? 0),
+						seat_id: row.seat_id,
+						name: row.name,
+						email: row.email,
+						college_registration_number: row.registration_number,
+					}))
+					.filter((row) => row.id > 0);
+
+				sendSeatReservationMails(env, ctx, event, mailRows);
+
+				return json(
+					{
+						ok: true,
+						reserved: accepted.map((row) => ({ seat_id: row.seat_id, name: row.name })),
+					},
+					200,
 					request,
 					env,
 				);

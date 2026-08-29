@@ -11,6 +11,8 @@ interface __BaseEnv_Env {
 	GITHUB_CLIENT_SECRET: string;
 	DISCORD_WEBHOOK_URL: string;
 	ADMIN_HANDLE_PEPPER: string;
+	OSC_SMTP_USER: string;
+	OSC_SMTP_PASS: string;
 	REGISTRATION_ID_LIMITER: RateLimit;
 	REGISTRATION_IP_LIMITER: RateLimit;
 	AUTH_LIMITER: RateLimit;
@@ -26,7 +28,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ALLOWED_ORIGINS" | "ADMIN_GITHUB_USERS" | "ADMIN_OUTSIDER_ID_HASHES" | "GITHUB_CLIENT_ID" | "GITHUB_CLIENT_SECRET" | "DISCORD_WEBHOOK_URL" | "ADMIN_HANDLE_PEPPER">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ALLOWED_ORIGINS" | "ADMIN_GITHUB_USERS" | "ADMIN_OUTSIDER_ID_HASHES" | "GITHUB_CLIENT_ID" | "GITHUB_CLIENT_SECRET" | "DISCORD_WEBHOOK_URL" | "ADMIN_HANDLE_PEPPER" | "OSC_SMTP_USER" | "OSC_SMTP_PASS">> {}
 }
 
 // Begin runtime types

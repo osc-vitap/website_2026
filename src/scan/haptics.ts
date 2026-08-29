@@ -78,6 +78,13 @@ const iosSwitch = (): HTMLInputElement | null => {
   input.setAttribute('aria-hidden', 'true');
   input.tabIndex = -1;
 
+  /*
+   * No pointer-events: none. The haptic comes from the control's
+   * activation behaviour, which is reached through click(), and a
+   * control that cannot be clicked cannot be activated. One transparent
+   * pixel off the top-left corner is out of anyone's way without being
+   * out of the browser's.
+   */
   Object.assign(input.style, {
     position: 'fixed',
     top: '-1px',
@@ -85,7 +92,6 @@ const iosSwitch = (): HTMLInputElement | null => {
     width: '1px',
     height: '1px',
     opacity: '0',
-    pointerEvents: 'none',
   });
 
   document.body.appendChild(input);
@@ -121,11 +127,19 @@ export function haptic(kind: Haptic): void {
 
   IOS_TAPS[kind].forEach((delay) => {
     window.setTimeout(() => {
-      /* Toggling is what plays it, so the state is flipped rather than
-         set. Its value is never read by anything. */
-      input.checked = !input.checked;
-
-      input.dispatchEvent(new Event('change', { bubbles: false }));
+      /*
+       * click(), not checked = !checked.
+       *
+       * The haptic is part of the control's activation behaviour, which
+       * is what click() runs. Assigning to checked changes the property
+       * and nothing else, and dispatching a synthetic change event is
+       * observed by listeners but is not activation, so neither plays
+       * anything. That was the first attempt, and it was silent.
+       *
+       * The checked state itself is never read by anything; it just
+       * has to keep moving.
+       */
+      input.click();
     }, delay);
   });
 }
@@ -146,5 +160,14 @@ export function primeHaptics(): void {
     return;
   }
 
-  iosSwitch();
+  /*
+   * A single tap on sign-in, inside the tap that submitted the form.
+   *
+   * It primes the path, and it doubles as the only way anyone can tell
+   * whether haptics work on this handset at all: if the phone buzzes
+   * when you press Start scanning, every verdict will buzz too. If it
+   * does not, nothing further will, and it is better to learn that at
+   * the start of a shift than halfway through a queue.
+   */
+  iosSwitch()?.click();
 }

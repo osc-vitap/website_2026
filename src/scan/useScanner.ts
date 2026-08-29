@@ -135,6 +135,10 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
 
   /* One decode at a time, always. */
   const busyRef = useRef(false);
+
+  /* When it went up, so a reply that never arrives cannot hold the
+     loop shut for the rest of the shift. */
+  const busySinceRef = useRef(0);
   const lastAttemptRef = useRef(0);
   const lastFrameRef = useRef(0);
   const frameHandleRef = useRef<number | null>(null);
@@ -193,6 +197,19 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
   /* The frame loop                                                    */
   /* ---------------------------------------------------------------- */
 
+  /*
+   * Decode one frame, and own the busy flag while doing it.
+   *
+   * The flag used to be raised by the caller before this ran, which
+   * meant every early return below leaked it. On the fallback path the
+   * only thing that lowers it is the worker's reply, so returning
+   * before the frame was ever posted left it raised forever and the
+   * loop never attempted another decode. That is a scanner that works
+   * exactly once and then looks alive while doing nothing.
+   *
+   * Now nothing is raised until work is actually handed off, and every
+   * path that hands work off is wrapped so it comes back down.
+   */
   const decodeFrame = useCallback(async () => {
     const video = videoRef.current;
 
@@ -201,22 +218,29 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
     const detector = detectorRef.current;
 
     if (detector) {
-      /*
-       * The whole frame, not a crop. Native detection is cheap enough
-       * that cropping buys nothing, and a crop would lose a pass held
-       * off to one side, which is exactly what a person does when they
-       * are also holding a phone and a bag.
-       */
-      const found = await detector.detect(video);
+      busyRef.current = true;
+      busySinceRef.current = performance.now();
 
-      if (found.length > 1) {
-        /* Two passes in shot. Picking one would admit whichever the
+      try {
+        /*
+         * The whole frame, not a crop. Native detection is cheap enough
+         * that cropping buys nothing, and a crop would lose a pass held
+         * off to one side, which is exactly what a person does when
+         * they are also holding a phone and a bag.
+         */
+        const found = await detector.detect(video);
+
+        /* Two passes in shot: picking one would admit whichever the
            decoder happened to order first, which is a coin toss with
            somebody's entry on it. */
-        return;
+        if (found.length === 1) handleText(found[0].rawValue);
+      } catch {
+        /* A dropped frame is not worth reporting. The next one is
+           already on its way. */
+      } finally {
+        busyRef.current = false;
       }
 
-      handleText(found[0]?.rawValue ?? null);
       return;
     }
 
@@ -229,39 +253,58 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
 
     if (!context) return;
 
-    /* The centre square, downscaled. */
+    /*
+     * The centre square, downscaled.
+     *
+     * videoWidth is 0 while the element has no decoded frame yet, and
+     * iOS reports that transiently whenever the video is re-shown —
+     * which is every time the verdict card is dismissed. This is the
+     * return that used to strand the flag.
+     */
     const side = Math.min(video.videoWidth, video.videoHeight);
 
     if (!side) return;
 
-    context.drawImage(
-      video,
-      (video.videoWidth - side) / 2,
-      (video.videoHeight - side) / 2,
-      side,
-      side,
-      0,
-      0,
-      FALLBACK_EDGE,
-      FALLBACK_EDGE,
-    );
+    try {
+      context.drawImage(
+        video,
+        (video.videoWidth - side) / 2,
+        (video.videoHeight - side) / 2,
+        side,
+        side,
+        0,
+        0,
+        FALLBACK_EDGE,
+        FALLBACK_EDGE,
+      );
 
-    const frame = context.getImageData(0, 0, FALLBACK_EDGE, FALLBACK_EDGE);
+      const frame = context.getImageData(0, 0, FALLBACK_EDGE, FALLBACK_EDGE);
 
-    attemptRef.current += 1;
+      attemptRef.current += 1;
 
-    /* Transferred, not copied: the buffer is several hundred kilobytes
-       and structured-cloning it every frame would cost more than the
-       decode saved by moving off the main thread. */
-    worker.postMessage(
-      {
-        id: attemptRef.current,
-        width: FALLBACK_EDGE,
-        height: FALLBACK_EDGE,
-        buffer: frame.data.buffer,
-      },
-      [frame.data.buffer],
-    );
+      /* Raised only now, with the frame in hand and the post about to
+         happen, so there is no window where it is up and no work is
+         going anywhere. */
+      busyRef.current = true;
+      busySinceRef.current = performance.now();
+
+      /* Transferred, not copied: the buffer is several hundred
+         kilobytes and structured-cloning it every frame would cost more
+         than moving the decode off the main thread saves. */
+      worker.postMessage(
+        {
+          id: attemptRef.current,
+          width: FALLBACK_EDGE,
+          height: FALLBACK_EDGE,
+          buffer: frame.data.buffer,
+        },
+        [frame.data.buffer],
+      );
+    } catch {
+      /* drawImage and getImageData both throw on a frame the browser
+         has decided is tainted or gone. Put the flag back down. */
+      busyRef.current = false;
+    }
   }, [handleText]);
 
   const onFrame = useCallback<FrameCallback>(
@@ -281,20 +324,9 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
 
       lastAttemptRef.current = now;
 
-      const detector = detectorRef.current;
-
-      if (!detector) {
-        /* The worker answers asynchronously and clears the flag there. */
-        busyRef.current = true;
-        void decodeFrame();
-        return;
-      }
-
-      busyRef.current = true;
-
-      void decodeFrame().finally(() => {
-        busyRef.current = false;
-      });
+      /* decodeFrame raises and lowers the flag itself, because it is
+         the only thing that knows whether any work was dispatched. */
+      void decodeFrame();
     },
     [decodeFrame],
   );
@@ -473,6 +505,20 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
 
     const timer = window.setInterval(() => {
       if (document.visibilityState !== 'visible') return;
+
+      /*
+       * A decode that never came back.
+       *
+       * The flag is now raised only when work is genuinely dispatched,
+       * so this should not fire. It exists because the cost of being
+       * wrong is a scanner that looks alive and admits nobody, and a
+       * volunteer has no way to tell that from a quiet queue. Two
+       * seconds is far longer than any decode takes.
+       */
+      if (busyRef.current && performance.now() - busySinceRef.current > 2000) {
+        console.warn('scanner: decode did not return, releasing');
+        busyRef.current = false;
+      }
 
       if (performance.now() - lastFrameRef.current > FRAME_TIMEOUT_MS) {
         setStatus('restarting');

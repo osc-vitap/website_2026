@@ -13,6 +13,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { getArmchairTexture } from './ArmchairTexture';
+import { getScreenLabelTexture } from './ScreenLabelTexture';
 import { MAX_SEATS, fetchTakenSeats, seatLabel } from '../data/seatingApi';
 import ReserveDialog from '../pages/seating/ReserveDialog';
 
@@ -83,6 +84,7 @@ const STAGE_TOP = SEAT_BOTTOM - 4;
 const STAGE_BOTTOM = STAGE_TOP - 8.5;
 const STAGE_HALF_WIDTH = ROW_WIDTH / 2 + 5.5;
 const STAGE_ARC = 2.2;
+const STAGE_RISER = 1.7;
 
 const BOUNDS = {
   minX: -STAGE_HALF_WIDTH,
@@ -93,6 +95,11 @@ const BOUNDS = {
 
 const CENTER_X = 0;
 const CENTER_Y = (BOUNDS.minY + BOUNDS.maxY) / 2;
+
+/* Room kept for the header and the selection bar, so the stage is
+   never hidden behind them */
+const INSET_TOP = 92;
+const INSET_BOTTOM = 108;
 const CONTENT_WIDTH = BOUNDS.maxX - BOUNDS.minX;
 const CONTENT_HEIGHT = BOUNDS.maxY - BOUNDS.minY;
 
@@ -101,10 +108,10 @@ const seatIndexById = new Map(
 );
 
 const dummy = new THREE.Object3D();
-const colorUnselected = new THREE.Color('#a1a1aa');
-const colorHover = new THREE.Color('#e4e4e7');
+const colorUnselected = new THREE.Color('#474d5a');
+const colorHover = new THREE.Color('#8b93a5');
 const colorSelected = new THREE.Color('#3b82f6');
-const colorTaken = new THREE.Color('#4a2a2a');
+const colorTaken = new THREE.Color('#5a2f33');
 const scratchColor = new THREE.Color();
 
 /* How quickly a seat settles on its new colour, lower is gentler */
@@ -293,10 +300,36 @@ function stageShape(): THREE.Shape {
   return shape;
 }
 
+/* A strip that follows the same curve, used for the riser under the
+   deck and for the lit edge along its lip */
+function stageBand(from: number, to: number): THREE.Shape {
+  const shape = new THREE.Shape();
+
+  shape.moveTo(-STAGE_HALF_WIDTH, from);
+  shape.quadraticCurveTo(
+    0,
+    from + STAGE_ARC * 2,
+    STAGE_HALF_WIDTH,
+    from,
+  );
+  shape.lineTo(STAGE_HALF_WIDTH, to);
+  shape.quadraticCurveTo(
+    0,
+    to + STAGE_ARC * 2,
+    -STAGE_HALF_WIDTH,
+    to,
+  );
+  shape.closePath();
+
+  return shape;
+}
+
 const SCREEN_BEZEL = 0.14;
-const SCREEN_RADIUS = 0.45;
+const SCREEN_RADIUS = 0.32;
 const SCREEN_BOTTOM = STAGE_BOTTOM + SCREEN_BEZEL;
-const SCREEN_TOP = SCREEN_BOTTOM + 6;
+const SCREEN_TOP = SCREEN_BOTTOM + 2.4;
+const SCREEN_HALF_TOP = 14;
+const SCREEN_HALF_BOTTOM = 14.65;
 
 /* Corners are cut back along both edges and joined through the old
    point, so the outline has no sharp vertex left */
@@ -367,8 +400,8 @@ const SCREEN_TINT_ANGLE = Math.PI / 4;
 function screenShape(inset: number): THREE.Shape {
   const bottom = SCREEN_BOTTOM - inset;
   const top = SCREEN_TOP + inset;
-  const halfTop = 9.3 + inset;
-  const halfBottom = 9.5 + inset;
+  const halfTop = SCREEN_HALF_TOP + inset;
+  const halfBottom = SCREEN_HALF_BOTTOM + inset;
 
   return roundedShape(
     [
@@ -379,6 +412,66 @@ function screenShape(inset: number): THREE.Shape {
     ],
     SCREEN_RADIUS + inset,
   );
+}
+
+/* The screen narrows towards the back, so the label is laid on a grid
+   that follows the same taper instead of a flat rectangle */
+function screenLabelGeometry(): THREE.BufferGeometry {
+  const COLS = 32;
+  const ROWS = 4;
+  const SPREAD = 0.62;
+  const MARGIN = 0.2;
+
+  const height = SCREEN_TOP - SCREEN_BOTTOM;
+  const bottom = SCREEN_BOTTOM + height * MARGIN;
+  const top = SCREEN_TOP - height * MARGIN;
+
+  const halfAt = (y: number) => {
+    const t = (y - SCREEN_BOTTOM) / height;
+    return (
+      SCREEN_HALF_BOTTOM +
+      (SCREEN_HALF_TOP - SCREEN_HALF_BOTTOM) * t
+    );
+  };
+
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+
+  for (let r = 0; r <= ROWS; r += 1) {
+    const v = r / ROWS;
+    const y = bottom + (top - bottom) * v;
+    const half = halfAt(y) * SPREAD;
+
+    for (let c = 0; c <= COLS; c += 1) {
+      const u = c / COLS;
+      positions.push((u - 0.5) * 2 * half, y, 0);
+      uvs.push(u, v);
+    }
+  }
+
+  for (let r = 0; r < ROWS; r += 1) {
+    for (let c = 0; c < COLS; c += 1) {
+      const a = r * (COLS + 1) + c;
+      const b = a + 1;
+      const d = a + COLS + 1;
+      const e = d + 1;
+      indices.push(a, b, d, b, e, d);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
+  geometry.setAttribute(
+    'uv',
+    new THREE.Float32BufferAttribute(uvs, 2),
+  );
+  geometry.setIndex(indices);
+
+  return geometry;
 }
 
 /* A flat material cannot fade, so the blue is written onto the corners
@@ -426,14 +519,36 @@ function screenGeometry(): THREE.ShapeGeometry {
 
 function StageArea() {
   const stage = useMemo(() => stageShape(), []);
+  const riser = useMemo(
+    () => stageBand(STAGE_TOP, STAGE_TOP + STAGE_RISER),
+    [],
+  );
+  const lip = useMemo(
+    () => stageBand(STAGE_TOP, STAGE_TOP + 0.22),
+    [],
+  );
   const bezel = useMemo(() => screenShape(SCREEN_BEZEL), []);
   const screen = useMemo(() => screenGeometry(), []);
+  const label = useMemo(() => getScreenLabelTexture(), []);
+  const labelMesh = useMemo(() => screenLabelGeometry(), []);
 
   return (
     <group>
       <mesh position={[0, 0, -0.2]}>
         <shapeGeometry args={[stage]} />
         <meshBasicMaterial color="#151517" toneMapped={false} />
+      </mesh>
+
+      {/* The riser and the lit lip together read as a step up from the
+          floor to the deck */}
+      <mesh position={[0, 0, -0.19]}>
+        <shapeGeometry args={[riser]} />
+        <meshBasicMaterial color="#1e1e23" toneMapped={false} />
+      </mesh>
+
+      <mesh position={[0, 0, -0.18]}>
+        <shapeGeometry args={[lip]} />
+        <meshBasicMaterial color="#4a4a55" toneMapped={false} />
       </mesh>
 
       <mesh position={[0, 0, -0.1]}>
@@ -444,6 +559,17 @@ function StageArea() {
       <mesh geometry={screen}>
         <meshBasicMaterial vertexColors toneMapped={false} />
       </mesh>
+
+      {label && (
+        <mesh geometry={labelMesh} position={[0, 0, 0.05]}>
+          <meshBasicMaterial
+            map={label}
+            transparent
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -468,14 +594,25 @@ function SceneView({
   const size = useThree((state) => state.size);
   const touched = useRef(false);
 
+  const usableHeight = Math.max(
+    160,
+    size.height - INSET_TOP - INSET_BOTTOM,
+  );
+
   const fitZoom = useMemo(() => {
     if (!size.width || !size.height) return 12;
 
     return Math.min(
-      size.width / (CONTENT_WIDTH * 1.06),
-      size.height / (CONTENT_HEIGHT * 1.06),
+      size.width / (CONTENT_WIDTH * 1.12),
+      usableHeight / (CONTENT_HEIGHT * 1.06),
     );
-  }, [size.width, size.height]);
+  }, [size.width, size.height, usableHeight]);
+
+  /* The drawing is centred in the band between the two bars, not in the
+     whole canvas */
+  const centerY =
+    CENTER_Y +
+    (INSET_TOP + usableHeight / 2 - size.height / 2) / fitZoom;
 
   const apply = useCallback(
     (zoom: number) => {
@@ -488,14 +625,14 @@ function SceneView({
   const fit = useCallback(() => {
     const controls = controlsRef.current;
 
-    camera.position.set(CENTER_X, CENTER_Y, 100);
+    camera.position.set(CENTER_X, centerY, 100);
     apply(fitZoom);
 
     if (controls) {
-      controls.target.set(CENTER_X, CENTER_Y, 0);
+      controls.target.set(CENTER_X, centerY, 0);
       controls.update();
     }
-  }, [apply, camera, fitZoom]);
+  }, [apply, camera, centerY, fitZoom]);
 
   /* Refit while the reader has not moved the map themselves, so a
      rotation or a resize still shows the whole room */
@@ -698,9 +835,9 @@ export default function SeatingLayout() {
       {/* Legend and view controls */}
       <div className="pointer-events-none absolute left-4 top-24 z-40 flex flex-col gap-2 md:left-8">
         {[
-          { color: '#a1a1aa', label: 'Available' },
+          { color: '#474d5a', label: 'Available' },
           { color: '#3b82f6', label: 'Selected' },
-          { color: '#4a2a2a', label: 'Taken' },
+          { color: '#5a2f33', label: 'Taken' },
         ].map((item) => (
           <div
             key={item.label}

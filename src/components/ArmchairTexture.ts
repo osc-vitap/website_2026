@@ -56,7 +56,7 @@ export const getArmchairTexture = () => {
 
   /* A quiet base under the whole chair, so the gaps between its parts
      read as soft shadow instead of hard black lines */
-  ctx.fillStyle = shade(ctx, 26, 212, 0.3, 0.24);
+  ctx.fillStyle = shade(ctx, 26, 212, 0.18, 0.14);
   roundedRect(ctx, 16, 26, 224, 186, 34);
   ctx.fill();
 

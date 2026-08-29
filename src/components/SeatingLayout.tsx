@@ -86,8 +86,7 @@ const ROW_WIDTH =
 
 const SEAT_BOTTOM = seatData[seatData.length - 1].y;
 
-/* The two cross aisles are the way out, so they are marked at both
-   side walls */
+/* Both cross aisles lead out on the right hand wall only */
 const EXIT_ROWS = [12, 3];
 
 const rowTop = new Map<number, number>();
@@ -105,11 +104,13 @@ const exitMarks = EXIT_ROWS.flatMap((row) => {
 
   const y = (near + far) / 2;
 
-  return [-1, 1].map((side) => ({
-    key: `${row}-${side}`,
-    x: side * (ROW_WIDTH / 2 + 3.1),
-    y,
-  }));
+  return [
+    {
+      key: `${row}`,
+      x: ROW_WIDTH / 2 + 3.1,
+      y,
+    },
+  ];
 });
 
 const STAGE_TOP = SEAT_BOTTOM - 6.5;
@@ -471,8 +472,8 @@ function screenShape(inset: number): THREE.Shape {
 function screenLabelGeometry(): THREE.BufferGeometry {
   const COLS = 32;
   const ROWS = 4;
-  const SPREAD = 0.62;
-  const MARGIN = 0.2;
+  const SPREAD = 0.8;
+  const MARGIN = 0.1;
 
   const height = SCREEN_TOP - SCREEN_BOTTOM;
   const bottom = SCREEN_BOTTOM + height * MARGIN;
@@ -904,7 +905,7 @@ export default function SeatingLayout() {
       >
         
         {/* Left: OSC Logo */}
-        <div className="flex items-center flex-1 pointer-events-auto">
+        <div className="hidden flex-1 items-center pointer-events-auto md:flex">
           <img
             src="/events/gittyup26/osc-lockup.webp"
             alt="Open Source Community"
@@ -913,15 +914,18 @@ export default function SeatingLayout() {
         </div>
 
         {/* Center: Title */}
-        <div className="flex flex-col items-center justify-center flex-1 pointer-events-auto">
-          <div className="text-[#86868b] text-sm md:text-base font-normal">
+        <div className="flex flex-1 flex-col items-start justify-center pointer-events-auto md:items-center">
+          <div className="whitespace-nowrap text-[#86868b] text-sm md:text-base font-normal">
             Seat Reservations <span className="opacity-50 mx-2">|</span> AB-2 Audi
           </div>
         </div>
 
         {/* Right: Gitty Up */}
         <div className="flex items-center justify-end flex-1 pointer-events-auto">
-          <Link to="/gittyup26" className="text-white text-[1.5rem] md:text-[2rem] tracking-[-0.015em] opacity-90 hover:opacity-100 transition-opacity drop-shadow-lg select-none flex items-baseline">
+          <Link
+            to="/gittyup26"
+            className="flex select-none items-baseline bg-[linear-gradient(110deg,#ffffff_0%,#ffffff_36%,#c9b6ff_46%,#ffffff_56%,#ffffff_100%)] bg-[length:200%_auto] bg-clip-text text-[1.5rem] tracking-[-0.015em] text-transparent opacity-90 transition-opacity animate-shine hover:opacity-100 motion-reduce:animate-none md:text-[2rem]"
+          >
             <span className="font-thin">gitty</span>
             <span className="font-black" style={{ marginLeft: '0.36em' }}>up</span>
           </Link>
@@ -931,7 +935,7 @@ export default function SeatingLayout() {
       {/* Legend and view controls */}
       <div
         style={{ top: headerHeight + 18 }}
-        className="pointer-events-none absolute left-4 z-40 flex flex-col gap-2 md:left-8"
+        className="pointer-events-none absolute left-4 z-40 flex flex-col gap-2 rounded-[14px] border border-[#2e2e33] bg-[#0b0b0d]/85 px-3.5 py-3 backdrop-blur-md md:left-8"
       >
         {[
           { color: '#474d5a', label: 'Available' },
@@ -954,7 +958,7 @@ export default function SeatingLayout() {
       </div>
 
       <div
-        className={`absolute right-4 z-40 flex flex-col overflow-hidden rounded-xl border border-[#2e2e33] bg-[#0b0b0d]/85 backdrop-blur-md transition-all duration-200 md:right-8 ${
+        className={`absolute right-4 z-40 flex flex-col overflow-hidden rounded-[14px] border border-[#2e2e33] bg-[#0b0b0d]/85 backdrop-blur-md transition-all duration-200 md:right-8 ${
           selected.size > 0 ? 'bottom-32 md:bottom-28' : 'bottom-8'
         }`}
       >

@@ -1523,6 +1523,81 @@ describe("admin access", () => {
 		});
 	});
 
+	describe("the poster bundle", () => {
+		beforeEach(async () => {
+			env.ADMIN_GITHUB_USERS = "";
+			await seedSession("poster-admin");
+
+			await env.osc_events_archives.put("posters/gittyup26-pg01.png", "print-master");
+			await env.osc_events_archives.put(
+				"posters/bundle/gittyup26-posters.pdf",
+				"%PDF-1.4 the whole run",
+			);
+		});
+
+		afterEach(async () => {
+			const listed = await env.osc_events_archives.list();
+
+			for (const object of listed.objects) {
+				await env.osc_events_archives.delete(object.key);
+			}
+		});
+
+		it("serves the run as one PDF download", async () => {
+			const response = await asAdmin("/api/admin/posters/bundle");
+
+			expect(response.status).toBe(200);
+			expect(response.headers.get("Content-Type")).toBe("application/pdf");
+			expect(response.headers.get("Content-Disposition")).toBe(
+				'attachment; filename="gittyup26-posters.pdf"',
+			);
+			expect(await response.text()).toBe("%PDF-1.4 the whole run");
+		});
+
+		it("keeps the bundle behind the admin gate", async () => {
+			const response = await fetchWorker("/api/admin/posters/bundle");
+
+			expect(response.status).toBe(401);
+		});
+
+		/*
+		 * The single-sheet route matches any name in the same character
+		 * class, so without the bundle route being declared first this
+		 * would go looking for an object literally called posters/bundle
+		 * and 404 — which is how the download quietly stops working the
+		 * next time these routes are reordered.
+		 */
+		it("is not shadowed by the single-sheet route", async () => {
+			const response = await asAdmin("/api/admin/posters/bundle");
+
+			expect(response.status).toBe(200);
+			expect(response.headers.get("Content-Type")).not.toBe("image/png");
+		});
+
+		/*
+		 * It sits under a prefix with a slash in it, so the listing's
+		 * derivative filter already excludes it — the panel must not
+		 * offer a PDF among thirty-six PNG sheets.
+		 */
+		it("does not appear in the sheet listing", async () => {
+			const response = await asAdmin("/api/admin/posters");
+
+			expect(response.status).toBe(200);
+
+			const body = await response.json<{ posters: Array<{ name: string }> }>();
+
+			expect(body.posters.map((poster) => poster.name)).toEqual(["gittyup26-pg01.png"]);
+		});
+
+		it("404s when the bundle has not been built yet", async () => {
+			await env.osc_events_archives.delete("posters/bundle/gittyup26-posters.pdf");
+
+			const response = await asAdmin("/api/admin/posters/bundle");
+
+			expect(response.status).toBe(404);
+		});
+	});
+
 	it("allows any signed-in admin when the allow list is empty", async () => {
 		env.ADMIN_GITHUB_USERS = "";
 

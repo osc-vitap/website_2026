@@ -11,6 +11,10 @@ lerna-debug.log*
 node_modules/
 dist/
 dist-ssr/
+
+# Poster masters pulled from R2 and the PDF built from them — half a
+# gigabyte of print artwork that lives in the bucket, not here.
+/dist-posters/
 *.local
 
 # Editor directories and files

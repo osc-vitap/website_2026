@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Download,
   FileImage,
+  FileText,
   Loader2,
   X,
 } from 'lucide-react';
@@ -514,6 +515,22 @@ const AdminPosters = () => {
               </button>
             ))}
           </div>
+
+          {/*
+            * The whole run in one file.
+            *
+            * A print shop given thirty-six separate downloads is a
+            * print shop that ends up with thirty-five, and the missing
+            * one is not noticed until the wall is up. Same sheets, same
+            * 300dpi, bound in page order.
+            */}
+          <a
+            href={`${API_BASE_URL}/api/admin/posters/bundle`}
+            className="mt-3 flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-brand-primary/40 bg-brand-primary/10 px-4 text-sm font-semibold text-brand-accent transition-colors hover:bg-brand-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+          >
+            <FileText size={16} aria-hidden="true" />
+            All {posters.length} sheets as one A3 PDF
+          </a>
 
           <p className="mt-3 text-xs text-gray-500">
             Every QR verified against the page it opens.

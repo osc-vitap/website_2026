@@ -2554,6 +2554,54 @@ export default {
 				return new Response(object.body, { headers });
 			}
 
+			/*
+			 * The whole run as one A3 PDF.
+			 *
+			 * Declared before the single-sheet route below, which would
+			 * otherwise match "bundle" as a filename and go looking for
+			 * an object called posters/bundle.
+			 *
+			 * It is the same thirty-six sheets at the same 300dpi, bound
+			 * in page order, and it exists because handing a print shop
+			 * thirty-six separate downloads is how a sheet goes missing.
+			 * Built by scripts/make-poster-pdf.mjs.
+			 */
+			if (request.method === 'GET' && url.pathname === '/api/admin/posters/bundle') {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const object = await env.osc_events_archives.get(
+					'posters/bundle/gittyup26-posters.pdf',
+				);
+
+				if (!object) {
+					return json({ error: 'Poster bundle not found' }, 404, request, env);
+				}
+
+				const headers = new Headers(corsHeaders(request, env));
+
+				headers.set('Content-Type', 'application/pdf');
+				headers.set('Content-Length', String(object.size));
+
+				headers.set(
+					'Content-Disposition',
+					'attachment; filename="gittyup26-posters.pdf"',
+				);
+
+				/*
+				 * Private and briefer than the sheets. The bundle is
+				 * rebuilt whenever any one of the thirty-six is, so a
+				 * day of caching would hand back yesterday's run to the
+				 * person who just rebuilt it.
+				 */
+				headers.set('Cache-Control', 'private, max-age=300');
+
+				return new Response(object.body, { headers });
+			}
+
 			const posterMatch = url.pathname.match(/^\/api\/admin\/posters\/([A-Za-z0-9._-]+)$/);
 
 			if (request.method === 'GET' && posterMatch) {

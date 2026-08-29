@@ -7,9 +7,11 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   'https://events.oscvitap.com';
 
-interface ContributorItem {
+export interface ContributorItem {
   id?: number;
   login: string;
+  name?: string | null;
+  description?: string | null;
   avatar_url: string;
   html_url: string;
   display_order?: number;
@@ -19,13 +21,13 @@ const containerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
+    transition: { staggerChildren: 0.1 },
+  },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, scale: 0.9 },
-  show: { opacity: 1, scale: 1 }
+  show: { opacity: 1, scale: 1 },
 };
 
 const Contributors = () => {
@@ -92,18 +94,18 @@ const Contributors = () => {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-50px" }}
-          className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4 lg:grid-cols-6"
+          className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
         >
           {contributors.map((member, i) => (
             <motion.div 
               key={member.id ?? member.login ?? i} 
               variants={itemVariants} 
-              className="border border-dark-700 bg-dark-900/40 relative overflow-hidden group hover:border-brand-primary/50 transition-colors flex flex-col items-center p-4 md:p-6"
+              className="border border-dark-700 bg-dark-900/40 relative overflow-hidden group hover:border-brand-primary/50 transition-all flex flex-col items-center p-4 md:p-5 rounded-lg"
             >
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-dark-600 mb-4 group-hover:border-brand-accent transition-colors">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-dark-600 mb-3.5 group-hover:border-brand-accent transition-colors shrink-0">
                 <img 
                   src={member.avatar_url} 
-                  alt={member.login} 
+                  alt={member.name || member.login} 
                   loading="lazy"
                   className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
                   onError={(e) => {
@@ -111,17 +113,37 @@ const Contributors = () => {
                   }}
                 />
               </div>
-              <h3 className="text-white font-mono text-xs text-center truncate w-full mb-3">
-                @{member.login}
-              </h3>
-              {/* "Intel" alone is meaningless out of context, so the link
-                  carries its own label for screen readers. */}
+
+              {/* Name & Handle */}
+              {member.name ? (
+                <>
+                  <h3 className="text-white font-sans font-semibold text-sm text-center truncate w-full">
+                    {member.name}
+                  </h3>
+                  <p className="text-brand-accent font-mono text-[11px] text-center truncate w-full mb-1">
+                    @{member.login}
+                  </p>
+                </>
+              ) : (
+                <h3 className="text-white font-mono text-xs text-center truncate w-full mb-1 font-medium">
+                  @{member.login}
+                </h3>
+              )}
+
+              {/* Optional Description / Role */}
+              {member.description && (
+                <p className="text-gray-400 font-mono text-[10px] text-center line-clamp-2 w-full my-1.5 px-1 leading-snug">
+                  {member.description}
+                </p>
+              )}
+
+              {/* Profile Link */}
               <a
                 href={member.html_url}
                 target="_blank"
                 rel="noreferrer"
-                aria-label={`${member.login} on GitHub`}
-                className="text-[10px] font-mono uppercase tracking-[0.1em] text-gray-400 hover:text-brand-accent flex items-center justify-center gap-2 transition-colors mt-auto px-3 min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
+                aria-label={`${member.name || member.login} on GitHub`}
+                className="text-[10px] font-mono uppercase tracking-[0.1em] text-gray-400 hover:text-brand-accent flex items-center justify-center gap-1.5 transition-colors mt-auto pt-3 px-3 min-h-[36px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent"
               >
                 Intel <ExternalLink size={10} className="flex-shrink-0" />
               </a>
@@ -135,4 +157,3 @@ const Contributors = () => {
 };
 
 export default Contributors;
-

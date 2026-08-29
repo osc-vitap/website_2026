@@ -2302,6 +2302,8 @@ export default {
 	          SELECT
 	            id,
 	            login,
+	            name,
+	            description,
 	            avatar_url,
 	            html_url,
 	            display_order,
@@ -2312,6 +2314,8 @@ export default {
 				).all<{
 					id: number;
 					login: string;
+					name: string | null;
+					description: string | null;
 					avatar_url: string;
 					html_url: string;
 					display_order: number;
@@ -2781,6 +2785,8 @@ export default {
 	          SELECT
 	            id,
 	            login,
+	            name,
+	            description,
 	            avatar_url,
 	            html_url,
 	            display_order,
@@ -2791,6 +2797,8 @@ export default {
 				).all<{
 					id: number;
 					login: string;
+					name: string | null;
+					description: string | null;
 					avatar_url: string;
 					html_url: string;
 					display_order: number;
@@ -2817,6 +2825,8 @@ export default {
 				let body: {
 					login?: string;
 					username?: string;
+					name?: string;
+					description?: string;
 					avatar_url?: string;
 					html_url?: string;
 				};
@@ -2844,6 +2854,9 @@ export default {
 					return json({ error: `Contributor @${existing.login} already exists` }, 409, request, env);
 				}
 
+				const customName = body.name?.trim() || null;
+				const customDescription = body.description?.trim() || null;
+
 				const avatar_url =
 					body.avatar_url && body.avatar_url.trim().startsWith('http')
 						? body.avatar_url.trim()
@@ -2862,11 +2875,11 @@ export default {
 
 				const insertResult = await env.DB.prepare(
 					`
-	          INSERT INTO contributors (login, avatar_url, html_url, display_order)
-	          VALUES (?, ?, ?, ?)
+	          INSERT INTO contributors (login, name, description, avatar_url, html_url, display_order)
+	          VALUES (?, ?, ?, ?, ?, ?)
 	        `,
 				)
-					.bind(normalizedLogin, avatar_url, html_url, nextOrder)
+					.bind(normalizedLogin, customName, customDescription, avatar_url, html_url, nextOrder)
 					.run();
 
 				const newId = insertResult.meta.last_row_id;
@@ -2877,6 +2890,8 @@ export default {
 						contributor: {
 							id: newId,
 							login: normalizedLogin,
+							name: customName,
+							description: customDescription,
 							avatar_url,
 							html_url,
 							display_order: nextOrder,
@@ -2888,16 +2903,108 @@ export default {
 				);
 			}
 
-			const adminContributorDeleteMatch = url.pathname.match(/^\/api\/admin\/contributors\/(\d+)$/);
+			const adminContributorIdMatch = url.pathname.match(/^\/api\/admin\/contributors\/(\d+)$/);
 
-			if (request.method === 'DELETE' && adminContributorDeleteMatch) {
+			if ((request.method === 'PATCH' || request.method === 'PUT') && adminContributorIdMatch) {
 				const auth = await requireAdmin(request, env);
 
 				if (!auth.authorized) {
 					return auth.response;
 				}
 
-				const contributorId = Number(adminContributorDeleteMatch[1]);
+				const contributorId = Number(adminContributorIdMatch[1]);
+
+				const current = await env.DB.prepare(`SELECT * FROM contributors WHERE id = ?`)
+					.bind(contributorId)
+					.first<{
+						id: number;
+						login: string;
+						name: string | null;
+						description: string | null;
+						avatar_url: string;
+						html_url: string;
+						display_order: number;
+					}>();
+
+				if (!current) {
+					return json({ error: 'Contributor not found' }, 404, request, env);
+				}
+
+				let body: {
+					login?: string;
+					name?: string | null;
+					description?: string | null;
+					avatar_url?: string;
+					html_url?: string;
+					display_order?: number;
+				};
+
+				try {
+					body = (await request.json()) as typeof body;
+				} catch {
+					return json({ error: 'Invalid JSON payload' }, 400, request, env);
+				}
+
+				let login = current.login;
+				if (body.login !== undefined) {
+					const norm = normalizeGithub(body.login.trim());
+					if (!norm) {
+						return json({ error: 'GitHub login cannot be empty' }, 400, request, env);
+					}
+					login = norm;
+				}
+
+				const name = body.name !== undefined ? (body.name ? body.name.trim() : null) : current.name;
+				const description =
+					body.description !== undefined ? (body.description ? body.description.trim() : null) : current.description;
+				const avatar_url =
+					body.avatar_url !== undefined && body.avatar_url.trim().startsWith('http')
+						? body.avatar_url.trim()
+						: current.avatar_url;
+				const html_url =
+					body.html_url !== undefined && body.html_url.trim().startsWith('http')
+						? body.html_url.trim()
+						: current.html_url;
+				const display_order =
+					typeof body.display_order === 'number' ? body.display_order : current.display_order;
+
+				await env.DB.prepare(
+					`
+	          UPDATE contributors
+	          SET login = ?, name = ?, description = ?, avatar_url = ?, html_url = ?, display_order = ?
+	          WHERE id = ?
+	        `,
+				)
+					.bind(login, name, description, avatar_url, html_url, display_order, contributorId)
+					.run();
+
+				return json(
+					{
+						success: true,
+						contributor: {
+							id: contributorId,
+							login,
+							name,
+							description,
+							avatar_url,
+							html_url,
+							display_order,
+						},
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			if (request.method === 'DELETE' && adminContributorIdMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const contributorId = Number(adminContributorIdMatch[1]);
 
 				const result = await env.DB.prepare(`DELETE FROM contributors WHERE id = ?`)
 					.bind(contributorId)

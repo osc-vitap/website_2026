@@ -4,6 +4,8 @@
 CREATE TABLE contributors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     login TEXT NOT NULL UNIQUE,
+    name TEXT,
+    description TEXT,
     avatar_url TEXT NOT NULL,
     html_url TEXT NOT NULL,
     display_order INTEGER NOT NULL DEFAULT 0,

@@ -713,5 +713,57 @@ describe("door scanning", () => {
 
 			expect(rows.results.map((r) => r.result)).toEqual(["admitted", "already-in", "unknown"]);
 		});
+
+		it("reads the log back, newest first", async () => {
+			await addPass("tok-a", "registered", "22BCE1001");
+
+			const cookie = await signedIn();
+
+			await claim("tok-a", cookie);
+			await claim("never-issued", cookie);
+
+			const response = await SELF.fetch(
+				`${WORKER_ORIGIN}/api/admin/events/gittyup26/entry/log`,
+				{ headers: { Cookie: await asAdmin() } },
+			);
+
+			expect(response.status).toBe(200);
+
+			const body = await response.json<{
+				entries: { result: string; name: string | null; token_prefix: string }[];
+			}>();
+
+			expect(body.entries.map((e) => e.result)).toEqual(["unknown", "admitted"]);
+
+			/* The holder's name is there so a line reads without a lookup. */
+			expect(body.entries[1].name).toBe("Holder 22BCE1001");
+		});
+
+		/*
+		 * A token is a credential. A log that prints one is a log that
+		 * lets whoever reads it walk in on somebody else's pass.
+		 */
+		it("never returns a whole token", async () => {
+			await addPass("tok-abcdef123456", "registered", "22BCE1001");
+
+			await claim("tok-abcdef123456", await signedIn());
+
+			const body = await (
+				await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/entry/log`, {
+					headers: { Cookie: await asAdmin() },
+				})
+			).json<{ entries: { token_prefix: string }[] }>();
+
+			expect(body.entries[0].token_prefix).toBe("tok-abcd");
+			expect(JSON.stringify(body)).not.toContain("tok-abcdef123456");
+		});
+
+		it("needs an admin session", async () => {
+			const response = await SELF.fetch(
+				`${WORKER_ORIGIN}/api/admin/events/gittyup26/entry/log`,
+			);
+
+			expect(response.status).toBe(401);
+		});
 	});
 });

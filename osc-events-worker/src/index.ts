@@ -2106,6 +2106,19 @@ export default {
 						.bind(token)
 						.first<{ name: string; seat_id: string | null }>();
 
+					/*
+					 * One line per scan, so `wrangler tail` is a live view
+					 * of the door.
+					 *
+					 * Only the first eight characters of the token. It is a
+					 * credential: anyone reading it out of a log can walk in
+					 * on somebody else's pass, and eight is enough to match
+					 * a scan against its row when something needs chasing.
+					 */
+					console.log(
+						`SCAN admitted  ${deviceId}  ${token.slice(0, 8)}…  ${admitted.kind}`,
+					);
+
 					ctx.waitUntil(recordEntryEvent(env, eventId, token, deviceId, 'admitted'));
 
 					return json(
@@ -2131,6 +2144,10 @@ export default {
 				 * and those need opposite reactions from a volunteer.
 				 */
 				const verdict = await classifyRefusal(env, eventId, token);
+
+				console.log(
+					`SCAN ${verdict.verdict.padEnd(9)} ${deviceId}  ${token.slice(0, 8)}…`,
+				);
 
 				ctx.waitUntil(recordEntryEvent(env, eventId, token, deviceId, verdict.verdict));
 
@@ -4127,6 +4144,61 @@ export default {
 					request,
 					env,
 				);
+			}
+
+			/*
+			 * Every outcome at the door, newest first.
+			 *
+			 * entry_scans only holds admissions, so the refusals live in
+			 * entry_events and this is the only way to see them. Workers
+			 * logs are sampled and cannot be queried after the fact,
+			 * which makes them useless for "what happened at 10:40".
+			 */
+			const entryLogMatch = url.pathname.match(/^\/api\/admin\/events\/([^/]+)\/entry\/log$/);
+
+			if (request.method === 'GET' && entryLogMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const event = await env.DB.prepare(`SELECT id FROM events WHERE slug = ?`)
+					.bind(entryLogMatch[1])
+					.first<{ id: string }>();
+
+				if (!event) {
+					return json({ error: 'Event not found' }, 404, request, env);
+				}
+
+				const limit = Math.min(Number(url.searchParams.get('limit') ?? 100) || 100, 500);
+
+				const { results } = await env.DB.prepare(
+					`
+            SELECT
+              e.at,
+              e.result,
+              e.device_id,
+              e.actor,
+              e.reason,
+              /* The holder's name, so a line is readable without
+                 anyone having to look a token up by hand. */
+              p.name,
+              p.kind,
+              /* Never the whole token. It is a credential, and a log
+                 that leaks one is a log that lets somebody walk in. */
+              substr(e.token, 1, 8) AS token_prefix
+            FROM entry_events e
+            LEFT JOIN entry_passes p ON p.token = e.token
+            WHERE e.event_id = ?
+            ORDER BY e.id DESC
+            LIMIT ?
+          `,
+				)
+					.bind(event.id, limit)
+					.all();
+
+				return json({ entries: results }, 200, request, env);
 			}
 
 			const entryGateMatch = url.pathname.match(/^\/api\/admin\/events\/([^/]+)\/entry$/);

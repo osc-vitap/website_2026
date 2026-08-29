@@ -1485,6 +1485,76 @@ function archiveKeyFor(eventId: string): string {
 	return `events/${eventId}/registrations.csv.gz`;
 }
 
+/*
+ * The public /team roster lives in D1 (see 0014_team_members.sql) so the
+ * admin panel can add, edit and remove members and upload photos at
+ * runtime. These helpers shape a row for the API and locate the R2 object
+ * behind an uploaded photo so it can be freed on replace or delete.
+ */
+const TEAM_TIERS = ['Admins', 'Track Leads', 'Technical Leads', 'Executive Members'];
+
+const TEAM_IMAGE_EXT: Record<string, string> = {
+	'image/png': 'png',
+	'image/jpeg': 'jpg',
+	'image/webp': 'webp',
+};
+
+const TEAM_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+interface TeamMemberRow {
+	id: number;
+	name: string;
+	role: string;
+	tier: string;
+	bio: string;
+	image_url: string;
+	github: string | null;
+	linkedin: string | null;
+	instagram: string | null;
+	website: string | null;
+}
+
+const TEAM_MEMBER_COLUMNS =
+	'id, name, role, tier, bio, image_url, github, linkedin, instagram, website';
+
+function serializeTeamMember(row: TeamMemberRow) {
+	return {
+		id: String(row.id),
+		name: row.name,
+		role: row.role,
+		tier: row.tier,
+		bio: row.bio,
+		image: row.image_url,
+		/*
+		 * Undefined keys are dropped by JSON.stringify, so the shape matches
+		 * the old static teamData where a missing social was simply absent.
+		 */
+		socials: {
+			github: row.github ?? undefined,
+			linkedin: row.linkedin ?? undefined,
+			instagram: row.instagram ?? undefined,
+			website: row.website ?? undefined,
+		},
+	};
+}
+
+/* Empty and whitespace-only inputs collapse to null so the column is clear. */
+function cleanSocial(value: unknown): string | null {
+	if (typeof value !== 'string') return null;
+	const trimmed = value.trim();
+	return trimmed ? trimmed : null;
+}
+
+/*
+ * The R2 key behind an uploaded photo, or null for a seeded /team/*.webp
+ * path — those live in the site's public folder and must never be deleted.
+ */
+function teamImageKey(imageUrl: string | null | undefined): string | null {
+	if (!imageUrl) return null;
+	const match = /\/api\/team\/image\/([A-Za-z0-9._-]+)$/.exec(imageUrl);
+	return match ? `team/${match[1]}` : null;
+}
+
 async function buildRegistrationCsv(
 	env: Env,
 	slug: string,
@@ -5880,6 +5950,352 @@ export default {
 					request,
 					env,
 				);
+			}
+
+			/*
+			 * ============================================================
+			 * TEAM MEMBERS (public read)
+			 * ============================================================
+			 *
+			 * The /team roster. Public because it exposes only what that page
+			 * already shows — names, roles, bios and social links.
+			 */
+			if (
+				request.method === 'GET' &&
+				(url.pathname === '/api/team/members' || url.pathname === '/api/team/members/')
+			) {
+				const { results } = await env.DB.prepare(
+					`SELECT ${TEAM_MEMBER_COLUMNS} FROM team_members ORDER BY sort_order ASC, id ASC`,
+				).all<TeamMemberRow>();
+
+				return json({ members: results.map(serializeTeamMember) }, 200, request, env);
+			}
+
+			/*
+			 * An uploaded member photo, streamed from R2. Public and cached
+			 * hard: the key is unique per upload, so a changed photo is a new
+			 * URL and never a stale cache hit. Seeded members use the
+			 * /team/*.webp files in the site's public folder and never reach
+			 * this route. The key is matched against a strict character class,
+			 * so nothing with a slash or a dot-dot reaches the bucket, and the
+			 * team/ prefix is added here rather than taken from the request.
+			 */
+			const teamImageMatch = url.pathname.match(/^\/api\/team\/image\/([A-Za-z0-9._-]+)$/);
+
+			if (request.method === 'GET' && teamImageMatch) {
+				const object = await env.osc_events_archives.get(`team/${teamImageMatch[1]}`);
+
+				if (!object) {
+					return json({ error: 'Image not found' }, 404, request, env);
+				}
+
+				const headers = new Headers(corsHeaders(request, env));
+
+				object.writeHttpMetadata(headers);
+				headers.set('Content-Length', String(object.size));
+				headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+
+				return new Response(object.body, { headers });
+			}
+
+			/*
+			 * ============================================================
+			 * TEAM MEMBERS (admin management)
+			 * ============================================================
+			 */
+			if (
+				request.method === 'GET' &&
+				(url.pathname === '/api/admin/team/members' || url.pathname === '/api/admin/team/members/')
+			) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const { results } = await env.DB.prepare(
+					`SELECT ${TEAM_MEMBER_COLUMNS} FROM team_members ORDER BY sort_order ASC, id ASC`,
+				).all<TeamMemberRow>();
+
+				return json({ members: results.map(serializeTeamMember) }, 200, request, env);
+			}
+
+			if (
+				request.method === 'POST' &&
+				(url.pathname === '/api/admin/team/members' || url.pathname === '/api/admin/team/members/')
+			) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				let body: {
+					name?: string;
+					role?: string;
+					tier?: string;
+					bio?: string;
+					image?: string;
+					socials?: { github?: string; linkedin?: string; instagram?: string; website?: string };
+				};
+
+				try {
+					body = await request.json();
+				} catch {
+					return json({ error: 'Invalid JSON body' }, 400, request, env);
+				}
+
+				const name = (body.name ?? '').trim();
+				const role = (body.role ?? '').trim();
+				const tier = (body.tier ?? '').trim();
+
+				if (!name || !role || !tier) {
+					return json({ error: 'Name, role and tier are required.' }, 400, request, env);
+				}
+
+				if (!TEAM_TIERS.includes(tier)) {
+					return json({ error: 'Unknown tier.' }, 400, request, env);
+				}
+
+				const socials = body.socials ?? {};
+
+				/*
+				 * New members sort after everyone else. Grouped by tier on the
+				 * page, that puts them at the end of their own tier.
+				 */
+				const next = await env.DB.prepare(
+					`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM team_members`,
+				).first<{ next: number }>();
+
+				const created = await env.DB.prepare(
+					`
+			      INSERT INTO team_members
+			        (name, role, tier, bio, image_url, github, linkedin, instagram, website, sort_order)
+			      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			      RETURNING ${TEAM_MEMBER_COLUMNS}
+			    `,
+				)
+					.bind(
+						name,
+						role,
+						tier,
+						typeof body.bio === 'string' ? body.bio.trim() : '',
+						cleanSocial(body.image) ?? '',
+						cleanSocial(socials.github),
+						cleanSocial(socials.linkedin),
+						cleanSocial(socials.instagram),
+						cleanSocial(socials.website),
+						next?.next ?? 1,
+					)
+					.first<TeamMemberRow>();
+
+				return json({ member: created ? serializeTeamMember(created) : null }, 201, request, env);
+			}
+
+			const teamImageUploadMatch = url.pathname.match(
+				/^\/api\/admin\/team\/members\/(\d+)\/image$/,
+			);
+
+			if (request.method === 'POST' && teamImageUploadMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const id = Number(teamImageUploadMatch[1]);
+
+				const existing = await env.DB.prepare(
+					`SELECT image_url FROM team_members WHERE id = ?`,
+				)
+					.bind(id)
+					.first<{ image_url: string }>();
+
+				if (!existing) {
+					return json({ error: 'Member not found' }, 404, request, env);
+				}
+
+				let form: FormData;
+
+				try {
+					form = await request.formData();
+				} catch {
+					return json({ error: 'Expected a multipart form upload.' }, 400, request, env);
+				}
+
+				const file = form.get('image');
+
+				if (!(file instanceof File)) {
+					return json({ error: 'No image file was sent.' }, 400, request, env);
+				}
+
+				const ext = TEAM_IMAGE_EXT[file.type];
+
+				if (!ext) {
+					return json({ error: 'Image must be a PNG, JPEG or WebP.' }, 400, request, env);
+				}
+
+				if (file.size > TEAM_IMAGE_MAX_BYTES) {
+					return json({ error: 'Image must be 5 MB or smaller.' }, 400, request, env);
+				}
+
+				const key = `team/${crypto.randomUUID()}.${ext}`;
+
+				await env.osc_events_archives.put(key, await file.arrayBuffer(), {
+					httpMetadata: {
+						contentType: file.type,
+						cacheControl: 'public, max-age=31536000, immutable',
+					},
+				});
+
+				/*
+				 * Absolute, against this Worker's own origin, because the photo
+				 * is served from here (events.oscvitap.com) while the seeded
+				 * paths are relative to the site. A relative URL would send the
+				 * browser to the site origin, which has no such file.
+				 */
+				const imageUrl = `${url.origin}/api/team/image/${key.slice('team/'.length)}`;
+
+				const updated = await env.DB.prepare(
+					`
+			      UPDATE team_members
+			      SET image_url = ?, updated_at = CURRENT_TIMESTAMP
+			      WHERE id = ?
+			      RETURNING ${TEAM_MEMBER_COLUMNS}
+			    `,
+				)
+					.bind(imageUrl, id)
+					.first<TeamMemberRow>();
+
+				/*
+				 * Free the photo this one replaced, once the row points at the
+				 * new object. A seeded /team/*.webp returns null and is kept.
+				 */
+				const oldKey = teamImageKey(existing.image_url);
+
+				if (oldKey && oldKey !== key) {
+					await env.osc_events_archives.delete(oldKey);
+				}
+
+				return json({ member: updated ? serializeTeamMember(updated) : null }, 200, request, env);
+			}
+
+			const teamMemberMatch = url.pathname.match(/^\/api\/admin\/team\/members\/(\d+)$/);
+
+			if (request.method === 'PATCH' && teamMemberMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const id = Number(teamMemberMatch[1]);
+
+				const existing = await env.DB.prepare(
+					`SELECT ${TEAM_MEMBER_COLUMNS} FROM team_members WHERE id = ?`,
+				)
+					.bind(id)
+					.first<TeamMemberRow>();
+
+				if (!existing) {
+					return json({ error: 'Member not found' }, 404, request, env);
+				}
+
+				let body: {
+					name?: string;
+					role?: string;
+					tier?: string;
+					bio?: string;
+					image?: string;
+					socials?: { github?: string; linkedin?: string; instagram?: string; website?: string };
+				};
+
+				try {
+					body = await request.json();
+				} catch {
+					return json({ error: 'Invalid JSON body' }, 400, request, env);
+				}
+
+				const name = body.name !== undefined ? body.name.trim() : existing.name;
+				const role = body.role !== undefined ? body.role.trim() : existing.role;
+				const tier = body.tier !== undefined ? body.tier.trim() : existing.tier;
+
+				if (!name || !role || !tier) {
+					return json({ error: 'Name, role and tier are required.' }, 400, request, env);
+				}
+
+				if (!TEAM_TIERS.includes(tier)) {
+					return json({ error: 'Unknown tier.' }, 400, request, env);
+				}
+
+				const bio = body.bio !== undefined ? body.bio.trim() : existing.bio;
+
+				const image =
+					body.image !== undefined ? cleanSocial(body.image) ?? '' : existing.image_url;
+
+				/*
+				 * A social is only touched when its key is present in the body,
+				 * so a PATCH that sends none of them leaves the links alone.
+				 */
+				const socials = body.socials ?? {};
+
+				const github =
+					socials.github !== undefined ? cleanSocial(socials.github) : existing.github;
+				const linkedin =
+					socials.linkedin !== undefined ? cleanSocial(socials.linkedin) : existing.linkedin;
+				const instagram =
+					socials.instagram !== undefined ? cleanSocial(socials.instagram) : existing.instagram;
+				const website =
+					socials.website !== undefined ? cleanSocial(socials.website) : existing.website;
+
+				const updated = await env.DB.prepare(
+					`
+			      UPDATE team_members
+			      SET name = ?, role = ?, tier = ?, bio = ?, image_url = ?,
+			          github = ?, linkedin = ?, instagram = ?, website = ?,
+			          updated_at = CURRENT_TIMESTAMP
+			      WHERE id = ?
+			      RETURNING ${TEAM_MEMBER_COLUMNS}
+			    `,
+				)
+					.bind(name, role, tier, bio, image, github, linkedin, instagram, website, id)
+					.first<TeamMemberRow>();
+
+				return json({ member: updated ? serializeTeamMember(updated) : null }, 200, request, env);
+			}
+
+			if (request.method === 'DELETE' && teamMemberMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const id = Number(teamMemberMatch[1]);
+
+				const existing = await env.DB.prepare(
+					`SELECT image_url FROM team_members WHERE id = ?`,
+				)
+					.bind(id)
+					.first<{ image_url: string }>();
+
+				if (!existing) {
+					return json({ error: 'Member not found' }, 404, request, env);
+				}
+
+				await env.DB.prepare(`DELETE FROM team_members WHERE id = ?`).bind(id).run();
+
+				/*
+				 * Free the uploaded photo, if any. Seeded /team/*.webp paths
+				 * return null here and are left in the public folder.
+				 */
+				const key = teamImageKey(existing.image_url);
+
+				if (key) {
+					await env.osc_events_archives.delete(key);
+				}
+
+				return json({ ok: true }, 200, request, env);
 			}
 
 			/*

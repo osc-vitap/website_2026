@@ -68,7 +68,7 @@
 		 *   node -e "const c=require('crypto');console.log(c.createHmac('sha256',process.env.P).update(process.argv[1].trim()).digest('hex'))" <id>
 		 * with P set to the same pepper the Worker holds.
 		 */
-		"ADMIN_OUTSIDER_ID_HASHES": "11e443787d6cfb8c0a4cb5ab8d6cfd6c6243296de58337f7fc4817304ca41492"
+		"ADMIN_OUTSIDER_ID_HASHES": "b5b4230f4cabb584d4979bfb41562e8b46affb68e94ef5170b339ab2fbe30613,4e911e2766ee586a64679d07cb235932aeb44b37c1ed0022c50f641485597c56"
 	},
 
 	/**

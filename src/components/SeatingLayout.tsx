@@ -9,7 +9,7 @@ import {
   SetStateAction,
 } from 'react';
 import { Link } from 'react-router-dom';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { getArmchairTexture } from './ArmchairTexture';
@@ -105,6 +105,10 @@ const colorUnselected = new THREE.Color('#a1a1aa');
 const colorHover = new THREE.Color('#e4e4e7');
 const colorSelected = new THREE.Color('#3b82f6');
 const colorTaken = new THREE.Color('#4a2a2a');
+const scratchColor = new THREE.Color();
+
+/* How quickly a seat settles on its new colour, lower is gentler */
+const HOVER_EASE = 6;
 
 interface SeatsInstancedProps {
   selected: Set<number>;
@@ -126,7 +130,9 @@ function SeatsInstanced({
   onTaken,
 }: SeatsInstancedProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const hoveredRef = useRef<number | null>(null);
+  const tint = useRef(
+    new Float32Array(seatData.length * 3),
+  );
   const texture = useMemo(() => getArmchairTexture(), []);
 
   const colorFor = useCallback(
@@ -139,38 +145,82 @@ function SeatsInstanced({
     [selected, taken],
   );
 
-  /* Seat positions never move, so the matrices are written once */
+  /* Seat positions never move, so the matrices and the first colours
+     are written once */
   useEffect(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
+
+    const buffer = tint.current;
+
     seatData.forEach((seat, i) => {
       dummy.position.set(seat.x, seat.y, 0);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
+
+      const start = colorFor(i, null);
+      mesh.setColorAt(i, start);
+      buffer[i * 3] = start.r;
+      buffer[i * 3 + 1] = start.g;
+      buffer[i * 3 + 2] = start.b;
     });
+
     mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
+  /* Colours ease towards their target instead of snapping, and nothing
+     is uploaded once every seat has settled */
+  useFrame((_, delta) => {
     const mesh = meshRef.current;
-    if (!mesh) return;
-    for (let i = 0; i < seatData.length; i++) {
-      mesh.setColorAt(i, colorFor(i, hoveredRef.current));
-    }
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [colorFor]);
+    if (!mesh?.instanceColor) return;
 
-  /* Only the seat the pointer left and the one it entered are repainted */
-  useEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    const previous = hoveredRef.current;
-    hoveredRef.current = hovered;
-    if (previous === hovered) return;
-    if (previous !== null) mesh.setColorAt(previous, colorFor(previous, hovered));
-    if (hovered !== null) mesh.setColorAt(hovered, colorFor(hovered, hovered));
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [hovered, colorFor]);
+    const buffer = tint.current;
+    const step = 1 - Math.exp(-delta * HOVER_EASE);
+    let moving = false;
+
+    for (let i = 0; i < seatData.length; i += 1) {
+      const target = colorFor(i, hovered);
+      const at = i * 3;
+
+      const dr = target.r - buffer[at];
+      const dg = target.g - buffer[at + 1];
+      const db = target.b - buffer[at + 2];
+
+      if (
+        Math.abs(dr) < 0.0015 &&
+        Math.abs(dg) < 0.0015 &&
+        Math.abs(db) < 0.0015
+      ) {
+        if (dr || dg || db) {
+          buffer[at] = target.r;
+          buffer[at + 1] = target.g;
+          buffer[at + 2] = target.b;
+          moving = true;
+        }
+        continue;
+      }
+
+      buffer[at] += dr * step;
+      buffer[at + 1] += dg * step;
+      buffer[at + 2] += db * step;
+      moving = true;
+    }
+
+    if (!moving) return;
+
+    for (let i = 0; i < seatData.length; i += 1) {
+      scratchColor.setRGB(
+        buffer[i * 3],
+        buffer[i * 3 + 1],
+        buffer[i * 3 + 2],
+      );
+      mesh.setColorAt(i, scratchColor);
+    }
+
+    mesh.instanceColor.needsUpdate = true;
+  });
 
   return (
     <instancedMesh
@@ -243,11 +293,74 @@ function stageShape(): THREE.Shape {
   return shape;
 }
 
-const SCREEN_BOTTOM = STAGE_BOTTOM + 0.4;
+const SCREEN_BEZEL = 0.14;
+const SCREEN_RADIUS = 0.32;
+const SCREEN_BOTTOM = STAGE_BOTTOM + SCREEN_BEZEL;
 const SCREEN_TOP = SCREEN_BOTTOM + 2.4;
 
-const SCREEN_TINT_TOP = new THREE.Color('#5aa2f5');
-const SCREEN_TINT_BOTTOM = new THREE.Color('#16255c');
+/* Corners are cut back along both edges and joined through the old
+   point, so the outline has no sharp vertex left */
+function roundedShape(
+  points: [number, number][],
+  radius: number,
+): THREE.Shape {
+  const shape = new THREE.Shape();
+  const count = points.length;
+
+  for (let i = 0; i < count; i += 1) {
+    const previous = points[(i - 1 + count) % count];
+    const corner = points[i];
+    const next = points[(i + 1) % count];
+
+    const toPrevious = [
+      previous[0] - corner[0],
+      previous[1] - corner[1],
+    ];
+    const toNext = [
+      next[0] - corner[0],
+      next[1] - corner[1],
+    ];
+
+    const previousLength = Math.hypot(
+      toPrevious[0],
+      toPrevious[1],
+    );
+    const nextLength = Math.hypot(toNext[0], toNext[1]);
+
+    const cut = Math.min(
+      radius,
+      previousLength / 2,
+      nextLength / 2,
+    );
+
+    const start = [
+      corner[0] + (toPrevious[0] / previousLength) * cut,
+      corner[1] + (toPrevious[1] / previousLength) * cut,
+    ];
+    const end = [
+      corner[0] + (toNext[0] / nextLength) * cut,
+      corner[1] + (toNext[1] / nextLength) * cut,
+    ];
+
+    if (i === 0) shape.moveTo(start[0], start[1]);
+    else shape.lineTo(start[0], start[1]);
+
+    shape.quadraticCurveTo(
+      corner[0],
+      corner[1],
+      end[0],
+      end[1],
+    );
+  }
+
+  shape.closePath();
+
+  return shape;
+}
+
+const SCREEN_TINT_FROM = new THREE.Color('#16255c');
+const SCREEN_TINT_TO = new THREE.Color('#5aa2f5');
+const SCREEN_TINT_ANGLE = Math.PI / 4;
 
 /* The screen hangs on the back wall at the far end of the stage, so its
    lower edge sits on the wall line */
@@ -257,36 +370,46 @@ function screenShape(inset: number): THREE.Shape {
   const halfTop = 10.4 + inset;
   const halfBottom = 11.2 + inset;
 
-  const shape = new THREE.Shape();
-
-  shape.moveTo(-halfTop, top);
-  shape.lineTo(halfTop, top);
-  shape.lineTo(halfBottom, bottom);
-  shape.lineTo(-halfBottom, bottom);
-  shape.closePath();
-
-  return shape;
+  return roundedShape(
+    [
+      [-halfTop, top],
+      [halfTop, top],
+      [halfBottom, bottom],
+      [-halfBottom, bottom],
+    ],
+    SCREEN_RADIUS + inset,
+  );
 }
 
 /* A flat material cannot fade, so the blue is written onto the corners
    and the triangles blend it across the screen */
 function screenGeometry(): THREE.ShapeGeometry {
-  const geometry = new THREE.ShapeGeometry(screenShape(0));
+  const geometry = new THREE.ShapeGeometry(screenShape(0), 24);
   const position = geometry.attributes.position;
+
+  const axisX = Math.cos(SCREEN_TINT_ANGLE);
+  const axisY = Math.sin(SCREEN_TINT_ANGLE);
+
+  const along = (index: number) =>
+    position.getX(index) * axisX +
+    position.getY(index) * axisY;
+
+  let low = Infinity;
+  let high = -Infinity;
+
+  for (let i = 0; i < position.count; i += 1) {
+    low = Math.min(low, along(i));
+    high = Math.max(high, along(i));
+  }
+
+  const span = high - low || 1;
   const colors = new Float32Array(position.count * 3);
   const tint = new THREE.Color();
 
   for (let i = 0; i < position.count; i += 1) {
-    const mix = THREE.MathUtils.clamp(
-      (position.getY(i) - SCREEN_BOTTOM) /
-        (SCREEN_TOP - SCREEN_BOTTOM),
-      0,
-      1,
-    );
-
     tint
-      .copy(SCREEN_TINT_BOTTOM)
-      .lerp(SCREEN_TINT_TOP, mix);
+      .copy(SCREEN_TINT_FROM)
+      .lerp(SCREEN_TINT_TO, (along(i) - low) / span);
 
     colors[i * 3] = tint.r;
     colors[i * 3 + 1] = tint.g;
@@ -303,7 +426,7 @@ function screenGeometry(): THREE.ShapeGeometry {
 
 function StageArea() {
   const stage = useMemo(() => stageShape(), []);
-  const bezel = useMemo(() => screenShape(0.4), []);
+  const bezel = useMemo(() => screenShape(SCREEN_BEZEL), []);
   const screen = useMemo(() => screenGeometry(), []);
 
   return (
@@ -314,7 +437,7 @@ function StageArea() {
       </mesh>
 
       <mesh position={[0, 0, -0.1]}>
-        <shapeGeometry args={[bezel]} />
+        <shapeGeometry args={[bezel, 24]} />
         <meshBasicMaterial color="#2e2e33" toneMapped={false} />
       </mesh>
 
@@ -474,8 +597,29 @@ export default function SeatingLayout() {
   const pageRef = useRef<HTMLDivElement>(null);
   const reserveButtonRef = useRef<HTMLButtonElement>(null);
 
-  const hoveredSeat = hovered !== null ? seatData[hovered] : null;
-  const hoveredTaken = hovered !== null && taken.has(hovered);
+  const [chip, setChip] = useState<{
+    label: string;
+    taken: boolean;
+  } | null>(null);
+
+  /* Moving onto the next seat replaces the text and cancels the pending
+     hide, so the chip never blinks between neighbours */
+  useEffect(() => {
+    if (hovered !== null) {
+      setChip({
+        label: seatLabel(seatData[hovered].id),
+        taken: taken.has(hovered),
+      });
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => setChip(null),
+      220,
+    );
+
+    return () => window.clearTimeout(timer);
+  }, [hovered, taken]);
 
   const loadTaken = useCallback(async () => {
     try {
@@ -607,16 +751,18 @@ export default function SeatingLayout() {
 
       {/* Hover Tooltip Overlay */}
       <div
-        className={`absolute left-1/2 -translate-x-1/2 backdrop-blur-md border text-white px-6 py-3 rounded-full font-bold tracking-widest text-sm pointer-events-none z-40 shadow-xl transition-all duration-200 ${
-          hoveredTaken
+        className={`absolute left-1/2 -translate-x-1/2 backdrop-blur-md border text-white px-6 py-3 rounded-full font-bold tracking-widest text-sm pointer-events-none z-40 shadow-xl transition-all duration-[320ms] ease-out ${
+          chip?.taken
             ? 'bg-[#4a2a2a]/90 border-[#6b3a3a]'
             : 'bg-[#2e2e33]/90 border-[#3e3e44]'
         } ${selected.size > 0 ? 'bottom-32 md:bottom-28' : 'bottom-8'} ${
-          hoveredSeat ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          chip
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-0 translate-y-3'
         }`}
       >
-        {hoveredSeat
-          ? `${seatLabel(hoveredSeat.id).toUpperCase()}${hoveredTaken ? ' | TAKEN' : ''}`
+        {chip
+          ? `${chip.label.toUpperCase()}${chip.taken ? ' | TAKEN' : ''}`
           : 'HOVER A SEAT'}
       </div>
 
@@ -670,6 +816,8 @@ export default function SeatingLayout() {
       {/* WebGL Scene */}
       <Canvas
         orthographic
+        dpr={[1, 2]}
+        gl={{ antialias: true }}
         camera={{
           position: [CENTER_X, CENTER_Y, 100],
           zoom: 12,

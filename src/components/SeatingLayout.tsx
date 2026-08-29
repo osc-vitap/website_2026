@@ -1,49 +1,104 @@
-import { useState, useMemo, useRef, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
+import {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+  ElementRef,
+  Dispatch,
+  SetStateAction,
+} from 'react';
 import { Link } from 'react-router-dom';
-import { Canvas } from '@react-three/fiber';
-import { MapControls, Text } from '@react-three/drei';
+import { Canvas, useThree } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { getArmchairTexture } from './ArmchairTexture';
 import { MAX_SEATS, fetchTakenSeats, seatLabel } from '../data/seatingApi';
 import ReserveDialog from '../pages/seating/ReserveDialog';
 
-const SPACING = 1.2;
+/* Seat blocks across a row and rows in each section, taken from the
+   auditorium plan */
+const BLOCKS = [7, 12, 7];
+const SECTIONS = [10, 9, 3];
+
+const SEAT_PITCH = 1.25;
+const AISLE = 4;
+const SECTION_GAP = 2.75;
+
 const seatData: { id: string; x: number; y: number }[] = [];
-let yCursor = 15;
-const sections = [
-  { rows: 10, startRow: 22 },
-  { rows: 9, startRow: 12 },
-  { rows: 3, startRow: 3 },
-];
 
-sections.forEach((section) => {
-  for (let i = 0; i < section.rows; i++) {
-    const rowNum = section.startRow - i;
-    let xCursor = -16;
-    let seatNum = 1;
-    // Left 7
-    for (let c = 0; c < 7; c++) {
-      seatData.push({ id: `R${rowNum}-S${seatNum++}`, x: xCursor, y: yCursor });
-      xCursor += SPACING;
-    }
-    xCursor += SPACING * 1.5;
-    // Center 12
-    for (let c = 0; c < 12; c++) {
-      seatData.push({ id: `R${rowNum}-S${seatNum++}`, x: xCursor, y: yCursor });
-      xCursor += SPACING;
-    }
-    xCursor += SPACING * 1.5;
-    // Right 7
-    for (let c = 0; c < 7; c++) {
-      seatData.push({ id: `R${rowNum}-S${seatNum++}`, x: xCursor, y: yCursor });
-      xCursor += SPACING;
-    }
-    yCursor -= SPACING;
-  }
-  yCursor -= SPACING * 1.5; // Gap between sections
-});
+const ROW_WIDTH =
+  BLOCKS.reduce(
+    (total, count) => total + (count - 1) * SEAT_PITCH,
+    0,
+  ) +
+  AISLE * (BLOCKS.length - 1);
 
-const seatIndexById = new Map(seatData.map((seat, index) => [seat.id, index]));
+{
+  const startX = -ROW_WIDTH / 2;
+
+  let y = 0;
+  let topRow = SECTIONS.reduce(
+    (total, rows) => total + rows,
+    0,
+  );
+
+  SECTIONS.forEach((rows, section) => {
+    for (let i = 0; i < rows; i += 1) {
+      const rowNumber = topRow - i;
+
+      let x = startX;
+      let seatNumber = 1;
+
+      BLOCKS.forEach((count, block) => {
+        for (let c = 0; c < count; c += 1) {
+          seatData.push({
+            id: `R${rowNumber}-S${seatNumber}`,
+            x,
+            y,
+          });
+          seatNumber += 1;
+          x += SEAT_PITCH;
+        }
+
+        if (block < BLOCKS.length - 1) {
+          x += AISLE - SEAT_PITCH;
+        }
+      });
+
+      y -= SEAT_PITCH;
+    }
+
+    topRow -= rows;
+
+    if (section < SECTIONS.length - 1) {
+      y -= SECTION_GAP - SEAT_PITCH;
+    }
+  });
+}
+
+const SEAT_BOTTOM = seatData[seatData.length - 1].y;
+
+const STAGE_TOP = SEAT_BOTTOM - 4;
+const STAGE_BOTTOM = STAGE_TOP - 7;
+const STAGE_HALF_WIDTH = ROW_WIDTH / 2 + 5.5;
+const STAGE_ARC = 2.2;
+
+const BOUNDS = {
+  minX: -STAGE_HALF_WIDTH,
+  maxX: STAGE_HALF_WIDTH,
+  minY: STAGE_BOTTOM,
+  maxY: 0.75,
+};
+
+const CENTER_X = 0;
+const CENTER_Y = (BOUNDS.minY + BOUNDS.maxY) / 2;
+const CONTENT_WIDTH = BOUNDS.maxX - BOUNDS.minX;
+const CONTENT_HEIGHT = BOUNDS.maxY - BOUNDS.minY;
+
+const seatIndexById = new Map(
+  seatData.map((seat, index) => [seat.id, index]),
+);
 
 const dummy = new THREE.Object3D();
 const colorUnselected = new THREE.Color('#a1a1aa');
@@ -169,49 +224,201 @@ function SeatsInstanced({
   );
 }
 
+/* The stage front curves towards the room, so the top edge is an arc
+   rather than a straight line */
+function stageShape(): THREE.Shape {
+  const shape = new THREE.Shape();
+
+  shape.moveTo(-STAGE_HALF_WIDTH, STAGE_BOTTOM);
+  shape.lineTo(-STAGE_HALF_WIDTH, STAGE_TOP);
+  shape.quadraticCurveTo(
+    0,
+    STAGE_TOP + STAGE_ARC * 2,
+    STAGE_HALF_WIDTH,
+    STAGE_TOP,
+  );
+  shape.lineTo(STAGE_HALF_WIDTH, STAGE_BOTTOM);
+  shape.closePath();
+
+  return shape;
+}
+
+/* The screen sits on the stage and is drawn narrower at the back, so it
+   reads as lying flat under the room */
+function screenShape(inset: number): THREE.Shape {
+  const top = STAGE_TOP + STAGE_ARC - 0.6 - inset;
+  const bottom = top - 2.6 - inset * 2;
+  const halfTop = 6.2 + inset;
+  const halfBottom = 8.8 + inset;
+
+  const shape = new THREE.Shape();
+
+  shape.moveTo(-halfTop, top);
+  shape.lineTo(halfTop, top);
+  shape.lineTo(halfBottom, bottom);
+  shape.lineTo(-halfBottom, bottom);
+  shape.closePath();
+
+  return shape;
+}
+
 function StageArea() {
+  const stage = useMemo(() => stageShape(), []);
+  const bezel = useMemo(() => screenShape(0.4), []);
+  const screen = useMemo(() => screenShape(0), []);
+
   return (
-    <group position={[0, -20, 0]}>
-      {/* Screen */}
-      <group position={[0, 4, 0]}>
-        <mesh>
-          <planeGeometry args={[10, 6]} />
-          <meshBasicMaterial color="#1c1c1e" />
-        </mesh>
-        <Text position={[0, 0, 0.1]} fontSize={1} color="#86868b" letterSpacing={0.2}>
-          SCREEN
-        </Text>
-      </group>
-      
-      {/* Stage */}
-      <mesh position={[0, -2, 0]}>
-        <boxGeometry args={[40, 4, 1]} />
-        <meshBasicMaterial color="#2e2e33" />
+    <group>
+      <mesh position={[0, 0, -0.2]}>
+        <shapeGeometry args={[stage]} />
+        <meshBasicMaterial color="#151517" toneMapped={false} />
       </mesh>
-      <mesh position={[0, -1.8, 0.51]}>
-        <planeGeometry args={[36, 3]} />
-        <meshBasicMaterial color="#0b0b0d" />
+
+      <mesh position={[0, 0, -0.1]}>
+        <shapeGeometry args={[bezel]} />
+        <meshBasicMaterial color="#6f6f76" toneMapped={false} />
       </mesh>
-      <Text position={[0, -1.8, 0.52]} fontSize={1.5} color="#d6d6db" letterSpacing={0.4}>
-        STAGE
-      </Text>
+
+      <mesh>
+        <shapeGeometry args={[screen]} />
+        <meshBasicMaterial color="#e8e8ed" toneMapped={false} />
+      </mesh>
     </group>
   );
 }
 
-function Counter3D({ selectedCount }: { selectedCount: number }) {
+export interface ViewApi {
+  zoomBy: (factor: number) => void;
+  fit: () => void;
+}
+
+/* A seat map is a flat drawing, so the camera is orthographic and the
+   controls only pan and zoom */
+function SceneView({
+  apiRef,
+}: {
+  apiRef: React.MutableRefObject<ViewApi | null>;
+}) {
+  const controlsRef =
+    useRef<ElementRef<typeof OrbitControls>>(null);
+  const camera = useThree(
+    (state) => state.camera,
+  ) as THREE.OrthographicCamera;
+  const size = useThree((state) => state.size);
+  const touched = useRef(false);
+
+  const fitZoom = useMemo(() => {
+    if (!size.width || !size.height) return 12;
+
+    return Math.min(
+      size.width / (CONTENT_WIDTH * 1.06),
+      size.height / (CONTENT_HEIGHT * 1.06),
+    );
+  }, [size.width, size.height]);
+
+  const apply = useCallback(
+    (zoom: number) => {
+      camera.zoom = zoom;
+      camera.updateProjectionMatrix();
+    },
+    [camera],
+  );
+
+  const fit = useCallback(() => {
+    const controls = controlsRef.current;
+
+    camera.position.set(CENTER_X, CENTER_Y, 100);
+    apply(fitZoom);
+
+    if (controls) {
+      controls.target.set(CENTER_X, CENTER_Y, 0);
+      controls.update();
+    }
+  }, [apply, camera, fitZoom]);
+
+  /* Refit while the reader has not moved the map themselves, so a
+     rotation or a resize still shows the whole room */
+  useEffect(() => {
+    const controls = controlsRef.current;
+
+    if (controls) {
+      controls.minZoom = fitZoom * 0.85;
+      controls.maxZoom = fitZoom * 7;
+    }
+
+    if (!touched.current) fit();
+  }, [fit, fitZoom]);
+
+  useEffect(() => {
+    apiRef.current = {
+      fit: () => {
+        touched.current = false;
+        fit();
+      },
+      zoomBy: (factor) => {
+        touched.current = true;
+
+        const next = THREE.MathUtils.clamp(
+          camera.zoom * factor,
+          fitZoom * 0.85,
+          fitZoom * 7,
+        );
+
+        apply(next);
+      },
+    };
+
+    return () => {
+      apiRef.current = null;
+    };
+  }, [apiRef, apply, camera, fit, fitZoom]);
+
+  /* Panning must not carry the room off screen, so the target is kept
+     inside the drawing */
+  const clamp = useCallback(() => {
+    const controls = controlsRef.current;
+
+    if (!controls) return;
+
+    controls.target.x = THREE.MathUtils.clamp(
+      controls.target.x,
+      BOUNDS.minX,
+      BOUNDS.maxX,
+    );
+    controls.target.y = THREE.MathUtils.clamp(
+      controls.target.y,
+      BOUNDS.minY,
+      BOUNDS.maxY,
+    );
+
+    camera.position.x = controls.target.x;
+    camera.position.y = controls.target.y;
+  }, [camera]);
+
   return (
-    <group position={[24, 0, 0]}>
-      <Text position={[0, 1.5, 0]} fontSize={1} color="#86868b" letterSpacing={0.1} anchorX="left">
-        RESERVED SEATS
-      </Text>
-      <Text position={[0, -1, 0]} fontSize={4} color={selectedCount > 0 ? "#3b82f6" : "#ffffff"} anchorX="left">
-        {selectedCount}
-      </Text>
-      <Text position={[3 + (selectedCount > 9 ? 1.5 : 0), -1, 0]} fontSize={4} color="#86868b" anchorX="left">
-        {` / ${MAX_SEATS}`}
-      </Text>
-    </group>
+    <OrbitControls
+      ref={controlsRef}
+      makeDefault
+      enableRotate={false}
+      enablePan
+      screenSpacePanning
+      enableDamping
+      dampingFactor={0.18}
+      zoomToCursor
+      onStart={() => {
+        touched.current = true;
+      }}
+      onChange={clamp}
+      mouseButtons={{
+        LEFT: THREE.MOUSE.PAN,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN,
+      }}
+      touches={{
+        ONE: THREE.TOUCH.PAN,
+        TWO: THREE.TOUCH.DOLLY_PAN,
+      }}
+    />
   );
 }
 
@@ -223,6 +430,7 @@ export default function SeatingLayout() {
 
   /* The dialog keeps the seats it opened with, so refreshing the map
      underneath can never tear it down mid confirmation */
+  const viewRef = useRef<ViewApi | null>(null);
   const [dialogSeatIds, setDialogSeatIds] = useState<string[] | null>(null);
 
   const pageRef = useRef<HTMLDivElement>(null);
@@ -305,6 +513,60 @@ export default function SeatingLayout() {
         </div>
       </header>
 
+      {/* Legend and view controls */}
+      <div className="pointer-events-none absolute left-4 top-24 z-40 flex flex-col gap-2 md:left-8">
+        {[
+          { color: '#a1a1aa', label: 'Available' },
+          { color: '#3b82f6', label: 'Selected' },
+          { color: '#4a2a2a', label: 'Taken' },
+        ].map((item) => (
+          <div
+            key={item.label}
+            className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-[#86868b] md:text-xs"
+          >
+            <span
+              aria-hidden="true"
+              className="h-3 w-3 rounded-[3px]"
+              style={{ backgroundColor: item.color }}
+            />
+            {item.label}
+          </div>
+        ))}
+      </div>
+
+      <div
+        className={`absolute right-4 z-40 flex flex-col overflow-hidden rounded-xl border border-[#2e2e33] bg-[#0b0b0d]/85 backdrop-blur-md transition-all duration-200 md:right-8 ${
+          selected.size > 0 ? 'bottom-32 md:bottom-28' : 'bottom-8'
+        }`}
+      >
+        <button
+          type="button"
+          aria-label="Zoom in"
+          onClick={() => viewRef.current?.zoomBy(1.35)}
+          className="px-3 py-2 text-lg leading-none text-[#d6d6db] transition-colors hover:bg-white/5"
+        >
+          +
+        </button>
+
+        <button
+          type="button"
+          aria-label="Zoom out"
+          onClick={() => viewRef.current?.zoomBy(1 / 1.35)}
+          className="border-t border-[#2e2e33] px-3 py-2 text-lg leading-none text-[#d6d6db] transition-colors hover:bg-white/5"
+        >
+          &minus;
+        </button>
+
+        <button
+          type="button"
+          aria-label="Fit the whole room"
+          onClick={() => viewRef.current?.fit()}
+          className="border-t border-[#2e2e33] px-3 py-2 text-[10px] uppercase tracking-wider text-[#86868b] transition-colors hover:bg-white/5 hover:text-white"
+        >
+          Fit
+        </button>
+      </div>
+
       {/* Hover Tooltip Overlay */}
       <div
         className={`absolute left-1/2 -translate-x-1/2 backdrop-blur-md border text-white px-6 py-3 rounded-full font-bold tracking-widest text-sm pointer-events-none z-40 shadow-xl transition-all duration-200 ${
@@ -368,18 +630,19 @@ export default function SeatingLayout() {
       </div>
 
       {/* WebGL Scene */}
-      <Canvas camera={{ position: [0, 0, 30], fov: 45 }}>
+      <Canvas
+        orthographic
+        camera={{
+          position: [CENTER_X, CENTER_Y, 100],
+          zoom: 12,
+          near: 0.1,
+          far: 1000,
+        }}
+      >
         <color attach="background" args={['#0b0b0d']} />
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[10, 10, 10]} intensity={1} />
-        
-        <MapControls 
-          enableRotate={false} 
-          enableDamping={true}
-          minDistance={10}
-          maxDistance={50}
-        />
-        
+
+        <SceneView apiRef={viewRef} />
+
         <SeatsInstanced
           selected={selected}
           setSelected={setSelected}
@@ -390,7 +653,6 @@ export default function SeatingLayout() {
           onTaken={() => setNotice('That seat is already taken.')}
         />
         <StageArea />
-        <Counter3D selectedCount={selected.size} />
       </Canvas>
 
       {dialogSeatIds && dialogSeatIds.length > 0 && (

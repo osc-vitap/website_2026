@@ -5,7 +5,7 @@ import {
   useState,
 } from 'react';
 import { useScanner } from '../scan/useScanner';
-import { haptic, primeHaptics } from '../scan/haptics';
+import { feedback, primeFeedback } from '../scan/haptics';
 
 /*
  * The door.
@@ -76,6 +76,29 @@ const ScanPage = () => {
   const [claiming, setClaiming] = useState(false);
   const [gate, setGate] = useState<GateState | null>(null);
 
+  /*
+   * On by default, and remembered per phone.
+   *
+   * Sound is the only channel that reliably reaches a volunteer on iOS,
+   * where the vibration API does not exist. It is a toggle rather than
+   * a fixed choice because one of the four queues may end up somewhere
+   * a beep is unwelcome.
+   */
+  const [sound, setSound] = useState(
+    () => localStorage.getItem('osc-scan-sound') !== 'off',
+  );
+
+  useEffect(() => {
+    localStorage.setItem('osc-scan-sound', sound ? 'on' : 'off');
+  }, [sound]);
+
+  /* Read inside the claim, which must not be rebuilt when it changes. */
+  const soundRef = useRef(sound);
+
+  useEffect(() => {
+    soundRef.current = sound;
+  }, [sound]);
+
   /* Cleared on the next scan rather than on a timer: a verdict that
      vanishes while someone is still reading it is worse than one that
      lingers. */
@@ -103,16 +126,17 @@ const ScanPage = () => {
       const claimed: ClaimResult = await response.json();
 
       /*
-       * Felt before it is read. The phone is usually held low and
-       * pointed at a pass while the volunteer is looking at a face, so
-       * the buzz is what tells them the answer.
+       * Heard or felt before it is read. The phone is usually held low
+       * and pointed at a pass while the volunteer is looking at a face,
+       * so this is what tells them the answer.
        */
-      haptic(
+      feedback(
         claimed.verdict === 'admitted'
           ? 'admitted'
           : claimed.verdict === 'already-in'
             ? 'warn'
             : 'refused',
+        soundRef.current,
       );
 
       setResult(claimed);
@@ -122,7 +146,7 @@ const ScanPage = () => {
        * connection" both mean nobody goes in, but only one of them is
        * worth shouting across the foyer about.
        */
-      haptic('refused');
+      feedback('refused', soundRef.current);
       setResult({ verdict: 'error' });
     } finally {
       setClaiming(false);
@@ -165,7 +189,7 @@ const ScanPage = () => {
      * only allow a haptic from within one, and without this the very
      * first admission of a shift is the one nobody feels.
      */
-    primeHaptics();
+    primeFeedback(sound);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/scan/session`, {
@@ -444,6 +468,26 @@ const ScanPage = () => {
             {scanner.engine === 'native' ? 'fast decoder' : 'fallback decoder'}
           </div>
         </div>
+
+        {/*
+          * Toggling it plays the tone, so this is also how anyone
+          * checks the phone is still audible without scanning a person
+          * to find out.
+          */}
+        <button
+          type="button"
+          onClick={() => {
+            const next = !sound;
+            setSound(next);
+            if (next) primeFeedback(true);
+          }}
+          aria-pressed={sound}
+          className={`min-h-[44px] rounded-lg px-4 text-sm font-semibold ${
+            sound ? 'bg-dark-700 text-white' : 'bg-dark-800 text-gray-500 line-through'
+          }`}
+        >
+          Sound
+        </button>
 
         {scanner.torchAvailable && (
           <button

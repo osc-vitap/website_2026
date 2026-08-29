@@ -1,173 +1,216 @@
 /*
- * Something the hand feels, so a volunteer does not have to read the
- * screen to know what happened.
+ * Something other than the screen telling a volunteer what happened.
  *
- * At a door the phone is often held low and pointed at a pass while the
- * person doing the scanning is looking at a face. A distinct buzz for
- * "in" versus "stop" is worth more than any amount of colour.
+ * The phone is held low and pointed at a pass while the person doing
+ * the scanning is looking at a face, so a signal that does not need
+ * eyes is worth more than any amount of colour.
  *
- * Two entirely different mechanisms, because the platforms share
- * nothing here.
+ * Two channels, because neither is reliable everywhere.
  *
- * ANDROID and everything else: navigator.vibrate, which takes a
- * millisecond pattern and does exactly what it says.
+ * VIBRATION works on Android without ceremony. iOS has never shipped
+ * navigator.vibrate, and the only haptic a web page can reach there is
+ * the one Safari plays when a switch control is toggled. That is
+ * attempted, and it may well not fire: it is undocumented, it needs
+ * 17.4 or newer, and Safari ties feedback to user activation, which a
+ * camera decoding a code by itself does not have.
  *
- * iOS: navigator.vibrate does not exist and never has. The only haptic
- * a web page can reach is the one Safari plays when a switch control is
- * toggled, which since 17.4 fires the system feedback generator. So a
- * hidden switch is kept in the document and flipped.
- *
- * Being straight about the limit: a web page cannot call the API behind
- * the Apple Pay confirmation, which is UINotificationFeedbackGenerator
- * with .success, and there is no way to ask for that specific pattern.
- * What the switch gives is the lighter selection haptic. Two of them,
- * spaced the way the payment confirmation spaces its pair, is as close
- * as the platform allows and reads as the same gesture in the hand.
+ * SOUND is the one that works. Once an AudioContext has been unlocked
+ * inside a real tap, iOS will play from a timer, a promise, or anything
+ * else, with no further gesture needed. A short tone per verdict is
+ * also what every barcode scanner in the world already does, so nobody
+ * has to be taught what it means.
  */
 
-export type Haptic = 'admitted' | 'warn' | 'refused';
+export type Feedback = 'admitted' | 'warn' | 'refused';
 
-/*
- * Millisecond patterns for navigator.vibrate. Alternating on and off,
- * so [30, 60, 30] is buzz, pause, buzz.
- */
-const PATTERNS: Record<Haptic, number | number[]> = {
-  /* Two short taps: the shape of a confirmation everywhere. */
+/* Alternating on and off, in milliseconds. */
+const VIBRATION: Record<Feedback, number | number[]> = {
   admitted: [28, 55, 28],
-
-  /* One medium. Not an error, but stop and look. */
   warn: 90,
-
-  /* Long and single, so it is unmistakable through a pocket or a
-     glove and cannot be confused with the double. */
   refused: [180, 70, 180],
 };
 
-/* How many switch flips stand in for each pattern on iOS, and how far
-   apart, since that is the only variable available there. */
-const IOS_TAPS: Record<Haptic, number[]> = {
-  admitted: [0, 70],
-  warn: [0],
-  refused: [0, 90, 180],
+/*
+ * Tones as [hertz, start ms, length ms].
+ *
+ * Rising for yes, flat for wait, low and doubled for no. Kept under a
+ * fifth of a second: this plays once per person and a queue is not the
+ * place for a jingle.
+ */
+const TONES: Record<Feedback, [number, number, number][]> = {
+  admitted: [
+    [880, 0, 70],
+    [1320, 70, 110],
+  ],
+  warn: [[620, 0, 180]],
+  refused: [
+    [300, 0, 130],
+    [200, 150, 200],
+  ],
 };
 
-let ios: HTMLInputElement | null = null;
+/* ------------------------------------------------------------------ */
+/* Sound                                                               */
+/* ------------------------------------------------------------------ */
 
-/*
- * The hidden switch.
- *
- * It has to be a real, rendered, interactive control: Safari plays
- * nothing for one that is display:none, and nothing for a plain
- * checkbox without the switch attribute. So it is one pixel, fully
- * transparent, fixed out of reach, and hidden from assistive tech,
- * which is visible enough for the haptic and invisible enough for
- * everyone.
- */
-const iosSwitch = (): HTMLInputElement | null => {
-  if (typeof document === 'undefined') return null;
+type WindowWithAudio = Window & {
+  webkitAudioContext?: typeof AudioContext;
+};
 
-  if (ios?.isConnected) return ios;
+let audio: AudioContext | null = null;
 
-  const input = document.createElement('input');
+const audioContext = (): AudioContext | null => {
+  if (typeof window === 'undefined') return null;
 
-  input.type = 'checkbox';
+  if (!audio) {
+    const Ctor = window.AudioContext ?? (window as WindowWithAudio).webkitAudioContext;
 
-  /* Not a React prop and not in the HTML types, so it is set directly. */
-  input.setAttribute('switch', '');
+    if (!Ctor) return null;
 
-  input.setAttribute('aria-hidden', 'true');
-  input.tabIndex = -1;
+    audio = new Ctor();
+  }
 
   /*
-   * No pointer-events: none. The haptic comes from the control's
-   * activation behaviour, which is reached through click(), and a
-   * control that cannot be clicked cannot be activated. One transparent
-   * pixel off the top-left corner is out of anyone's way without being
-   * out of the browser's.
+   * Safari suspends a context created outside a gesture and will not
+   * resume it outside one either, so this is called from the sign-in
+   * tap as well as from here. Resuming an already-running context is
+   * free.
    */
-  Object.assign(input.style, {
+  if (audio.state === 'suspended') void audio.resume();
+
+  return audio;
+};
+
+const play = (kind: Feedback): void => {
+  const ctx = audioContext();
+
+  if (!ctx || ctx.state !== 'running') return;
+
+  for (const [hz, startMs, lengthMs] of TONES[kind]) {
+    const at = ctx.currentTime + startMs / 1000;
+    const until = at + lengthMs / 1000;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.value = hz;
+
+    /*
+     * Ramped rather than switched. A gain that jumps from 0 to full
+     * puts a click at both ends of every tone, which over a few hundred
+     * people is more irritating than the tone itself.
+     */
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(0.35, at + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, until);
+
+    osc.connect(gain).connect(ctx.destination);
+
+    osc.start(at);
+    osc.stop(until + 0.02);
+  }
+};
+
+/* ------------------------------------------------------------------ */
+/* Vibration and the iOS switch                                        */
+/* ------------------------------------------------------------------ */
+
+let iosLabel: HTMLLabelElement | null = null;
+
+/*
+ * A switch inside a label, clicked by the label.
+ *
+ * Clicking the input directly was the first attempt and was silent. The
+ * haptic belongs to the label's activation behaviour forwarding to the
+ * control, which is the path a real tap takes; poking the input is not
+ * the same thing.
+ */
+const iosSwitch = (): HTMLLabelElement | null => {
+  if (typeof document === 'undefined') return null;
+
+  if (iosLabel?.isConnected) return iosLabel;
+
+  const label = document.createElement('label');
+
+  label.setAttribute('aria-hidden', 'true');
+
+  Object.assign(label.style, {
     position: 'fixed',
     top: '-1px',
     left: '-1px',
     width: '1px',
     height: '1px',
+    overflow: 'hidden',
     opacity: '0',
   });
 
-  document.body.appendChild(input);
+  const input = document.createElement('input');
 
-  ios = input;
+  input.type = 'checkbox';
 
-  return input;
+  /* Not a React prop and not in the HTML types, so set directly. A
+     plain checkbox without this plays nothing. */
+  input.setAttribute('switch', '');
+
+  input.tabIndex = -1;
+
+  label.appendChild(input);
+  document.body.appendChild(label);
+
+  iosLabel = label;
+
+  return label;
 };
 
-/**
- * Does this browser have the vibration API at all?
- *
- * Chrome on desktop reports it and does nothing, which is harmless.
- * Safari does not report it, which is what routes iOS to the switch.
- */
 const canVibrate = (): boolean =>
   typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
 
-export function haptic(kind: Haptic): void {
+const buzz = (kind: Feedback): void => {
   if (canVibrate()) {
     try {
-      navigator.vibrate(PATTERNS[kind]);
+      navigator.vibrate(VIBRATION[kind]);
       return;
     } catch {
-      /* Some browsers throw rather than returning false. Fall through
-         to the switch, which costs nothing if it also does nothing. */
+      /* Some browsers throw rather than returning false. */
     }
   }
 
-  const input = iosSwitch();
+  const label = iosSwitch();
 
-  if (!input) return;
+  if (!label) return;
 
-  IOS_TAPS[kind].forEach((delay) => {
-    window.setTimeout(() => {
-      /*
-       * click(), not checked = !checked.
-       *
-       * The haptic is part of the control's activation behaviour, which
-       * is what click() runs. Assigning to checked changes the property
-       * and nothing else, and dispatching a synthetic change event is
-       * observed by listeners but is not activation, so neither plays
-       * anything. That was the first attempt, and it was silent.
-       *
-       * The checked state itself is never read by anything; it just
-       * has to keep moving.
-       */
-      input.click();
-    }, delay);
-  });
+  /* One flip per pulse in the pattern, which is the only variable the
+     switch gives. */
+  const pulses = kind === 'warn' ? 1 : kind === 'admitted' ? 2 : 3;
+
+  for (let n = 0; n < pulses; n += 1) {
+    window.setTimeout(() => label.click(), n * 80);
+  }
+};
+
+/* ------------------------------------------------------------------ */
+
+export function feedback(kind: Feedback, sound: boolean): void {
+  buzz(kind);
+
+  if (sound) play(kind);
 }
 
-/*
- * Some platforms only allow a haptic inside a real user gesture, and
- * the first scan of a shift is not one. Calling this from the sign-in
- * tap warms the path so the first admission is felt like every other.
+/**
+ * Call from inside a real tap.
+ *
+ * Unlocks audio, which iOS will not do outside a gesture, and builds
+ * the switch. Also fires one of each so the volunteer learns in the
+ * first second of a shift whether this phone does anything at all,
+ * rather than halfway through a queue.
  */
-export function primeHaptics(): void {
-  if (canVibrate()) {
-    try {
-      navigator.vibrate(0);
-    } catch {
-      /* nothing to do */
-    }
+export function primeFeedback(sound: boolean): void {
+  audioContext();
 
-    return;
-  }
+  iosSwitch();
 
-  /*
-   * A single tap on sign-in, inside the tap that submitted the form.
-   *
-   * It primes the path, and it doubles as the only way anyone can tell
-   * whether haptics work on this handset at all: if the phone buzzes
-   * when you press Start scanning, every verdict will buzz too. If it
-   * does not, nothing further will, and it is better to learn that at
-   * the start of a shift than halfway through a queue.
-   */
-  iosSwitch()?.click();
+  buzz('admitted');
+
+  if (sound) play('admitted');
 }

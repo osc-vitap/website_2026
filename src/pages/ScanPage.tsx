@@ -5,6 +5,7 @@ import {
   useState,
 } from 'react';
 import { useScanner } from '../scan/useScanner';
+import { haptic, primeHaptics } from '../scan/haptics';
 
 /*
  * The door.
@@ -99,13 +100,29 @@ const ScanPage = () => {
 
       if (!response.ok) throw new Error(String(response.status));
 
-      setResult(await response.json());
+      const claimed: ClaimResult = await response.json();
+
+      /*
+       * Felt before it is read. The phone is usually held low and
+       * pointed at a pass while the volunteer is looking at a face, so
+       * the buzz is what tells them the answer.
+       */
+      haptic(
+        claimed.verdict === 'admitted'
+          ? 'admitted'
+          : claimed.verdict === 'already-in'
+            ? 'warn'
+            : 'refused',
+      );
+
+      setResult(claimed);
     } catch {
       /*
        * A distinct verdict, not one of the refusals. "Full" and "no
        * connection" both mean nobody goes in, but only one of them is
        * worth shouting across the foyer about.
        */
+      haptic('refused');
       setResult({ verdict: 'error' });
     } finally {
       setClaiming(false);
@@ -124,6 +141,13 @@ const ScanPage = () => {
   const scanner = useScanner({
     onToken: claim,
     paused: claiming || !device || result !== null,
+    /*
+     * No camera until the device has signed in. Asking earlier put an
+     * iOS permission prompt in front of the sign-in form, before the
+     * volunteer knew what the app was, and acquired a stream at a
+     * moment when the video element did not exist to attach it to.
+     */
+    enabled: Boolean(device),
   });
 
   clearRef.current = scanner.release;
@@ -134,6 +158,14 @@ const ScanPage = () => {
 
     setSigningIn(true);
     setSignInError('');
+
+    /*
+     * Inside the tap that submits the form, which is the last
+     * guaranteed user gesture before scanning starts. Some platforms
+     * only allow a haptic from within one, and without this the very
+     * first admission of a shift is the one nobody feels.
+     */
+    primeHaptics();
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/scan/session`, {
@@ -246,7 +278,10 @@ const ScanPage = () => {
 
   if (!device) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-dark-900 px-6">
+      /* Same dvh problem as the scanner: centred inside a 100vh box on
+         iOS puts the form below the middle of what you can see. Scrolls
+         rather than clips, so the keyboard cannot bury the button. */
+      <div className="screen-h flex items-center justify-center overflow-y-auto bg-dark-900 px-6 py-10">
         <form onSubmit={signIn} className="w-full max-w-sm">
           <h1 className="text-2xl font-bold text-white">Door scanner</h1>
 
@@ -285,15 +320,9 @@ const ScanPage = () => {
   const look = result ? LOOK[result.verdict] : null;
 
   return (
-    /*
-     * dvh, not vh.
-     *
-     * On iOS Safari 100vh is the height with the browser chrome hidden,
-     * which it is not while the page is scrolled to the top, so a vh
-     * layout is taller than the screen and the bottom bar sits off it.
-     * dvh is the height that is actually visible right now.
-     */
-    <div className="flex h-[100dvh] min-h-screen flex-col bg-black">
+    /* .screen-h is dvh with a vh fallback. See index.css: pairing them
+       as height and min-height instead lets the larger vh win. */
+    <div className="screen-h flex flex-col overflow-hidden bg-black">
       {/*
         * min-h-0 because a flex item's default min-height is auto, which
         * refuses to shrink below its content and leaves this box sized

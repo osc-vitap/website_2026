@@ -105,9 +105,22 @@ export interface UseScannerOptions {
 
   /** While true, frames are still drawn but nothing is decoded. */
   paused: boolean;
+
+  /*
+   * Whether to hold a camera at all.
+   *
+   * False until the device has signed in. Without this the hook asked
+   * for the camera the moment the page loaded, so iOS put a permission
+   * prompt in front of the sign-in form — before the volunteer had any
+   * idea what the app was. Worse, the video element does not exist
+   * while that form is up, so the stream was acquired and had nowhere
+   * to go; the element mounted later with a camera already running and
+   * nothing attached to it, and the preview stayed black.
+   */
+  enabled: boolean;
 }
 
-export function useScanner({ onToken, paused }: UseScannerOptions) {
+export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const [status, setStatus] = useState<ScanStatus>('starting');
@@ -372,8 +385,16 @@ export function useScanner({ onToken, paused }: UseScannerOptions) {
     void start();
   }, [start, stop]);
 
-  /* Pick the decoder once, then hold the stream for the shift. */
+  /*
+   * Pick the decoder, take the camera, hold it for the shift.
+   *
+   * Keyed on `enabled` rather than running on mount, so nothing is
+   * requested until the device has signed in and the video element the
+   * stream needs to attach to is actually on the page.
+   */
   useEffect(() => {
+    if (!enabled) return;
+
     let live = true;
 
     const setup = async () => {
@@ -435,9 +456,11 @@ export function useScanner({ onToken, paused }: UseScannerOptions) {
       stop();
       workerRef.current?.terminate();
       workerRef.current = null;
+      detectorRef.current = null;
+      setStatus('starting');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled]);
 
   /*
    * The watchdog.
@@ -460,15 +483,17 @@ export function useScanner({ onToken, paused }: UseScannerOptions) {
   }, [status]);
 
   useEffect(() => {
-    if (status !== 'restarting') return;
+    if (!enabled || status !== 'restarting') return;
 
     const timer = window.setTimeout(restart, 400);
 
     return () => window.clearTimeout(timer);
-  }, [status, restart]);
+  }, [enabled, status, restart]);
 
   /* Coming back from the lock screen or another app. */
   useEffect(() => {
+    if (!enabled) return;
+
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
 
@@ -480,7 +505,7 @@ export function useScanner({ onToken, paused }: UseScannerOptions) {
     document.addEventListener('visibilitychange', onVisible);
 
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, []);
+  }, [enabled]);
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];

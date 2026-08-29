@@ -100,6 +100,25 @@
   }
 
   /*
+   * Exactly the screen, on a phone, with nothing under the chrome.
+   *
+   * The scanner is the one place where being a few pixels too tall is a
+   * real fault: the bottom bar carries the count and the torch, and on
+   * iOS it was sliding under the browser's own bar.
+   *
+   * Two declarations, not a fallback chain with min-height. 100vh on
+   * iOS Safari is the height with the chrome hidden, which is taller
+   * than what you can see while the page sits at the top, so pairing vh
+   * as a minimum with dvh as a height means the larger vh always wins
+   * and the dvh does nothing. The second declaration simply replaces
+   * the first wherever dvh is understood.
+   */
+  .screen-h {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /*
    * Printing the door test sheet.
    *
    * The panel is white type on near-black glass, which prints as a

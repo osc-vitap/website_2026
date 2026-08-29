@@ -37,6 +37,9 @@ interface ClaimResult {
   kind?: 'reserved' | 'registered';
   name?: string | null;
   seat_id?: string | null;
+  /* Reserved passes only. A seat is assigned to one named person, so
+     the volunteer taking them to it has to be able to check. */
+  college_registration_number?: string | null;
   first_device?: string;
   first_scanned_at?: string;
 }
@@ -109,7 +112,19 @@ const ScanPage = () => {
     }
   }, []);
 
-  const scanner = useScanner({ onToken: claim, paused: claiming || !device });
+  /*
+   * Scanning stops dead while a verdict is on screen.
+   *
+   * Left running, the next pass in the queue decodes the moment it
+   * drifts into frame, which replaces the card the volunteer is still
+   * reading and, worse, admits somebody nobody looked at. A person is
+   * checked in when a person decides they are, so the camera waits for
+   * a tap.
+   */
+  const scanner = useScanner({
+    onToken: claim,
+    paused: claiming || !device || result !== null,
+  });
 
   clearRef.current = scanner.release;
 
@@ -270,12 +285,32 @@ const ScanPage = () => {
   const look = result ? LOOK[result.verdict] : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-black">
-      {/* The camera, always live. */}
-      <div className="relative flex-1 overflow-hidden">
+    /*
+     * dvh, not vh.
+     *
+     * On iOS Safari 100vh is the height with the browser chrome hidden,
+     * which it is not while the page is scrolled to the top, so a vh
+     * layout is taller than the screen and the bottom bar sits off it.
+     * dvh is the height that is actually visible right now.
+     */
+    <div className="flex h-[100dvh] min-h-screen flex-col bg-black">
+      {/*
+        * min-h-0 because a flex item's default min-height is auto, which
+        * refuses to shrink below its content and leaves this box sized
+        * by the video's intrinsic dimensions rather than by the space
+        * available. That is what letterboxed the preview into a band in
+        * the middle of a black screen.
+        */}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         <video
           ref={scanner.videoRef}
-          className="h-full w-full object-cover"
+          /*
+           * Absolute against the relative parent rather than h-full.
+           * A percentage height needs a definite parent height to
+           * resolve against, and a flex item's height is computed
+           * rather than definite, so h-full quietly collapsed here.
+           */
+          className="absolute inset-0 h-full w-full object-cover"
           playsInline
           muted
           autoPlay
@@ -320,9 +355,25 @@ const ScanPage = () => {
               </div>
             )}
 
-            {result?.seat_id && (
-              <div className="mt-1 font-mono text-base text-white/90">
-                Seat {result.seat_id}
+            {/*
+              * Seat and registration number together, big and mono.
+              * These are the two things a volunteer reads aloud while
+              * walking somebody to a reserved seat, so they are sized to
+              * be read at arm's length rather than squinted at.
+              */}
+            {(result?.seat_id || result?.college_registration_number) && (
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-4 font-mono">
+                {result.seat_id && (
+                  <span className="text-2xl font-bold text-white">
+                    Seat {result.seat_id}
+                  </span>
+                )}
+
+                {result.college_registration_number && (
+                  <span className="text-xl font-bold text-white/95">
+                    {result.college_registration_number}
+                  </span>
+                )}
               </div>
             )}
 
@@ -333,8 +384,14 @@ const ScanPage = () => {
               </div>
             )}
 
-            <div className="mt-3 text-xs uppercase tracking-widest text-white/70">
-              Tap to clear
+            {/*
+              * The whole card is the button, because a volunteer is
+              * holding a phone one-handed and looking at a person
+              * rather than at a target. Scanning does not resume until
+              * this is tapped.
+              */}
+            <div className="mt-4 rounded-lg bg-black/25 py-3 text-center text-sm font-bold uppercase tracking-widest text-white">
+              Tap for the next person
             </div>
           </button>
         )}

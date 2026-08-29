@@ -106,6 +106,10 @@ async function addPass(
 	kind: "reserved" | "registered",
 	regNo: string,
 	seatId: string | null = null,
+	/* Defaults to embedding the registration number, which is handy for
+	   most assertions and useless for the one test checking the number
+	   does not leak. */
+	name = `Holder ${regNo}`,
 ): Promise<void> {
 	await env.DB.prepare(
 		`
@@ -113,7 +117,7 @@ async function addPass(
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
 	)
-		.bind(token, eventId, kind, `Holder ${regNo}`, `${regNo.toLowerCase()}@vitapstudent.ac.in`, regNo, seatId)
+		.bind(token, eventId, kind, name, `${regNo.toLowerCase()}@vitapstudent.ac.in`, regNo, seatId)
 		.run();
 }
 
@@ -278,13 +282,35 @@ describe("door scanning", () => {
 			expect(body.name).toBe("Holder 22BCE1001");
 		});
 
-		it("gives a reserved pass its seat number", async () => {
+		it("gives a reserved pass its seat number and registration number", async () => {
 			await addPass("tok-r", "reserved", "22BCE2001", "R5-S12");
 
 			const body = await (await claim("tok-r", await signedIn())).json<Verdict>();
 
 			expect(body.verdict).toBe("admitted");
 			expect(body.seat_id).toBe("R5-S12");
+
+			/* A seat belongs to one named person, so the volunteer
+			   showing them to it has to be able to check. */
+			expect(body.college_registration_number).toBe("22BCE2001");
+		});
+
+		/*
+		 * General admission has no seat to be wrong about, so it does not
+		 * get the same field. A door phone should carry the least
+		 * identifying detail that still does the job.
+		 */
+		it("withholds the registration number from a general pass", async () => {
+			/* A name that does not embed the number, so the check below
+			   is testing the field rather than the fixture. */
+			await addPass("tok-a", "registered", "22BCE1001", null, "Ada Lovelace");
+
+			const response = await claim("tok-a", await signedIn());
+			const text = await response.text();
+
+			expect(JSON.parse(text).verdict).toBe("admitted");
+			expect(JSON.parse(text).college_registration_number).toBeNull();
+			expect(text).not.toContain("22BCE1001");
 		});
 
 		/* The volunteer needs to know it was them, not a stranger. */

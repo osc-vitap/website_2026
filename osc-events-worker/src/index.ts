@@ -2101,10 +2101,15 @@ export default {
 
 				if (admitted) {
 					const pass = await env.DB.prepare(
-						`SELECT name, seat_id FROM entry_passes WHERE token = ?`,
+						`SELECT name, seat_id, kind, college_registration_number FROM entry_passes WHERE token = ?`,
 					)
 						.bind(token)
-						.first<{ name: string; seat_id: string | null }>();
+						.first<{
+							name: string;
+							seat_id: string | null;
+							kind: string;
+							college_registration_number: string;
+						}>();
 
 					/*
 					 * One line per scan, so `wrangler tail` is a live view
@@ -2125,11 +2130,25 @@ export default {
 						{
 							verdict: 'admitted',
 							kind: admitted.kind,
-							/* The name and nothing else. A phone at a door
-							   is the wrong place for a list of student
-							   emails and registration numbers. */
 							name: pass?.name ?? null,
 							seat_id: pass?.seat_id ?? null,
+							/*
+							 * The registration number, but only for a
+							 * reserved pass.
+							 *
+							 * A reserved seat is assigned to one named
+							 * person, so the volunteer showing them to it
+							 * has to be able to check the pass belongs to
+							 * whoever is holding it. General admission has
+							 * no seat to be wrong about, so it does not get
+							 * the same field: a door phone should carry the
+							 * least identifying detail that still does the
+							 * job, and for most of the queue that is a name.
+							 */
+							college_registration_number:
+								pass?.kind === 'reserved'
+									? (pass.college_registration_number ?? null)
+									: null,
 						},
 						200,
 						request,

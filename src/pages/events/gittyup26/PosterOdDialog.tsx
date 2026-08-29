@@ -89,7 +89,7 @@ const PosterOdDialog = ({
           className="mt-4 text-[clamp(0.9rem,2.4vw,1rem)] font-light leading-relaxed"
           style={{ color: variant.text }}
         >
-          It is arranged for you — there is
+          It is arranged for you. There is
           nothing to apply for and no form to
           chase. Attendance is not a reason to
           stay away.

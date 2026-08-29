@@ -903,8 +903,11 @@ export default function SeatingLayout() {
     <div 
       ref={pageRef}
       tabIndex={-1}
+      style={{
+        height: '100dvh',
+        fontFamily: "'Objectivity', sans-serif",
+      }}
       className="w-full h-[100vh] bg-[#0b0b0d] relative overflow-hidden outline-none"
-      style={{ fontFamily: "'Objectivity', sans-serif" }}
     >
       
       {/* Native DOM Header Overlay */}
@@ -1036,7 +1039,11 @@ export default function SeatingLayout() {
 
       {/* Selection bar */}
       <div
-        className={`absolute bottom-0 left-0 w-full z-50 border-t border-[#2e2e33] bg-[#0b0b0d]/90 backdrop-blur-md px-5 py-4 md:px-8 transition-all duration-200 ${
+        style={{
+          paddingBottom:
+            'calc(1rem + env(safe-area-inset-bottom))',
+        }}
+        className={`absolute bottom-0 left-0 w-full z-50 border-t border-[#2e2e33] bg-[#0b0b0d]/90 backdrop-blur-md px-5 pt-4 md:px-8 transition-all duration-200 ${
           selected.size > 0
             ? 'opacity-100 translate-y-0'
             : 'opacity-0 translate-y-full pointer-events-none'
@@ -1046,7 +1053,7 @@ export default function SeatingLayout() {
           <div className="text-sm text-[#d6d6db]">
             <span className="font-bold text-white">{selected.size}</span>
             <span className="text-[#86868b]">
-              {` of ${remaining} ${remaining === 1 ? 'seat' : 'seats'} left`}
+              {` of ${remaining} ${remaining === 1 ? 'seat' : 'seats'} selected`}
             </span>
           </div>
 

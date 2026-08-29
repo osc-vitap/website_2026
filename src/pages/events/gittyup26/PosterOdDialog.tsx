@@ -63,8 +63,8 @@ const PosterOdDialog = ({
         }}
       >
         <p className="text-[clamp(1.05rem,3vw,1.35rem)] font-bold leading-snug tracking-[-0.01em]">
-          An OD is On Duty: attendance for the
-          hours the event runs, granted to
+          An OD is On Duty: your attendance is
+          marked for the full day, granted to
           everyone who attends.
         </p>
       </div>
@@ -74,10 +74,9 @@ const PosterOdDialog = ({
           className="text-[clamp(0.9rem,2.4vw,1rem)] font-light leading-relaxed"
           style={{ color: variant.text }}
         >
-          Your attendance is marked for the
-          period you are here, so the classes
-          you miss to come are not counted
-          against you.
+          Both halves are covered, not only the
+          hours the session runs, so no class you
+          miss to be here is counted against you.
         </p>
 
         {/*
@@ -90,8 +89,7 @@ const PosterOdDialog = ({
           className="mt-4 text-[clamp(0.9rem,2.4vw,1rem)] font-light leading-relaxed"
           style={{ color: variant.text }}
         >
-          It covers the whole day, both halves,
-          and it is arranged for you — there is
+          It is arranged for you — there is
           nothing to apply for and no form to
           chase. Attendance is not a reason to
           stay away.

@@ -27,8 +27,26 @@ some seeded events still use.
 added to the preload list: preloading is very hard to undo and should be
 a deliberate decision.
 
-**`Permissions-Policy`** — nothing here uses a camera, a microphone or
-location, so the page says so rather than leaving it to the default.
+**`Permissions-Policy`** — the microphone and location are switched off,
+because nothing here uses them and saying so is better than leaving it to
+the default.
+
+The camera is `self` rather than off. `/scan` is the door scanner for
+event entry: it holds one camera stream and decodes the QR on the phone,
+so no frame is ever uploaded. This was `camera=()` until then, which
+blocks `getUserMedia` outright, before the browser ever asks the person
+for permission — the scanner would have failed on event day with a
+permission error that no amount of tapping "allow" could fix.
+
+`self` is not a grant. It says a same-origin page may *ask*; the browser
+still prompts, and every other origin, including anything framed, stays
+blocked. Narrow it back to `camera=()` if `/scan` is ever removed.
+
+**`worker-src` and `media-src`** — the scanner decodes in a Web Worker
+and paints frames to a canvas. `default-src 'self'` already covered the
+worker, but only because it is loaded from a real URL; both are named
+explicitly so that stays true if anyone reaches for a blob worker later,
+which `'self'` alone would reject.
 
 **`X-Content-Type-Options: nosniff`** — the SPA rewrite answers unknown
 paths with `index.html`, so a request for `/something.js` that does not

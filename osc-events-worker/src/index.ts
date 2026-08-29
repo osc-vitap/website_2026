@@ -100,14 +100,26 @@ function adminOrgExempt(env?: Env): string[] {
  * Trimmed first so the digest does not depend on stray whitespace in
  * the configured list.
  */
-async function adminIdDigest(githubUserId: string, pepper: string): Promise<string> {
+/*
+ * HMAC-SHA256 of a value under a secret, hex.
+ *
+ * Used for two unrelated things that want the same property: a stored
+ * digest that says nothing about its input to anyone without the
+ * secret, and cannot be reversed by counting up through the input space
+ * the way a bare SHA-256 of a short value can.
+ */
+async function hmacHex(value: string, pepper: string): Promise<string> {
 	const encoder = new TextEncoder();
 
 	const key = await crypto.subtle.importKey('raw', encoder.encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
 
-	const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(githubUserId.trim()));
+	const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(value.trim()));
 
 	return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function adminIdDigest(githubUserId: string, pepper: string): Promise<string> {
+	return hmacHex(githubUserId, pepper);
 }
 
 /*
@@ -1124,6 +1136,294 @@ async function requireAdmin(
 }
 
 /*
+ * ================================================================
+ * DOOR SCANNERS
+ * ================================================================
+ *
+ * The five phones on the four queues at the auditorium door.
+ *
+ * Deliberately outside the GitHub OAuth gate. A volunteer handed a
+ * phone at 9am cannot be asked to be in the osc-vitap organisation, and
+ * making them one to work a door would hand out real admin access for
+ * the afternoon.
+ *
+ * So this is its own everything: its own table, its own cookie on its
+ * own path, and its own resolver that never reads admin_sessions. The
+ * one thing a door phone can do is turn a token into a verdict. It
+ * cannot read a registrant's email, list an event, or reach anything
+ * under /api/admin.
+ */
+
+/* Long enough to cover a full event day plus the overrun. A door phone
+   being signed out mid-queue is worse than a session that outlives the
+   event, and the device row can be revoked instantly either way. */
+const SCAN_SESSION_HOURS = 14;
+
+function scanSessionCookie(sessionId: string, request: Request): string {
+	const secure = !isLocalRequest(request);
+
+	return [
+		`osc_scan_session=${encodeURIComponent(sessionId)}`,
+		/*
+		 * Scoped to the scan API, not to /. A cookie on / would be sent
+		 * to every admin route as well, which is exactly the confusion
+		 * this separation exists to prevent.
+		 */
+		'Path=/api/scan',
+		'HttpOnly',
+		'SameSite=Lax',
+		`Max-Age=${SCAN_SESSION_HOURS * 3600}`,
+		secure ? 'Secure' : '',
+	]
+		.filter(Boolean)
+		.join('; ');
+}
+
+interface ScannerSession {
+	sessionId: string;
+	deviceId: string;
+	eventId: string;
+	label: string;
+}
+
+/*
+ * Resolves a door phone, or refuses.
+ *
+ * Joined to scanner_devices rather than trusting the session row alone,
+ * so revoking a device takes effect on its very next scan instead of
+ * whenever its session happens to expire. A phone left in a taxi is
+ * revoked from the admin panel and is dead one scan later.
+ */
+async function requireScanner(
+	request: Request,
+	env: Env,
+): Promise<{ ok: true; scanner: ScannerSession } | { ok: false; response: Response }> {
+	const sessionId = getCookie(request, 'osc_scan_session');
+
+	const deny = () => ({
+		ok: false as const,
+		response: json({ error: 'Scanner sign-in required' }, 401, request, env),
+	});
+
+	if (!sessionId) {
+		return deny();
+	}
+
+	const row = await env.DB.prepare(
+		`
+      SELECT
+        s.id AS session_id,
+        s.device_id,
+        s.event_id,
+        d.label
+      FROM scanner_sessions s
+      JOIN scanner_devices d ON d.id = s.device_id
+      WHERE s.id = ?
+        AND datetime(s.expires_at) > datetime('now')
+        AND d.revoked_at IS NULL
+    `,
+	)
+		.bind(sessionId)
+		.first<{ session_id: string; device_id: string; event_id: string; label: string }>();
+
+	if (!row) {
+		return deny();
+	}
+
+	return {
+		ok: true,
+		scanner: {
+			sessionId: row.session_id,
+			deviceId: row.device_id,
+			eventId: row.event_id,
+			label: row.label,
+		},
+	};
+}
+
+/*
+ * Every outcome, including the refusals.
+ *
+ * entry_scans only holds admissions, so without this there is no record
+ * of the person turned away at 10:40 and no way to answer "how many did
+ * we refuse" afterwards. Workers logs are sampled and cannot be
+ * queried, so the answer has to be a row.
+ *
+ * Fired through waitUntil: the volunteer's verdict must not wait on the
+ * audit write, and a failed audit write must not fail an admission.
+ */
+async function recordEntryEvent(
+	env: Env,
+	eventId: string,
+	token: string | null,
+	deviceId: string | null,
+	result: string,
+	actor?: string,
+	reason?: string,
+): Promise<void> {
+	try {
+		await env.DB.prepare(
+			`
+        INSERT INTO entry_events (event_id, token, device_id, result, actor, reason)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+		)
+			.bind(eventId, token, deviceId, result, actor ?? null, reason ?? null)
+			.run();
+	} catch (error) {
+		console.error('Entry event not recorded:', result, error);
+	}
+}
+
+interface Refusal {
+	verdict: 'unknown' | 'revoked' | 'already-in' | 'closed' | 'not-configured' | 'full';
+	name?: string | null;
+	first_device?: string;
+	first_scanned_at?: string;
+}
+
+/*
+ * Why the claim admitted nobody.
+ *
+ * A separate read rather than an inference, because "already inside"
+ * and "never registered" both look like an absent row and need opposite
+ * reactions at the door: one is a person to wave through a second time
+ * or query, the other is a person to send to the registration desk.
+ */
+async function classifyRefusal(env: Env, eventId: string, token: string): Promise<Refusal> {
+	const row = await env.DB.prepare(
+		`
+      SELECT
+        p.token AS pass_token,
+        p.name,
+        p.revoked_at,
+        g.event_id AS gate_event,
+        g.is_open,
+        s.device_id AS first_device,
+        s.scanned_at AS first_scanned_at
+      FROM (SELECT ?2 AS event_id) base
+      LEFT JOIN entry_passes p
+        ON p.token = ?1
+      LEFT JOIN entry_gate g
+        ON g.event_id = base.event_id
+      LEFT JOIN entry_scans s
+        ON s.event_id = base.event_id
+       AND s.token = ?1
+       AND s.voided_at IS NULL
+    `,
+	)
+		.bind(token, eventId)
+		.first<{
+			pass_token: string | null;
+			name: string | null;
+			revoked_at: string | null;
+			gate_event: string | null;
+			is_open: number | null;
+			first_device: string | null;
+			first_scanned_at: string | null;
+		}>();
+
+	if (!row?.pass_token) {
+		return { verdict: 'unknown' };
+	}
+
+	if (row.revoked_at) {
+		return { verdict: 'revoked', name: row.name };
+	}
+
+	/*
+	 * Checked before the gate: someone already inside should be told so
+	 * even after the doors close, otherwise the last person through gets
+	 * "full" when they try to re-enter and reads it as being ejected.
+	 */
+	if (row.first_scanned_at) {
+		return {
+			verdict: 'already-in',
+			name: row.name,
+			first_device: row.first_device ?? undefined,
+			first_scanned_at: row.first_scanned_at,
+		};
+	}
+
+	/*
+	 * A missing gate row would otherwise read as a full auditorium, which
+	 * is the worst possible way to discover the migration did not seed.
+	 */
+	if (!row.gate_event) {
+		return { verdict: 'not-configured', name: row.name };
+	}
+
+	if (!row.is_open) {
+		return { verdict: 'closed', name: row.name };
+	}
+
+	return { verdict: 'full', name: row.name };
+}
+
+/*
+ * What the queue display shows.
+ *
+ * Occupancy is counted from entry_scans rather than read from the
+ * entry_gate columns, so the number on a volunteer's phone is the same
+ * number the claim just enforced. The stored counters are a cache and
+ * are reported alongside, so drift between the two is visible instead
+ * of silent.
+ */
+async function gateState(env: Env, eventId: string) {
+	const row = await env.DB.prepare(
+		`
+      SELECT
+        g.capacity,
+        g.is_open,
+        g.admitted_reserved AS cached_reserved,
+        g.admitted_general  AS cached_general,
+        (SELECT COUNT(*) FROM entry_scans s
+          WHERE s.event_id = g.event_id AND s.voided_at IS NULL)                        AS inside,
+        (SELECT COUNT(*) FROM entry_scans s
+          WHERE s.event_id = g.event_id AND s.kind = 'registered' AND s.voided_at IS NULL) AS inside_general,
+        (SELECT COUNT(*) FROM entry_passes p
+          WHERE p.event_id = g.event_id AND p.kind = 'reserved' AND p.revoked_at IS NULL)  AS reserved_issued
+      FROM entry_gate g
+      WHERE g.event_id = ?
+    `,
+	)
+		.bind(eventId)
+		.first<{
+			capacity: number;
+			is_open: number;
+			cached_reserved: number;
+			cached_general: number;
+			inside: number;
+			inside_general: number;
+			reserved_issued: number;
+		}>();
+
+	if (!row) {
+		return { configured: false as const };
+	}
+
+	const generalCap = row.capacity - row.reserved_issued;
+
+	return {
+		configured: true as const,
+		is_open: row.is_open === 1,
+		capacity: row.capacity,
+		inside: row.inside,
+		inside_general: row.inside_general,
+		inside_reserved: row.inside - row.inside_general,
+		reserved_issued: row.reserved_issued,
+		general_cap: generalCap,
+		general_remaining: Math.max(0, generalCap - row.inside_general),
+		/* Reported so a mismatch with `inside` is visible on the display
+		   rather than being discovered afterwards. */
+		cached: {
+			reserved: row.cached_reserved,
+			general: row.cached_general,
+		},
+	};
+}
+
+/*
  * Names, years of study and team names arrive from the unauthenticated
  * registration endpoint, and the export is written with a BOM so that
  * Excel is the expected reader. A value starting =, +, - or @ is
@@ -1545,6 +1845,10 @@ async function purgeExpiredAuthRows(env: Env): Promise<void> {
 	await env.DB.batch([
 		env.DB.prepare(`DELETE FROM admin_sessions WHERE datetime(expires_at) <= datetime('now')`),
 		env.DB.prepare(`DELETE FROM admin_oauth_states WHERE datetime(expires_at) <= datetime('now')`),
+		/* Door phones expire the same way admins do. Their sessions are
+		   long, so without this they would sit in the table until the
+		   event row was deleted. */
+		env.DB.prepare(`DELETE FROM scanner_sessions WHERE datetime(expires_at) <= datetime('now')`),
 	]);
 }
 
@@ -1580,6 +1884,240 @@ export default {
 
 			if (request.method === 'GET' && url.pathname === '/api/health') {
 				return json({ status: 'ok' }, 200, request, env);
+			}
+
+			/*
+			 * ============================================================
+			 * DOOR SCANNING
+			 * ============================================================
+			 *
+			 * Everything a phone on a queue can do. Three routes, no
+			 * OAuth, and no path from here into /api/admin.
+			 */
+
+			/* Trade a device token for a session. */
+			if (request.method === 'POST' && url.pathname === '/api/scan/session') {
+				/* Same budget as the admin sign-in: this is a credential
+				   check and there are five of them in the world. */
+				if (!(await withinRateLimit(env.AUTH_LIMITER, `scan-session:${clientIp(request)}`))) {
+					return rateLimited(request, env);
+				}
+
+				const pepper = env.ADMIN_HANDLE_PEPPER?.trim();
+
+				/*
+				 * Without the pepper no digest can be computed, so no
+				 * device can be recognised. Failing closed rather than
+				 * falling back to comparing raw tokens.
+				 */
+				if (!pepper) {
+					console.error('Scanner sign-in attempted with no ADMIN_HANDLE_PEPPER set');
+					return json({ error: 'Scanner sign-in is unavailable' }, 503, request, env);
+				}
+
+				let body: { device_token?: unknown };
+
+				try {
+					body = await request.json();
+				} catch {
+					return json({ error: 'Invalid JSON body' }, 400, request, env);
+				}
+
+				const deviceToken = asString(body.device_token).trim();
+
+				if (!deviceToken) {
+					return json({ error: 'Device token is required' }, 400, request, env);
+				}
+
+				const digest = await hmacHex(deviceToken, pepper);
+
+				/*
+				 * Looked up by digest, so the token itself is never
+				 * compared and never has to be in memory next to the
+				 * stored value.
+				 */
+				const device = await env.DB.prepare(
+					`
+            SELECT id, event_id, label
+            FROM scanner_devices
+            WHERE token_hash = ?
+              AND revoked_at IS NULL
+          `,
+				)
+					.bind(digest)
+					.first<{ id: string; event_id: string; label: string }>();
+
+				if (!device) {
+					/* Deliberately the same answer as a malformed token:
+					   this endpoint should not confirm that a device id
+					   exists to someone guessing. */
+					return json({ error: 'That device token was not recognised' }, 401, request, env);
+				}
+
+				const sessionId = randomToken();
+
+				const expiresAt = new Date(Date.now() + SCAN_SESSION_HOURS * 3600 * 1000).toISOString();
+
+				await env.DB.prepare(
+					`
+            INSERT INTO scanner_sessions (id, device_id, event_id, expires_at)
+            VALUES (?, ?, ?, ?)
+          `,
+				)
+					.bind(sessionId, device.id, device.event_id, expiresAt)
+					.run();
+
+				console.log('Scanner signed in:', device.id, device.label);
+
+				const headers = new Headers(corsHeaders(request, env));
+				headers.set('Content-Type', 'application/json');
+				headers.set('Set-Cookie', scanSessionCookie(sessionId, request));
+
+				return new Response(
+					JSON.stringify({
+						device_id: device.id,
+						label: device.label,
+						expires_at: expiresAt,
+					}),
+					{ status: 200, headers },
+				);
+			}
+
+			/*
+			 * The claim. One person, one token, one verdict.
+			 *
+			 * The whole admission is a single SQL statement, which is
+			 * the point. An earlier design took a capacity slot with an
+			 * UPDATE and then recorded the entry with an INSERT, which
+			 * leaks a slot every time the insert loses to the unique
+			 * index — and the compensating write is itself a write that
+			 * can fail, on wifi this design already calls bad. There is
+			 * nothing to compensate for here: the capacity test and the
+			 * slot are the same commit, and a duplicate simply inserts
+			 * no row.
+			 */
+			if (request.method === 'POST' && url.pathname === '/api/scan/claim') {
+				const auth = await requireScanner(request, env);
+
+				if (!auth.ok) {
+					return auth.response;
+				}
+
+				const { deviceId, eventId } = auth.scanner;
+
+				let body: { token?: unknown };
+
+				try {
+					body = await request.json();
+				} catch {
+					return json({ error: 'Invalid JSON body' }, 400, request, env);
+				}
+
+				const token = asString(body.token).trim();
+
+				if (!token || token.length > 200) {
+					return json({ verdict: 'unknown' }, 200, request, env);
+				}
+
+				/*
+				 * Admitted only if every one of these holds, checked
+				 * inside the one statement so none of them can go stale
+				 * between the check and the insert:
+				 *
+				 *   the pass exists and is not revoked
+				 *   the gate is open
+				 *   the room is not at capacity
+				 *   for a registered pass, general admission is not full
+				 *   this token is not already inside
+				 *
+				 * General admission is capped at capacity less the
+				 * reserved passes actually issued, counted live rather
+				 * than read from a column, so a reserved person who has
+				 * not arrived yet still has a seat waiting.
+				 */
+				const claimed = await env.DB.prepare(
+					`
+            INSERT INTO entry_scans (event_id, token, kind, device_id)
+            SELECT p.event_id, p.token, p.kind, ?2
+              FROM entry_passes p
+              JOIN entry_gate g ON g.event_id = p.event_id
+             WHERE p.token = ?1
+               AND p.revoked_at IS NULL
+               AND g.is_open = 1
+               AND (
+                     SELECT COUNT(*) FROM entry_scans s
+                      WHERE s.event_id = p.event_id AND s.voided_at IS NULL
+                   ) < g.capacity
+               AND (
+                     p.kind = 'reserved'
+                     OR (
+                          SELECT COUNT(*) FROM entry_scans s
+                           WHERE s.event_id = p.event_id
+                             AND s.kind = 'registered'
+                             AND s.voided_at IS NULL
+                        ) < g.capacity - (
+                          SELECT COUNT(*) FROM entry_passes r
+                           WHERE r.event_id = p.event_id
+                             AND r.kind = 'reserved'
+                             AND r.revoked_at IS NULL
+                        )
+                   )
+            ON CONFLICT (event_id, token) WHERE voided_at IS NULL DO NOTHING
+            RETURNING id, kind
+          `,
+				)
+					.bind(token, deviceId)
+					.all<{ id: number; kind: string }>();
+
+				const admitted = claimed.results?.[0];
+
+				if (admitted) {
+					const pass = await env.DB.prepare(
+						`SELECT name, seat_id FROM entry_passes WHERE token = ?`,
+					)
+						.bind(token)
+						.first<{ name: string; seat_id: string | null }>();
+
+					ctx.waitUntil(recordEntryEvent(env, eventId, token, deviceId, 'admitted'));
+
+					return json(
+						{
+							verdict: 'admitted',
+							kind: admitted.kind,
+							/* The name and nothing else. A phone at a door
+							   is the wrong place for a list of student
+							   emails and registration numbers. */
+							name: pass?.name ?? null,
+							seat_id: pass?.seat_id ?? null,
+						},
+						200,
+						request,
+						env,
+					);
+				}
+
+				/*
+				 * Nothing was inserted. Why is a separate read, because
+				 * inferring it from an absent row would turn "already
+				 * inside" and "never registered" into the same answer,
+				 * and those need opposite reactions from a volunteer.
+				 */
+				const verdict = await classifyRefusal(env, eventId, token);
+
+				ctx.waitUntil(recordEntryEvent(env, eventId, token, deviceId, verdict.verdict));
+
+				return json(verdict, 200, request, env);
+			}
+
+			/* Live counts for the queue display. */
+			if (request.method === 'GET' && url.pathname === '/api/scan/state') {
+				const auth = await requireScanner(request, env);
+
+				if (!auth.ok) {
+					return auth.response;
+				}
+
+				return json(await gateState(env, auth.scanner.eventId), 200, request, env);
 			}
 
 			/*

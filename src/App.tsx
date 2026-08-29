@@ -90,6 +90,28 @@ const SiteLayout = () => {
 };
 
 /*
+ * The panel is not part of the club site, so it does not wear the
+ * marketing navbar or the countdown. Installed, it keeps AppChrome.
+ */
+const AdminLayout = () => {
+  const standalone = useStandalone();
+
+  return (
+    <div className="relative min-h-screen flex flex-col">
+      <StarBackground />
+
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {standalone && <AppChrome />}
+
+        <main className="flex-grow">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
+
+/*
  * Launching the installed app opens the panel.
  *
  * The manifest's start_url already says /admin, so this only matters
@@ -165,9 +187,7 @@ function App() {
 
           <Route path="/seat-reservation-gittyup26" element={<SeatingPage />} />
 
-          <Route element={<SiteLayout />}>
-
-            <Route path="/events/:slug/register" element={<EventRegistration />} />
+          <Route element={<AdminLayout />}>
 
             <Route path="/admin" element={<AdminDashboard />} />
 
@@ -177,6 +197,11 @@ function App() {
             * on a JSON body at events.oscvitap.com with no way back.
             */}
             <Route path="/admin/restricted" element={<AdminRestricted />} />
+          </Route>
+
+          <Route element={<SiteLayout />}>
+
+            <Route path="/events/:slug/register" element={<EventRegistration />} />
 
             <Route path="/" element={<StandaloneLaunch />} />
             <Route path="/gallery" element={<Gallery />} />

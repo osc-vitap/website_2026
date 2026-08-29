@@ -2292,6 +2292,44 @@ export default {
 
 			/*
 			 * ============================================================
+			 * CONTRIBUTORS
+			 * ============================================================
+			 */
+
+			if (request.method === 'GET' && url.pathname === '/api/contributors') {
+				const { results } = await env.DB.prepare(
+					`
+	          SELECT
+	            id,
+	            login,
+	            avatar_url,
+	            html_url,
+	            display_order,
+	            created_at
+	          FROM contributors
+	          ORDER BY display_order ASC, id ASC
+	        `,
+				).all<{
+					id: number;
+					login: string;
+					avatar_url: string;
+					html_url: string;
+					display_order: number;
+					created_at: string;
+				}>();
+
+				return json(
+					{
+						contributors: results,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			/*
+			 * ============================================================
 			 * GITHUB OAUTH
 			 * ============================================================
 			 */
@@ -2718,6 +2756,161 @@ export default {
 						github_username: session.github_username,
 						role: `${GITHUB_ORG}-member`,
 						expires_at: session.expires_at,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			/*
+			 * ============================================================
+			 * ADMIN CONTRIBUTORS
+			 * ============================================================
+			 */
+
+			if (request.method === 'GET' && url.pathname === '/api/admin/contributors') {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const { results } = await env.DB.prepare(
+					`
+	          SELECT
+	            id,
+	            login,
+	            avatar_url,
+	            html_url,
+	            display_order,
+	            created_at
+	          FROM contributors
+	          ORDER BY display_order ASC, id ASC
+	        `,
+				).all<{
+					id: number;
+					login: string;
+					avatar_url: string;
+					html_url: string;
+					display_order: number;
+					created_at: string;
+				}>();
+
+				return json(
+					{
+						contributors: results,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			if (request.method === 'POST' && url.pathname === '/api/admin/contributors') {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				let body: {
+					login?: string;
+					username?: string;
+					avatar_url?: string;
+					html_url?: string;
+				};
+
+				try {
+					body = (await request.json()) as typeof body;
+				} catch {
+					return json({ error: 'Invalid JSON payload' }, 400, request, env);
+				}
+
+				const rawInput = (body.login || body.username || '').trim();
+				const normalizedLogin = normalizeGithub(rawInput);
+
+				if (!normalizedLogin) {
+					return json({ error: 'A valid GitHub username or profile URL is required' }, 400, request, env);
+				}
+
+				const existing = await env.DB.prepare(
+					`SELECT id, login FROM contributors WHERE LOWER(login) = LOWER(?)`,
+				)
+					.bind(normalizedLogin)
+					.first<{ id: number; login: string }>();
+
+				if (existing) {
+					return json({ error: `Contributor @${existing.login} already exists` }, 409, request, env);
+				}
+
+				const avatar_url =
+					body.avatar_url && body.avatar_url.trim().startsWith('http')
+						? body.avatar_url.trim()
+						: `https://avatars.githubusercontent.com/${encodeURIComponent(normalizedLogin)}`;
+
+				const html_url =
+					body.html_url && body.html_url.trim().startsWith('http')
+						? body.html_url.trim()
+						: `https://github.com/${encodeURIComponent(normalizedLogin)}`;
+
+				const maxOrder = await env.DB.prepare(
+					`SELECT MAX(display_order) AS max_order FROM contributors`,
+				).first<{ max_order: number | null }>();
+
+				const nextOrder = (maxOrder?.max_order ?? 0) + 1;
+
+				const insertResult = await env.DB.prepare(
+					`
+	          INSERT INTO contributors (login, avatar_url, html_url, display_order)
+	          VALUES (?, ?, ?, ?)
+	        `,
+				)
+					.bind(normalizedLogin, avatar_url, html_url, nextOrder)
+					.run();
+
+				const newId = insertResult.meta.last_row_id;
+
+				return json(
+					{
+						success: true,
+						contributor: {
+							id: newId,
+							login: normalizedLogin,
+							avatar_url,
+							html_url,
+							display_order: nextOrder,
+						},
+					},
+					201,
+					request,
+					env,
+				);
+			}
+
+			const adminContributorDeleteMatch = url.pathname.match(/^\/api\/admin\/contributors\/(\d+)$/);
+
+			if (request.method === 'DELETE' && adminContributorDeleteMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const contributorId = Number(adminContributorDeleteMatch[1]);
+
+				const result = await env.DB.prepare(`DELETE FROM contributors WHERE id = ?`)
+					.bind(contributorId)
+					.run();
+
+				if (!result.meta.changes) {
+					return json({ error: 'Contributor not found' }, 404, request, env);
+				}
+
+				return json(
+					{
+						success: true,
+						deleted_id: contributorId,
 					},
 					200,
 					request,

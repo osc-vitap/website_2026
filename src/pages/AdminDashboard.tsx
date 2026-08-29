@@ -28,6 +28,7 @@ import AdminEntryGate from '../components/AdminEntryGate';
 import AdminDoorTest from '../components/AdminDoorTest';
 import AdminSeating from '../components/AdminSeating';
 import AdminMembers from '../components/AdminMembers';
+import AdminContributors from '../components/AdminContributors';
 import { useAdminAppMeta } from '../data/adminAppMeta';
 
 const API_BASE_URL =
@@ -207,6 +208,7 @@ const TABS = [
   { id: 'events', label: 'Events', Icon: Calendar },
   { id: 'seating', label: 'Seating', Icon: Armchair },
   { id: 'posters', label: 'Posters', Icon: FileImage },
+  { id: 'contributors', label: 'Contributors', Icon: Users },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -1093,10 +1095,11 @@ setRegistrations(
 
         {tab === 'seating' && <AdminSeating />}
 
+        {tab === 'contributors' && <AdminContributors />}
+
         {tab === 'events' && (
           <>
-
-      <AdminMembers />
+            <AdminMembers />
 
       {/* Statistics */}
 

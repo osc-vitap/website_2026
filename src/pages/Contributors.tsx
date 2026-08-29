@@ -1,6 +1,19 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ExternalLink, Github } from 'lucide-react';
 import { contributorsData } from '../data/contributorsData';
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  'https://events.oscvitap.com';
+
+interface ContributorItem {
+  id?: number;
+  login: string;
+  avatar_url: string;
+  html_url: string;
+  display_order?: number;
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -16,6 +29,33 @@ const itemVariants = {
 };
 
 const Contributors = () => {
+  const [contributors, setContributors] = useState<ContributorItem[]>(contributorsData);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchContributors() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/contributors`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && Array.isArray(data.contributors) && data.contributors.length > 0) {
+            setContributors(data.contributors);
+          }
+        }
+      } catch (err) {
+        // Fallback to static contributorsData is already initialized
+        console.warn('Using static contributors fallback due to error:', err);
+      }
+    }
+
+    fetchContributors();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="container mx-auto max-w-7xl px-4 pb-16 pt-24 sm:pb-20 sm:pt-28 md:px-12 md:pb-24 md:pt-32">
       
@@ -44,7 +84,7 @@ const Contributors = () => {
           <h2 className="text-3xl md:text-4xl font-bebas uppercase tracking-widest text-white flex items-center gap-4">
             <Github className="text-brand-accent flex-shrink-0" size={36} /> Core Contributors
           </h2>
-          <span className="text-gray-400 font-mono text-xs uppercase tracking-[0.1em]">{contributorsData.length} records found</span>
+          <span className="text-gray-400 font-mono text-xs uppercase tracking-[0.1em]">{contributors.length} records found</span>
         </div>
 
         <motion.div 
@@ -54,9 +94,9 @@ const Contributors = () => {
           viewport={{ once: true, margin: "-50px" }}
           className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4 lg:grid-cols-6"
         >
-          {contributorsData.map((member, i) => (
+          {contributors.map((member, i) => (
             <motion.div 
-              key={i} 
+              key={member.id ?? member.login ?? i} 
               variants={itemVariants} 
               className="border border-dark-700 bg-dark-900/40 relative overflow-hidden group hover:border-brand-primary/50 transition-colors flex flex-col items-center p-4 md:p-6"
             >
@@ -66,6 +106,9 @@ const Contributors = () => {
                   alt={member.login} 
                   loading="lazy"
                   className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://avatars.githubusercontent.com/${encodeURIComponent(member.login)}`;
+                  }}
                 />
               </div>
               <h3 className="text-white font-mono text-xs text-center truncate w-full mb-3">
@@ -92,3 +135,4 @@ const Contributors = () => {
 };
 
 export default Contributors;
+

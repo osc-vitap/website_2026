@@ -27,6 +27,7 @@ import AdminPosters from '../components/AdminPosters';
 import AdminEntryGate from '../components/AdminEntryGate';
 import AdminDoorTest from '../components/AdminDoorTest';
 import AdminSeating from '../components/AdminSeating';
+import AdminMembers from '../components/AdminMembers';
 import { useAdminAppMeta } from '../data/adminAppMeta';
 
 const API_BASE_URL =
@@ -1094,6 +1095,8 @@ setRegistrations(
 
         {tab === 'events' && (
           <>
+
+      <AdminMembers />
 
       {/* Statistics */}
 

@@ -128,25 +128,15 @@ const BOUNDS = {
   maxY: 0.75,
 };
 
-/* The room outline sits just outside everything that is drawn */
-const ROOM_PAD = 1.8;
-
-const ROOM = {
-  minX: BOUNDS.minX - ROOM_PAD,
-  maxX: BOUNDS.maxX + ROOM_PAD,
-  minY: BOUNDS.minY - ROOM_PAD,
-  maxY: BOUNDS.maxY + ROOM_PAD,
-};
-
 const CENTER_X = 0;
-const CENTER_Y = (ROOM.minY + ROOM.maxY) / 2;
+const CENTER_Y = (BOUNDS.minY + BOUNDS.maxY) / 2;
 
 /* Room kept for the header and the selection bar, so the stage is
    never hidden behind them */
 const INSET_TOP = 92;
 const INSET_BOTTOM = 108;
-const CONTENT_WIDTH = ROOM.maxX - ROOM.minX;
-const CONTENT_HEIGHT = ROOM.maxY - ROOM.minY;
+const CONTENT_WIDTH = BOUNDS.maxX - BOUNDS.minX;
+const CONTENT_HEIGHT = BOUNDS.maxY - BOUNDS.minY;
 
 const seatIndexById = new Map(
   seatData.map((seat, index) => [seat.id, index]),
@@ -580,41 +570,7 @@ function screenGeometry(): THREE.ShapeGeometry {
   return geometry;
 }
 
-/* A hairline around the room, drawn as an outline with the middle cut
-   out so the thickness does not depend on line width support */
-function roomFrameShape(): THREE.Shape {
-  const thickness = 0.16;
-  const radius = 2.4;
-
-  const outer = roundedShape(
-    [
-      [ROOM.minX, ROOM.maxY],
-      [ROOM.maxX, ROOM.maxY],
-      [ROOM.maxX, ROOM.minY],
-      [ROOM.minX, ROOM.minY],
-    ],
-    radius,
-  );
-
-  const inner = roundedShape(
-    [
-      [ROOM.minX + thickness, ROOM.maxY - thickness],
-      [ROOM.maxX - thickness, ROOM.maxY - thickness],
-      [ROOM.maxX - thickness, ROOM.minY + thickness],
-      [ROOM.minX + thickness, ROOM.minY + thickness],
-    ],
-    radius - thickness,
-  );
-
-  outer.holes.push(
-    new THREE.Path(inner.getPoints(24).reverse()),
-  );
-
-  return outer;
-}
-
 function StageArea() {
-  const frame = useMemo(() => roomFrameShape(), []);
   const stage = useMemo(() => stageShape(), []);
   const riser = useMemo(
     () => stageBand(STAGE_TOP, STAGE_TOP + STAGE_RISER),
@@ -632,11 +588,6 @@ function StageArea() {
 
   return (
     <group>
-      <mesh position={[0, 0, -0.3]}>
-        <shapeGeometry args={[frame, 24]} />
-        <meshBasicMaterial color="#26262e" toneMapped={false} />
-      </mesh>
-
       <mesh position={[0, 0, -0.2]}>
         <shapeGeometry args={[stage]} />
         <meshBasicMaterial color="#151517" toneMapped={false} />
@@ -800,13 +751,13 @@ function SceneView({
 
     controls.target.x = THREE.MathUtils.clamp(
       controls.target.x,
-      ROOM.minX,
-      ROOM.maxX,
+      BOUNDS.minX,
+      BOUNDS.maxX,
     );
     controls.target.y = THREE.MathUtils.clamp(
       controls.target.y,
-      ROOM.minY,
-      ROOM.maxY,
+      BOUNDS.minY,
+      BOUNDS.maxY,
     );
 
     camera.position.x = controls.target.x;

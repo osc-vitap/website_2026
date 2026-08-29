@@ -17,19 +17,6 @@ export interface ContributorItem {
   display_order?: number;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, scale: 0.9 },
-  show: { opacity: 1, scale: 1 },
-};
-
 const Contributors = () => {
   const [contributors, setContributors] = useState<ContributorItem[]>(contributorsData);
 
@@ -89,20 +76,16 @@ const Contributors = () => {
           <span className="text-gray-400 font-mono text-xs uppercase tracking-[0.1em]">{contributors.length} records found</span>
         </div>
 
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-50px" }}
-          className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-        >
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {contributors.map((member, i) => (
             <motion.div 
               key={member.id ?? member.login ?? i} 
-              variants={itemVariants} 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.04, 0.4), duration: 0.3 }}
               className="border border-dark-700 bg-dark-900/40 relative overflow-hidden group hover:border-brand-primary/50 transition-all flex flex-col items-center p-4 md:p-5 rounded-lg"
             >
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-dark-600 mb-3.5 group-hover:border-brand-accent transition-colors shrink-0">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-dark-600 mb-3.5 group-hover:border-brand-accent transition-colors shrink-0 bg-dark-950">
                 <img 
                   src={member.avatar_url} 
                   alt={member.name || member.login} 
@@ -149,7 +132,7 @@ const Contributors = () => {
               </a>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
       </section>
 
     </div>

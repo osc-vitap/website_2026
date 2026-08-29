@@ -176,7 +176,7 @@ const AdminSeating = () => {
 
   const [open, setOpen] = useState(false);
 
-  const [count, setCount] = useState('30');
+  const [count, setCount] = useState('35');
   const [generating, setGenerating] =
     useState(false);
   const [freshCodes, setFreshCodes] = useState<

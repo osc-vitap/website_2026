@@ -132,7 +132,7 @@ describe("seat reservations", () => {
 
 		expect(response.status).toBe(200);
 
-		expect(await response.json<SeatsBody>()).toEqual({ seats: [], max_per_reservation: 30 });
+		expect(await response.json<SeatsBody>()).toEqual({ seats: [], max_per_reservation: 35 });
 	});
 
 	it("reserves a seat and answers with the registered name", async () => {
@@ -250,8 +250,8 @@ describe("seat reservations", () => {
 		expect(errors[0].field).toBe("seat_id");
 	});
 
-	it("refuses more than thirty seats in one request", async () => {
-		const seats = Array.from({ length: 31 }, (_unused, index) => ({
+	it("refuses more than thirty five seats in one request", async () => {
+		const seats = Array.from({ length: 36 }, (_unused, index) => ({
 			seat_id: `R1-S${(index % 26) + 1}`,
 			code: "AB3D-7K2M",
 			college_registration_number: "22BCE1234",

@@ -955,6 +955,20 @@ function hexToken(bytes = 16): string {
  * billion attempts. That is proportionate for a one day door; the
  * previous 128 bits was not buying anything the gate was not already.
  */
+/*
+ * As much of a pass code as a log may carry.
+ *
+ * Four characters, not eight. Eight was chosen when a token was
+ * thirty-two hex characters and a prefix was genuinely a prefix;
+ * shortening the codes turned that same slice into the whole
+ * credential, so every log line was printing a working pass. Four is
+ * enough to match a line against a row by eye and leaves about a
+ * million for the rest, behind a device gate that is also rate limited.
+ */
+function tokenTag(token: string | null | undefined): string {
+	return token ? `${token.slice(0, 4)}…` : '—';
+}
+
 function passCode(): string {
 	const bytes = new Uint8Array(8);
 
@@ -2142,7 +2156,7 @@ export default {
 					 * a scan against its row when something needs chasing.
 					 */
 					console.log(
-						`SCAN admitted  ${deviceId}  ${token.slice(0, 8)}…  ${admitted.kind}`,
+						`SCAN admitted  ${deviceId}  ${tokenTag(token)}  ${admitted.kind}`,
 					);
 
 					ctx.waitUntil(recordEntryEvent(env, eventId, token, deviceId, 'admitted'));
@@ -2186,7 +2200,7 @@ export default {
 				const verdict = await classifyRefusal(env, eventId, token);
 
 				console.log(
-					`SCAN ${verdict.verdict.padEnd(9)} ${deviceId}  ${token.slice(0, 8)}…`,
+					`SCAN ${verdict.verdict.padEnd(9)} ${deviceId}  ${tokenTag(token)}`,
 				);
 
 				ctx.waitUntil(recordEntryEvent(env, eventId, token, deviceId, verdict.verdict));
@@ -4260,7 +4274,7 @@ export default {
               p.kind,
               /* Never the whole token. It is a credential, and a log
                  that leaks one is a log that lets somebody walk in. */
-              substr(e.token, 1, 8) AS token_prefix
+              substr(e.token, 1, 4) AS token_prefix
             FROM entry_events e
             LEFT JOIN entry_passes p ON p.token = e.token
             WHERE e.event_id = ?

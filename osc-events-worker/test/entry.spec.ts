@@ -795,18 +795,31 @@ describe("door scanning", () => {
 		 * lets whoever reads it walk in on somebody else's pass.
 		 */
 		it("never returns a whole token", async () => {
-			await addPass("tok-abcdef123456", "registered", "22BCE1001");
+			/*
+			 * A real eight character code, not a long fake one. This
+			 * used to pass with a thirty character token and an eight
+			 * character prefix, which stopped being a prefix the moment
+			 * the codes were shortened to eight: every log line was
+			 * quietly printing a working pass.
+			 */
+			const code = "K7M2XR4P";
 
-			await claim("tok-abcdef123456", await signedIn());
+			await addPass(code, "registered", "22BCE1001", null, "Ada Lovelace");
 
-			const body = await (
-				await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/entry/log`, {
-					headers: { Cookie: await asAdmin() },
-				})
-			).json<{ entries: { token_prefix: string }[] }>();
+			await claim(code, await signedIn());
 
-			expect(body.entries[0].token_prefix).toBe("tok-abcd");
-			expect(JSON.stringify(body)).not.toContain("tok-abcdef123456");
+			const response = await SELF.fetch(
+				`${WORKER_ORIGIN}/api/admin/events/gittyup26/entry/log`,
+				{ headers: { Cookie: await asAdmin() } },
+			);
+
+			const text = await response.text();
+			const body = JSON.parse(text) as { entries: { token_prefix: string }[] };
+
+			expect(body.entries[0].token_prefix).toBe("K7M2");
+
+			/* The whole thing must not appear anywhere in the response. */
+			expect(text).not.toContain(code);
 		});
 
 		it("needs an admin session", async () => {

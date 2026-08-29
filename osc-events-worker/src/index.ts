@@ -3912,6 +3912,125 @@ export default {
 				return new Response(object.body, { headers });
 			}
 
+			/*
+			 * ============================================================
+			 * THE DOOR, FROM THE ADMIN SIDE
+			 * ============================================================
+			 *
+			 * Behind the normal GitHub gate, unlike /api/scan. Changing
+			 * how many people fit in a room, or closing the door on a
+			 * queue, is not something a borrowed phone should be able to
+			 * do.
+			 */
+			const entryGateMatch = url.pathname.match(/^\/api\/admin\/events\/([^/]+)\/entry$/);
+
+			if (entryGateMatch && (request.method === 'GET' || request.method === 'PATCH')) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const event = await env.DB.prepare(`SELECT id FROM events WHERE slug = ?`)
+					.bind(entryGateMatch[1])
+					.first<{ id: string }>();
+
+				if (!event) {
+					return json({ error: 'Event not found' }, 404, request, env);
+				}
+
+				if (request.method === 'GET') {
+					return json(await gateState(env, event.id), 200, request, env);
+				}
+
+				let body: { capacity?: unknown; is_open?: unknown };
+
+				try {
+					body = await request.json();
+				} catch {
+					return json({ error: 'Invalid JSON body' }, 400, request, env);
+				}
+
+				const updates: string[] = [];
+				const values: unknown[] = [];
+
+				if (body.capacity !== undefined) {
+					const capacity = Number(body.capacity);
+
+					/*
+					 * An upper bound as well as a lower one. A fat finger
+					 * turning 520 into 5200 would silently uncap the room,
+					 * and the failure only shows up as too many people in
+					 * it.
+					 */
+					if (!Number.isInteger(capacity) || capacity < 1 || capacity > 5000) {
+						return json(
+							{ error: 'Capacity must be a whole number between 1 and 5000' },
+							400,
+							request,
+							env,
+						);
+					}
+
+					/*
+					 * Lowering below the number already inside is allowed:
+					 * it stops new admissions without pretending the people
+					 * in the room are not there. Refusing it would mean an
+					 * admin who over-set capacity could not correct it.
+					 */
+					updates.push('capacity = ?');
+					values.push(capacity);
+				}
+
+				if (body.is_open !== undefined) {
+					updates.push('is_open = ?');
+					values.push(body.is_open ? 1 : 0);
+				}
+
+				if (updates.length === 0) {
+					return json({ error: 'Nothing to change' }, 400, request, env);
+				}
+
+				updates.push("updated_at = datetime('now')");
+
+				/*
+				 * INSERT first so a gate that was never seeded can still be
+				 * configured from the panel, rather than needing a
+				 * migration re-run on the day.
+				 */
+				await env.DB.prepare(
+					`INSERT OR IGNORE INTO entry_gate (event_id, capacity) VALUES (?, 0)`,
+				)
+					.bind(event.id)
+					.run();
+
+				await env.DB.prepare(`UPDATE entry_gate SET ${updates.join(', ')} WHERE event_id = ?`)
+					.bind(...values, event.id)
+					.run();
+
+				console.log(
+					'Entry gate changed:',
+					entryGateMatch[1],
+					JSON.stringify({ capacity: body.capacity, is_open: body.is_open }),
+					'by',
+					auth.session.github_username,
+				);
+
+				ctx.waitUntil(
+					recordEntryEvent(
+						env,
+						event.id,
+						null,
+						null,
+						'gate-changed',
+						auth.session.github_username,
+						JSON.stringify({ capacity: body.capacity, is_open: body.is_open }),
+					),
+				);
+
+				return json(await gateState(env, event.id), 200, request, env);
+			}
+
 			if (request.method === 'GET' && (url.pathname === '/api/admin/events' || url.pathname === '/api/admin/events/')) {
 				const auth = await requireAdmin(request, env);
 

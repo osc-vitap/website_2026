@@ -11,6 +11,14 @@
       "destination": "/admin.html"
     },
     {
+      "source": "/scan",
+      "destination": "/scan.html"
+    },
+    {
+      "source": "/scan/(.*)",
+      "destination": "/scan.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

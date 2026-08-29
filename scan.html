@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+
+    <!--
+      The door scanner's own entry document.
+
+      A third entry rather than a route inside admin.html, because the
+      two are installed by different people onto different phones. A
+      volunteer handed a phone at 9am taps Add to Home Screen and must
+      get a scanner: sharing site.webmanifest would install "OSC Admin",
+      whose start_url is /admin, and drop them on a dashboard they
+      cannot sign in to and should not see.
+
+      Same reason the metadata is in the head rather than injected after
+      mount: Chrome and Safari decide what they are installing while the
+      document parses, and anything added later produces a bookmark,
+      which opens in a tab with the address bar still there.
+    -->
+    <link rel="manifest" href="/app/scan.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="OSC Door" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/app/apple-touch-icon.png" />
+
+    <title>OSC Door Scanner</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body class="bg-black text-gray-100 font-sans antialiased overflow-x-hidden">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

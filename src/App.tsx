@@ -50,6 +50,14 @@ const AdminRestricted = lazy(
   () => import('./pages/AdminRestricted'),
 );
 
+/*
+ * The door scanner, split out for the same reason as the panel: it is
+ * used by five phones on one afternoon, and its camera pipeline and
+ * decoder have no business in the bundle served to someone reading the
+ * events page.
+ */
+const ScanPage = lazy(() => import('./pages/ScanPage'));
+
 import NotFound from './pages/NotFound';
 
 import { eventPageRoutes } from './data/eventPages';
@@ -186,6 +194,10 @@ function App() {
           )}
 
           <Route path="/seat-reservation-gittyup26" element={<SeatingPage />} />
+
+          {/* Outside the site shell: a phone held at a door has no use
+              for a navbar, and the camera wants the whole screen. */}
+          <Route path="/scan" element={<ScanPage />} />
 
           <Route element={<AdminLayout />}>
 

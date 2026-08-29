@@ -226,6 +226,8 @@ describe("door scanning", () => {
 				"/api/admin/events",
 				"/api/admin/events/gittyup26/registrations",
 				"/api/admin/posters",
+				/* Capacity is an admin decision, not a door decision. */
+				"/api/admin/events/gittyup26/entry",
 			]) {
 				const response = await SELF.fetch(`${WORKER_ORIGIN}${path}`, {
 					headers: { Cookie: cookie },
@@ -481,6 +483,90 @@ describe("door scanning", () => {
 			const response = await SELF.fetch(`${WORKER_ORIGIN}/api/scan/state`);
 
 			expect(response.status).toBe(401);
+		});
+	});
+
+	/*
+	 * Capacity is set from the admin panel, behind the normal GitHub
+	 * gate. A borrowed phone at a door must not be able to decide how
+	 * many people fit in a room.
+	 */
+	describe("the gate, from the admin panel", () => {
+		async function asAdmin(): Promise<string> {
+			env.ADMIN_GITHUB_USERS = "";
+
+			const sessionId = crypto.randomUUID();
+
+			await env.DB.prepare(
+				`
+          INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+          VALUES (?, '1', 'doorkeeper', ?)
+        `,
+			)
+				.bind(sessionId, new Date(Date.now() + 3600_000).toISOString())
+				.run();
+
+			return `osc_admin_session=${sessionId}`;
+		}
+
+		function gate(method: string, cookie: string, body?: unknown): Promise<Response> {
+			return SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/entry`, {
+				method,
+				headers: { "Content-Type": "application/json", Cookie: cookie },
+				body: body === undefined ? undefined : JSON.stringify(body),
+			});
+		}
+
+		it("needs an admin session", async () => {
+			expect((await gate("GET", "")).status).toBe(401);
+			expect((await gate("PATCH", "", { capacity: 10 })).status).toBe(401);
+		});
+
+		it("reads the current state", async () => {
+			const body = await (await gate("GET", await asAdmin())).json<State>();
+
+			expect(body.configured).toBe(true);
+			expect(body.capacity).toBe(3);
+		});
+
+		it("changes the capacity", async () => {
+			const cookie = await asAdmin();
+
+			const body = await (await gate("PATCH", cookie, { capacity: 40 })).json<State>();
+
+			expect(body.capacity).toBe(40);
+			expect(body.general_cap).toBe(40);
+		});
+
+		/* A fat finger turning 520 into 5200 uncaps the room silently. */
+		it("refuses a capacity outside the sane range", async () => {
+			const cookie = await asAdmin();
+
+			for (const capacity of [0, -5, 99999, 1.5]) {
+				expect((await gate("PATCH", cookie, { capacity })).status, `${capacity}`).toBe(400);
+			}
+		});
+
+		it("closes the door, and the door stays closed", async () => {
+			const cookie = await asAdmin();
+
+			await addPass("tok-a", "registered", "22BCE1001");
+
+			await gate("PATCH", cookie, { is_open: false });
+
+			const body = await (await claim("tok-a", await signedIn())).json<Verdict>();
+
+			expect(body.verdict).toBe("closed");
+		});
+
+		it("records who changed it", async () => {
+			await gate("PATCH", await asAdmin(), { capacity: 25 });
+
+			const row = await env.DB.prepare(
+				`SELECT actor, result FROM entry_events WHERE result = 'gate-changed' ORDER BY id DESC LIMIT 1`,
+			).first<{ actor: string; result: string }>();
+
+			expect(row?.actor).toBe("doorkeeper");
 		});
 	});
 

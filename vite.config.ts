@@ -8,16 +8,24 @@ export default defineConfig({
   build: {
     rollupOptions: {
       /*
-       * Two entry documents, one app.
+       * Three entry documents, one app.
        *
-       * admin.html exists only to carry the install metadata in its
-       * head — see the comment in that file. Both mount src/main.tsx,
-       * so the router and every shared chunk are the same; the second
-       * entry costs a duplicate HTML shell and nothing else.
+       * admin.html and scan.html exist only to carry their own install
+       * metadata in the head — see the comments in those files. All
+       * three mount src/main.tsx, so the router and every shared chunk
+       * are the same; each extra entry costs a duplicate HTML shell and
+       * nothing else.
+       *
+       * They are separate rather than one installable app because they
+       * are installed by different people: an admin onto their own
+       * machine, and a volunteer onto a borrowed phone at the door. One
+       * manifest would mean whoever installs second gets the other
+       * one's start_url.
        */
       input: {
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin.html'),
+        scan: resolve(__dirname, 'scan.html'),
       },
     },
   },

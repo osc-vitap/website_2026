@@ -243,13 +243,19 @@ function stageShape(): THREE.Shape {
   return shape;
 }
 
-/* The screen sits on the stage and is drawn narrower at the back, so it
-   reads as lying flat under the room */
+const SCREEN_BOTTOM = STAGE_BOTTOM + 0.4;
+const SCREEN_TOP = SCREEN_BOTTOM + 2.4;
+
+const SCREEN_TINT_TOP = new THREE.Color('#5aa2f5');
+const SCREEN_TINT_BOTTOM = new THREE.Color('#16255c');
+
+/* The screen hangs on the back wall at the far end of the stage, so its
+   lower edge sits on the wall line */
 function screenShape(inset: number): THREE.Shape {
-  const top = STAGE_TOP + STAGE_ARC - 0.6 - inset;
-  const bottom = top - 2.6 - inset * 2;
-  const halfTop = 6.2 + inset;
-  const halfBottom = 8.8 + inset;
+  const bottom = SCREEN_BOTTOM - inset;
+  const top = SCREEN_TOP + inset;
+  const halfTop = 10.4 + inset;
+  const halfBottom = 11.2 + inset;
 
   const shape = new THREE.Shape();
 
@@ -262,10 +268,43 @@ function screenShape(inset: number): THREE.Shape {
   return shape;
 }
 
+/* A flat material cannot fade, so the blue is written onto the corners
+   and the triangles blend it across the screen */
+function screenGeometry(): THREE.ShapeGeometry {
+  const geometry = new THREE.ShapeGeometry(screenShape(0));
+  const position = geometry.attributes.position;
+  const colors = new Float32Array(position.count * 3);
+  const tint = new THREE.Color();
+
+  for (let i = 0; i < position.count; i += 1) {
+    const mix = THREE.MathUtils.clamp(
+      (position.getY(i) - SCREEN_BOTTOM) /
+        (SCREEN_TOP - SCREEN_BOTTOM),
+      0,
+      1,
+    );
+
+    tint
+      .copy(SCREEN_TINT_BOTTOM)
+      .lerp(SCREEN_TINT_TOP, mix);
+
+    colors[i * 3] = tint.r;
+    colors[i * 3 + 1] = tint.g;
+    colors[i * 3 + 2] = tint.b;
+  }
+
+  geometry.setAttribute(
+    'color',
+    new THREE.BufferAttribute(colors, 3),
+  );
+
+  return geometry;
+}
+
 function StageArea() {
   const stage = useMemo(() => stageShape(), []);
   const bezel = useMemo(() => screenShape(0.4), []);
-  const screen = useMemo(() => screenShape(0), []);
+  const screen = useMemo(() => screenGeometry(), []);
 
   return (
     <group>
@@ -276,12 +315,11 @@ function StageArea() {
 
       <mesh position={[0, 0, -0.1]}>
         <shapeGeometry args={[bezel]} />
-        <meshBasicMaterial color="#6f6f76" toneMapped={false} />
+        <meshBasicMaterial color="#2e2e33" toneMapped={false} />
       </mesh>
 
-      <mesh>
-        <shapeGeometry args={[screen]} />
-        <meshBasicMaterial color="#e8e8ed" toneMapped={false} />
+      <mesh geometry={screen}>
+        <meshBasicMaterial vertexColors toneMapped={false} />
       </mesh>
     </group>
   );

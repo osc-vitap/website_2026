@@ -168,6 +168,7 @@ interface SeatsInstancedProps {
   onLimit: () => void;
   onTaken: () => void;
   onTeam: () => void;
+  cap: number;
 }
 
 function SeatsInstanced({
@@ -179,6 +180,7 @@ function SeatsInstanced({
   onLimit,
   onTaken,
   onTeam,
+  cap,
 }: SeatsInstancedProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const tint = useRef(
@@ -316,7 +318,7 @@ function SeatsInstanced({
           return;
         }
 
-        if (selected.size >= MAX_SEATS) {
+        if (selected.size >= cap) {
           onLimit();
           return;
         }
@@ -882,6 +884,13 @@ export default function SeatingLayout() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
+  /* Twenty seats exist in total, so what is left to pick shrinks as
+     others are taken */
+  const remaining = Math.max(
+    0,
+    MAX_SEATS - taken.size,
+  );
+
   const selectedSeatIds = useMemo(
     () =>
       [...selected]
@@ -1037,7 +1046,7 @@ export default function SeatingLayout() {
           <div className="text-sm text-[#d6d6db]">
             <span className="font-bold text-white">{selected.size}</span>
             <span className="text-[#86868b]">
-              {` of ${MAX_SEATS} ${selected.size === 1 ? 'seat' : 'seats'} selected`}
+              {` of ${remaining} ${remaining === 1 ? 'seat' : 'seats'} left`}
             </span>
           </div>
 
@@ -1084,7 +1093,14 @@ export default function SeatingLayout() {
           taken={taken}
           hovered={hovered}
           setHovered={setHovered}
-          onLimit={() => setNotice(`You can reserve at most ${MAX_SEATS} seats at once.`)}
+          cap={remaining}
+          onLimit={() =>
+            setNotice(
+              remaining === 0
+                ? 'Every seat has been reserved.'
+                : `Only ${remaining} ${remaining === 1 ? 'seat is' : 'seats are'} left to reserve.`,
+            )
+          }
           onTaken={() => setNotice('That seat is already taken.')}
           onTeam={() =>
             setNotice(

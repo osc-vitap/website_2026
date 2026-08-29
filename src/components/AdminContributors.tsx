@@ -17,6 +17,12 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   'https://events.oscvitap.com';
 
+import { contributorsData } from '../data/contributorsData';
+
+const isLocalHost = () =>
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 export interface Contributor {
   id: number;
   login: string;
@@ -37,9 +43,19 @@ const normalizeInputHandle = (input: string): string => {
   return trimmed.replace(/^@+/, '');
 };
 
+const initialFallbackContributors: Contributor[] = contributorsData.map((c, i) => ({
+  id: i + 1,
+  login: c.login,
+  avatar_url: c.avatar_url,
+  html_url: c.html_url,
+  display_order: i + 1,
+}));
+
 const AdminContributors = () => {
-  const [contributors, setContributors] = useState<Contributor[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [contributors, setContributors] = useState<Contributor[]>(() =>
+    isLocalHost() ? initialFallbackContributors : [],
+  );
+  const [loading, setLoading] = useState(!isLocalHost());
   const [unauthorized, setUnauthorized] = useState(false);
   const [open, setOpen] = useState(true);
 
@@ -64,6 +80,10 @@ const AdminContributors = () => {
       });
 
       if (response.status === 401) {
+        if (isLocalHost()) {
+          setLoading(false);
+          return;
+        }
         setUnauthorized(true);
         return;
       }
@@ -75,6 +95,10 @@ const AdminContributors = () => {
       const data = await response.json();
       setContributors(data.contributors ?? []);
     } catch (err: unknown) {
+      if (isLocalHost()) {
+        setLoading(false);
+        return;
+      }
       setFailed(
         err instanceof Error ? err.message : 'Unable to load contributors list',
       );
@@ -112,6 +136,19 @@ const AdminContributors = () => {
       });
 
       if (response.status === 401) {
+        if (isLocalHost()) {
+          const newContrib: Contributor = {
+            id: Date.now(),
+            login: clean,
+            avatar_url: `https://avatars.githubusercontent.com/${encodeURIComponent(clean)}`,
+            html_url: `https://github.com/${encodeURIComponent(clean)}`,
+            display_order: contributors.length + 1,
+          };
+          setContributors((prev) => [...prev, newContrib]);
+          setActionNote(`Added @${clean} to contributors.`);
+          setNewHandle('');
+          return;
+        }
         setUnauthorized(true);
         return;
       }
@@ -126,6 +163,19 @@ const AdminContributors = () => {
       setNewHandle('');
       await load(true);
     } catch (err: unknown) {
+      if (isLocalHost()) {
+        const newContrib: Contributor = {
+          id: Date.now(),
+          login: clean,
+          avatar_url: `https://avatars.githubusercontent.com/${encodeURIComponent(clean)}`,
+          html_url: `https://github.com/${encodeURIComponent(clean)}`,
+          display_order: contributors.length + 1,
+        };
+        setContributors((prev) => [...prev, newContrib]);
+        setActionNote(`Added @${clean} to contributors.`);
+        setNewHandle('');
+        return;
+      }
       setActionError(
         err instanceof Error ? err.message : 'Failed to add contributor',
       );
@@ -149,6 +199,11 @@ const AdminContributors = () => {
       );
 
       if (response.status === 401) {
+        if (isLocalHost()) {
+          setContributors((prev) => prev.filter((c) => c.id !== contributor.id));
+          setActionNote(`Removed @${contributor.login} from core contributors.`);
+          return;
+        }
         setUnauthorized(true);
         return;
       }
@@ -161,6 +216,11 @@ const AdminContributors = () => {
       setActionNote(`Removed @${contributor.login} from core contributors.`);
       await load(true);
     } catch (err: unknown) {
+      if (isLocalHost()) {
+        setContributors((prev) => prev.filter((c) => c.id !== contributor.id));
+        setActionNote(`Removed @${contributor.login} from core contributors.`);
+        return;
+      }
       setActionError(
         err instanceof Error ? err.message : `Failed to remove @${contributor.login}`,
       );

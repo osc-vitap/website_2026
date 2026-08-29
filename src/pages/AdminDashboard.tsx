@@ -22,6 +22,7 @@ import { clearOauthLoopMarker } from '../data/adminAuth';
 
 import AdminPosters from '../components/AdminPosters';
 import AdminEntryGate from '../components/AdminEntryGate';
+import AdminDoorTest from '../components/AdminDoorTest';
 import AdminSeating from '../components/AdminSeating';
 import { useAdminAppMeta } from '../data/adminAppMeta';
 
@@ -1013,6 +1014,8 @@ setRegistrations(
       {/* On event day this is the thing anyone opening the panel wants
           to see first, so it sits above the posters. */}
       <AdminEntryGate slug="gittyup26" />
+
+      <AdminDoorTest />
 
       <AdminPosters />
 

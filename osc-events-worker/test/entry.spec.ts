@@ -133,6 +133,23 @@ async function signedIn(deviceId = "queue-1"): Promise<string> {
 	return `osc_scan_session=${sessionId}`;
 }
 
+async function asAdmin(): Promise<string> {
+	env.ADMIN_GITHUB_USERS = "";
+
+	const sessionId = crypto.randomUUID();
+
+	await env.DB.prepare(
+		`
+      INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+      VALUES (?, '1', 'doorkeeper', ?)
+    `,
+	)
+		.bind(sessionId, new Date(Date.now() + 3600_000).toISOString())
+		.run();
+
+	return `osc_admin_session=${sessionId}`;
+}
+
 function claim(token: string, cookie: string): Promise<Response> {
 	return SELF.fetch(`${WORKER_ORIGIN}/api/scan/claim`, {
 		method: "POST",
@@ -492,23 +509,6 @@ describe("door scanning", () => {
 	 * many people fit in a room.
 	 */
 	describe("the gate, from the admin panel", () => {
-		async function asAdmin(): Promise<string> {
-			env.ADMIN_GITHUB_USERS = "";
-
-			const sessionId = crypto.randomUUID();
-
-			await env.DB.prepare(
-				`
-          INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
-          VALUES (?, '1', 'doorkeeper', ?)
-        `,
-			)
-				.bind(sessionId, new Date(Date.now() + 3600_000).toISOString())
-				.run();
-
-			return `osc_admin_session=${sessionId}`;
-		}
-
 		function gate(method: string, cookie: string, body?: unknown): Promise<Response> {
 			return SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/entry`, {
 				method,
@@ -567,6 +567,129 @@ describe("door scanning", () => {
 			).first<{ actor: string; result: string }>();
 
 			expect(row?.actor).toBe("doorkeeper");
+		});
+	});
+
+	/*
+	 * The throwaway door an admin can build to try the scanner before
+	 * the day, without waiting for the real passes to be generated.
+	 */
+	describe("the test door", () => {
+		interface TestDoor {
+			event_slug: string;
+			capacity: number;
+			device_token: string;
+			device_id: string;
+			passes: { token: string; kind: string; name: string }[];
+			expected: string;
+		}
+
+		function testDoor(method: string, cookie: string, body?: unknown): Promise<Response> {
+			return SELF.fetch(`${WORKER_ORIGIN}/api/admin/entry-test`, {
+				method,
+				headers: { "Content-Type": "application/json", Cookie: cookie },
+				body: body === undefined ? undefined : JSON.stringify(body),
+			});
+		}
+
+		it("needs an admin session", async () => {
+			expect((await testDoor("POST", "")).status).toBe(401);
+			expect((await testDoor("DELETE", "")).status).toBe(401);
+		});
+
+		it("builds a door with passes and a device token", async () => {
+			const body = await (await testDoor("POST", await asAdmin())).json<TestDoor>();
+
+			expect(body.capacity).toBe(5);
+			expect(body.passes).toHaveLength(6);
+			expect(body.passes.filter((p) => p.kind === "reserved")).toHaveLength(3);
+			expect(body.device_token).toMatch(/^[a-f0-9]{32}$/);
+
+			/* The tokens are what a camera has to read back, so they are
+			   the same single character class the scanner validates. */
+			body.passes.forEach((p) => expect(p.token).toMatch(/^[a-f0-9]{32}$/));
+		});
+
+		/*
+		 * The safety property the whole design rests on. A test pass is
+		 * on its own event, so admitting one cannot move the real
+		 * auditorium's count. If this ever fails, the test door is a way
+		 * to quietly fill the room.
+		 */
+		it("cannot admit anyone into the real auditorium", async () => {
+			const admin = await asAdmin();
+
+			const door = await (await testDoor("POST", admin)).json<TestDoor>();
+
+			const signIn = await SELF.fetch(`${WORKER_ORIGIN}/api/scan/session`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ device_token: door.device_token }),
+			});
+
+			expect(signIn.status).toBe(200);
+
+			const cookie = `osc_scan_session=${
+				/osc_scan_session=([^;]+)/.exec(signIn.headers.get("Set-Cookie") ?? "")?.[1]
+			}`;
+
+			const verdict = await (await claim(door.passes[0].token, cookie)).json<Verdict>();
+
+			expect(verdict.verdict).toBe("admitted");
+
+			/* The real door has not moved. */
+			const real = await env.DB.prepare(
+				`SELECT COUNT(*) AS n FROM entry_scans WHERE event_id = ? AND voided_at IS NULL`,
+			)
+				.bind(eventId)
+				.first<{ n: number }>();
+
+			expect(real?.n).toBe(0);
+		});
+
+		/* It would otherwise show up on the events page as a real event. */
+		it("hides the test event from the public listing", async () => {
+			await testDoor("POST", await asAdmin());
+
+			const events = await (
+				await SELF.fetch(`${WORKER_ORIGIN}/api/events`)
+			).json<{ events: { slug: string }[] }>();
+
+			expect(events.events.map((e) => e.slug)).not.toContain("door-scanner-test");
+		});
+
+		it("resets rather than piling up when pressed twice", async () => {
+			const admin = await asAdmin();
+
+			const first = await (await testDoor("POST", admin)).json<TestDoor>();
+			const second = await (await testDoor("POST", admin)).json<TestDoor>();
+
+			expect(second.passes[0].token).not.toBe(first.passes[0].token);
+
+			const passes = await env.DB.prepare(
+				`
+          SELECT COUNT(*) AS n FROM entry_passes
+          WHERE event_id = (SELECT id FROM events WHERE slug = 'door-scanner-test')
+        `,
+			).first<{ n: number }>();
+
+			expect(passes?.n).toBe(6);
+		});
+
+		it("tears the whole thing down", async () => {
+			const admin = await asAdmin();
+
+			await testDoor("POST", admin);
+
+			expect((await (await testDoor("DELETE", admin)).json<{ removed: boolean }>()).removed).toBe(true);
+
+			for (const table of ["entry_passes", "scanner_devices", "entry_gate"]) {
+				const left = await env.DB.prepare(
+					`SELECT COUNT(*) AS n FROM ${table} WHERE event_id NOT IN (SELECT id FROM events)`,
+				).first<{ n: number }>();
+
+				expect(left?.n, `${table} left orphans`).toBe(0);
+			}
 		});
 	});
 

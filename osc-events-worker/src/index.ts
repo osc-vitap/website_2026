@@ -923,6 +923,25 @@ function randomToken(): string {
 	return crypto.randomUUID() + crypto.randomUUID();
 }
 
+/*
+ * A random token as plain hex, no dashes.
+ *
+ * Entry passes use this rather than randomToken because the value ends
+ * up inside a QR code and then back out of a camera: hex is a single
+ * character class the scanner can validate in one expression, and it
+ * survives being read aloud, typed by hand, or pasted out of a
+ * spreadsheet in a way a dashed UUID pair does not.
+ *
+ * Sixteen bytes. Guessing one is not a thing that happens.
+ */
+function hexToken(bytes = 16): string {
+	const buffer = new Uint8Array(bytes);
+
+	crypto.getRandomValues(buffer);
+
+	return [...buffer].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 function getCookie(request: Request, name: string): string | null {
 	const cookies = request.headers.get('Cookie');
 
@@ -1158,6 +1177,15 @@ async function requireAdmin(
    being signed out mid-queue is worse than a session that outlives the
    event, and the device row can be revoked instantly either way. */
 const SCAN_SESSION_HOURS = 14;
+
+/*
+ * The throwaway event the door test builds itself on.
+ *
+ * Deliberately not gittyup26. Every test pass, device and scan hangs
+ * off this event id, so a test admission is counted against a gate that
+ * is not the auditorium's. There is nothing to remember to switch off.
+ */
+const TEST_DOOR_SLUG = 'door-scanner-test';
 
 function scanSessionCookie(sessionId: string, request: Request): string {
 	const secure = !isLocalRequest(request);
@@ -3922,6 +3950,185 @@ export default {
 			 * queue, is not something a borrowed phone should be able to
 			 * do.
 			 */
+			/*
+			 * A throwaway door, for trying the scanner before the day.
+			 *
+			 * Everything it makes belongs to its own event, not to
+			 * gittyup26. That is the whole safety argument: a test pass
+			 * cannot be admitted against the real auditorium because the
+			 * claim joins the gate on the pass's own event_id, so there
+			 * is no flag anyone has to remember to check and no way to
+			 * leak a test admission into the real count.
+			 *
+			 * The event is archived on creation so it never appears in
+			 * the public listing, and is_open is 0 so nobody can
+			 * register for it.
+			 */
+			if (url.pathname === '/api/admin/entry-test' && (request.method === 'POST' || request.method === 'DELETE')) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				if (request.method === 'DELETE') {
+					/* The event cascades to its gate, passes, devices and
+					   scans, so this is the whole teardown. */
+					const gone = await env.DB.prepare(`DELETE FROM events WHERE slug = ?`)
+						.bind(TEST_DOOR_SLUG)
+						.run();
+
+					console.log('Entry test door removed by', auth.session.github_username);
+
+					return json({ removed: gone.meta.changes > 0 }, 200, request, env);
+				}
+
+				const pepper = env.ADMIN_HANDLE_PEPPER?.trim();
+
+				if (!pepper) {
+					return json(
+						{ error: 'ADMIN_HANDLE_PEPPER is not set, so no scanner device can be made' },
+						503,
+						request,
+						env,
+					);
+				}
+
+				let body: { capacity?: unknown; reserved?: unknown; registered?: unknown };
+
+				try {
+					body = await request.json();
+				} catch {
+					body = {};
+				}
+
+				const count = (value: unknown, fallback: number) => {
+					const n = Number(value ?? fallback);
+					return Number.isInteger(n) && n >= 0 && n <= 40 ? n : fallback;
+				};
+
+				/*
+				 * Defaults chosen so one run exercises every branch:
+				 * three reserved always get in, general admission is
+				 * five less three, so two of the three registered get in
+				 * and the third is refused as full.
+				 */
+				const capacity = count(body.capacity, 5) || 5;
+				const reserved = count(body.reserved, 3);
+				const registered = count(body.registered, 3);
+
+				/* Rebuilt from scratch each time, so a second press is a
+				   reset rather than a pile of stale passes. */
+				await env.DB.prepare(`DELETE FROM events WHERE slug = ?`).bind(TEST_DOOR_SLUG).run();
+
+				const testEventId = crypto.randomUUID();
+
+				const statements = [
+					env.DB.prepare(
+						`
+              INSERT INTO events (
+                id, slug, title, event_date, event_end_at, is_open,
+                archive_status, registration_type, min_team_size, max_team_size, venue
+              )
+              VALUES (?, ?, 'Door scanner test', '2099-01-01', NULL, 0,
+                      'archived', 'solo', 1, 1, 'Test')
+            `,
+					).bind(testEventId, TEST_DOOR_SLUG),
+
+					env.DB.prepare(`INSERT INTO entry_gate (event_id, capacity) VALUES (?, ?)`).bind(
+						testEventId,
+						capacity,
+					),
+				];
+
+				const passes: { token: string; kind: string; name: string; seat_id: string | null }[] = [];
+
+				for (let n = 1; n <= reserved; n += 1) {
+					passes.push({
+						token: hexToken(),
+						kind: 'reserved',
+						name: `Test Reserved ${n}`,
+						seat_id: `R3-S${n}`,
+					});
+				}
+
+				for (let n = 1; n <= registered; n += 1) {
+					passes.push({
+						token: hexToken(),
+						kind: 'registered',
+						name: `Test Registered ${n}`,
+						seat_id: null,
+					});
+				}
+
+				passes.forEach((pass, index) => {
+					statements.push(
+						env.DB.prepare(
+							`
+                INSERT INTO entry_passes (
+                  token, event_id, kind, name, email, college_registration_number, seat_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+              `,
+						).bind(
+							pass.token,
+							testEventId,
+							pass.kind,
+							pass.name,
+							`door.test${index + 1}@vitapstudent.ac.in`,
+							`00TEST${String(index + 1).padStart(4, '0')}`,
+							pass.seat_id,
+						),
+					);
+				});
+
+				const deviceToken = hexToken();
+
+				statements.push(
+					env.DB.prepare(
+						`INSERT INTO scanner_devices (id, event_id, label, token_hash) VALUES (?, ?, ?, ?)`,
+					).bind('test-queue', testEventId, 'Test queue', await hmacHex(deviceToken, pepper)),
+				);
+
+				await env.DB.batch(statements);
+
+				console.log(
+					'Entry test door created by',
+					auth.session.github_username,
+					`${passes.length} passes, capacity ${capacity}`,
+				);
+
+				const base = siteOrigin(request);
+
+				return json(
+					{
+						event_slug: TEST_DOOR_SLUG,
+						capacity,
+						/*
+						 * The only time this is ever readable. It is a
+						 * credential for a throwaway door on a throwaway
+						 * event, so handing it back once is the point.
+						 */
+						device_token: deviceToken,
+						device_id: 'test-queue',
+						passes: passes.map((pass) => ({
+							...pass,
+							url: `${base}/e/${pass.token}`,
+						})),
+						expected: `${reserved} reserved in, ${Math.max(
+							0,
+							Math.min(registered, capacity - reserved),
+						)} registered in, ${Math.max(
+							0,
+							registered - Math.max(0, capacity - reserved),
+						)} refused as full`,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
 			const entryGateMatch = url.pathname.match(/^\/api\/admin\/events\/([^/]+)\/entry$/);
 
 			if (entryGateMatch && (request.method === 'GET' || request.method === 'PATCH')) {

@@ -202,6 +202,30 @@ All of these return 401 if you are not signed in as an admin.
 | GET | `/api/admin/events/:slug/seats` | Lists who booked which seat |
 | GET | `/api/admin/events/:slug/seats.csv` | Same list as a CSV download |
 | DELETE | `/api/admin/events/:slug/seats/:seatId` | Frees a seat and emails the person |
+| GET | `/api/admin/events/:slug/entry` | Door counts: who is inside, and the capacity |
+| PATCH | `/api/admin/events/:slug/entry` | Sets the capacity, or closes the door |
+| GET | `/api/admin/events/:slug/entry/log` | Every scan including the refusals |
+| POST | `/api/admin/entry-test` | Builds a throwaway door for trying the scanner |
+| DELETE | `/api/admin/entry-test` | Removes it again |
+
+### The door scanner
+
+Four volunteers on four queues scan people in at the auditorium. These
+are the only routes a scanning phone can reach, and they are not behind
+GitHub OAuth: a volunteer handed a phone at 9am cannot be asked to join
+the organisation, and making them a member to work a door would hand out
+real admin access for the afternoon.
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| POST | `/api/scan/session` | Trades a device token for a session |
+| POST | `/api/scan/claim` | One pass in, one verdict out |
+| GET | `/api/scan/state` | Live counts for the queue display |
+
+A claim answers with one of `admitted`, `already-in`, `full`, `unknown`,
+`revoked`, `closed` or `not-configured`. It returns the holder's name,
+and their registration number only for a reserved pass, where there is
+an assigned seat to check them against.
 | GET | `/api/admin/posters` | Lists the 36 print files |
 | GET | `/api/admin/posters/:name` | Downloads one print file |
 | GET | `/api/admin/posters/thumb/:name` | Small preview image |

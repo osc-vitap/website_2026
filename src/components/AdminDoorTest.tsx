@@ -29,11 +29,17 @@ interface TestPass {
   url: string;
 }
 
+interface TestDevice {
+  id: string;
+  label: string;
+  token: string;
+  url: string;
+}
+
 interface TestDoor {
   event_slug: string;
   capacity: number;
-  device_token: string;
-  device_id: string;
+  devices: TestDevice[];
   passes: TestPass[];
   expected: string;
 }
@@ -45,7 +51,17 @@ const INK = {
   registered: '#000000',
 };
 
-const PassCode = ({ pass }: { pass: TestPass }) => {
+const Code = ({
+  url,
+  ink,
+  caption,
+  size = 150,
+}: {
+  url: string;
+  ink: string;
+  caption: string;
+  size?: number;
+}) => {
   const host = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,16 +80,16 @@ const PassCode = ({ pass }: { pass: TestPass }) => {
       host.current.replaceChildren();
 
       new QRCodeStyling({
-        width: 150,
-        height: 150,
+        width: size,
+        height: size,
         type: 'svg',
-        data: pass.url,
+        data: url,
         margin: 4,
         qrOptions: { errorCorrectionLevel: 'H' },
-        dotsOptions: { color: INK[pass.kind], type: 'rounded' },
+        dotsOptions: { color: ink, type: 'rounded' },
         backgroundOptions: { color: '#ffffff' },
-        cornersSquareOptions: { color: INK[pass.kind], type: 'extra-rounded' },
-        cornersDotOptions: { color: INK[pass.kind], type: 'dot' },
+        cornersSquareOptions: { color: ink, type: 'extra-rounded' },
+        cornersDotOptions: { color: ink, type: 'dot' },
       }).append(host.current);
     };
 
@@ -82,14 +98,18 @@ const PassCode = ({ pass }: { pass: TestPass }) => {
     return () => {
       cancelled = true;
     };
-  }, [pass]);
+  }, [url, ink, size]);
 
   return (
     <figure className="rounded-lg bg-white p-2 text-center">
-      <div ref={host} className="mx-auto h-[150px] w-[150px]" />
+      <div
+        ref={host}
+        className="mx-auto"
+        style={{ width: size, height: size }}
+      />
 
       <figcaption className="mt-1 font-mono text-[11px] font-bold text-black">
-        {pass.kind === 'reserved' ? 'Reserved' : 'Registered'}
+        {caption}
       </figcaption>
     </figure>
   );
@@ -231,25 +251,61 @@ const AdminDoorTest = () => {
             <div className="mt-5 door-test-sheet">
               <ol className="space-y-1 text-sm text-gray-300 print:hidden">
                 <li>
-                  1. Open <span className="font-mono text-white">/scan</span> on a phone.
+                  1. Open <span className="font-mono text-white">/scan</span> on
+                  each phone and tap <em>Scan the queue code</em>.
                 </li>
-                <li>
-                  2. Paste this device token:
-                  <span className="ml-2 select-all break-all font-mono text-xs text-brand-accent">
-                    {door.device_token}
-                  </span>
-                </li>
-                <li>3. Point it at the codes below.</li>
+                <li>2. Point it at one of the queue codes below.</li>
+                <li>3. Then point it at the passes.</li>
               </ol>
 
-              <p className="mt-3 text-xs text-gray-500">
+              {/*
+                * The queue codes, one per phone.
+                *
+                * A phone reads one of these once to authorise itself for
+                * the shift. Kept visually apart from the passes and
+                * captioned by queue, because the two are scanned by the
+                * same camera and confusing them wastes a volunteer's
+                * first minute.
+                */}
+              <h3 className="mt-5 text-xs font-bold uppercase tracking-widest text-gray-500">
+                Queue codes, one per phone
+              </h3>
+
+              <div className="mt-3 flex flex-wrap gap-3">
+                {door.devices.map((scanner) => (
+                  <div key={scanner.id}>
+                    <Code
+                      url={scanner.url}
+                      ink="#111827"
+                      caption={scanner.label}
+                      size={120}
+                    />
+
+                    {/* Typed only if a camera will not cooperate. */}
+                    <div className="mt-1 max-w-[136px] select-all break-all text-center font-mono text-[10px] text-gray-600 print:hidden">
+                      {scanner.token}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="mt-6 text-xs font-bold uppercase tracking-widest text-gray-500">
+                Passes
+              </h3>
+
+              <p className="mt-1 text-xs text-gray-500">
                 Capacity {door.capacity}. Expect {door.expected}. Scanning one
                 twice should say already inside.
               </p>
 
-              <div className="mt-4 flex flex-wrap gap-3">
+              <div className="mt-3 flex flex-wrap gap-3">
                 {door.passes.map((pass) => (
-                  <PassCode key={pass.token} pass={pass} />
+                  <Code
+                    key={pass.token}
+                    url={pass.url}
+                    ink={INK[pass.kind]}
+                    caption={pass.kind === 'reserved' ? 'Reserved' : 'Registered'}
+                  />
                 ))}
               </div>
             </div>

@@ -924,18 +924,6 @@ function randomToken(): string {
 }
 
 /*
- * A random token as plain hex, no dashes. Used for scanner device
- * tokens, which are pasted once per phone and never go near a camera.
- */
-function hexToken(bytes = 16): string {
-	const buffer = new Uint8Array(bytes);
-
-	crypto.getRandomValues(buffer);
-
-	return [...buffer].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-/*
  * The code inside an entry pass QR. Eight characters, uppercase.
  *
  * Short and uppercase for one reason: a QR code encodes uppercase
@@ -969,12 +957,25 @@ function tokenTag(token: string | null | undefined): string {
 	return token ? `${token.slice(0, 4)}…` : '—';
 }
 
-function passCode(): string {
-	const bytes = new Uint8Array(8);
+function passCode(length = 8): string {
+	const bytes = new Uint8Array(length);
 
 	crypto.getRandomValues(bytes);
 
 	return [...bytes].map((byte) => SEAT_CODE_ALPHABET[byte % SEAT_CODE_ALPHABET.length]).join('');
+}
+
+/*
+ * A scanner device's token, in the same alphabet so it can be handed
+ * over as a QR rather than typed.
+ *
+ * Sixteen rather than eight. A pass code is one person for one
+ * afternoon and sits behind the device gate; a device token IS the
+ * gate, and holds for the whole shift, so it gets the length that
+ * difference deserves: thirty two to the sixteenth is about 1.2e24.
+ */
+function deviceCode(): string {
+	return passCode(16);
 }
 
 function getCookie(request: Request, name: string): string | null {
@@ -4175,13 +4176,42 @@ export default {
 					);
 				});
 
-				const deviceToken = hexToken();
+				/*
+				 * One per queue, because there are four doors and a
+				 * spare. Each phone gets its own so a scan can be traced
+				 * back to a queue, and so losing one phone means
+				 * revoking one device rather than re-authorising all of
+				 * them mid-event.
+				 */
+				/*
+				 * Namespaced ids, not queue-1.
+				 *
+				 * scanner_devices.id is a plain primary key, so it is
+				 * unique across every event rather than per event. The
+				 * real door will own queue-1 to queue-5, and this
+				 * building its own set under the same names collided the
+				 * moment both existed. It would have surfaced on event
+				 * day, as the test door refusing to build, which is
+				 * exactly when nobody has time to work out why.
+				 */
+				const devices = [1, 2, 3, 4, 5].map((n) => ({
+					id: `test-queue-${n}`,
+					label: `Queue ${n}`,
+					token: deviceCode(),
+				}));
 
-				statements.push(
-					env.DB.prepare(
-						`INSERT INTO scanner_devices (id, event_id, label, token_hash) VALUES (?, ?, ?, ?)`,
-					).bind('test-queue', testEventId, 'Test queue', await hmacHex(deviceToken, pepper)),
-				);
+				for (const scanner of devices) {
+					statements.push(
+						env.DB.prepare(
+							`INSERT INTO scanner_devices (id, event_id, label, token_hash) VALUES (?, ?, ?, ?)`,
+						).bind(
+							scanner.id,
+							testEventId,
+							scanner.label,
+							await hmacHex(scanner.token, pepper),
+						),
+					);
+				}
 
 				await env.DB.batch(statements);
 
@@ -4213,8 +4243,19 @@ export default {
 						 * credential for a throwaway door on a throwaway
 						 * event, so handing it back once is the point.
 						 */
-						device_token: deviceToken,
-						device_id: 'test-queue',
+						/*
+						 * The only time these are ever readable. Each
+						 * carries the URL a phone scans to authorise
+						 * itself, in the same uppercase shape as a pass
+						 * URL and for the same reason: it keeps the QR
+						 * in alphanumeric mode. Under /D/ rather than
+						 * /E/ so a queue code held up at a door cannot
+						 * be read as somebody's pass.
+						 */
+						devices: devices.map((scanner) => ({
+							...scanner,
+							url: `${base}/SCAN/D/${scanner.token}`,
+						})),
 						passes: passes.map((pass) => ({
 							...pass,
 							url: `${base}/E/${pass.token}`,

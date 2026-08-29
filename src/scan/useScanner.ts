@@ -107,6 +107,16 @@ export interface UseScannerOptions {
   paused: boolean;
 
   /*
+   * Turns whatever the camera read into a token, or rejects it.
+   *
+   * The same camera pairs a device on the sign-in screen and reads
+   * passes at the door. Which codes are valid is the caller's business,
+   * and a device code must never be mistaken for a pass or the other
+   * way round.
+   */
+  accept: (text: string) => string | null;
+
+  /*
    * Whether to hold a camera at all.
    *
    * False until the device has signed in. Without this the hook asked
@@ -120,7 +130,7 @@ export interface UseScannerOptions {
   enabled: boolean;
 }
 
-export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
+export function useScanner({ onToken, paused, enabled, accept }: UseScannerOptions) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const [status, setStatus] = useState<ScanStatus>('starting');
@@ -160,6 +170,7 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
      change, which would tear down and re-arm the callback. */
   const pausedRef = useRef(paused);
   const onTokenRef = useRef(onToken);
+  const acceptRef = useRef(accept);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -168,6 +179,12 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
   useEffect(() => {
     onTokenRef.current = onToken;
   }, [onToken]);
+
+  /* Held in a ref so switching from pairing to scanning does not tear
+     down and re-acquire the camera. */
+  useEffect(() => {
+    acceptRef.current = accept;
+  }, [accept]);
 
   /** Lets the same pass be scanned again, once the verdict is cleared. */
   const release = useCallback(() => {
@@ -182,26 +199,15 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
      * bare token, and some readers hand back the URL with a trailing
      * slash. Take the last non-empty path segment either way.
      */
-    const raw = text.trim().split(/[/?#]/).filter(Boolean).pop() ?? '';
-
     /*
-     * Two shapes.
-     *
-     * Current passes are eight characters from the unambiguous
-     * uppercase alphabet, which is what keeps the QR in its dense
-     * alphanumeric mode. The long hex form is what earlier passes used;
-     * it is still accepted so a sheet printed before the change keeps
-     * working rather than reading as an unknown pass at the door.
+     * What counts as a code depends on what is being scanned. The same
+     * camera reads a device code on the sign-in screen and a pass at
+     * the door, and the two must not be mistaken for one another, so
+     * the caller decides rather than this guessing from shape.
      */
-    const short = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/i.test(raw);
+    const token = acceptRef.current(text);
 
-    const legacy = /^[a-f0-9]{16,64}$/i.test(raw);
-
-    if (!short && !legacy) return;
-
-    /* Stored uppercase, so a reader that hands back lower case still
-       matches rather than silently missing. */
-    const token = short ? raw.toUpperCase() : raw.toLowerCase();
+    if (!token) return;
 
     if (heldTokenRef.current === token) return;
 

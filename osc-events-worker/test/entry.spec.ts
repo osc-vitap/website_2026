@@ -604,9 +604,8 @@ describe("door scanning", () => {
 		interface TestDoor {
 			event_slug: string;
 			capacity: number;
-			device_token: string;
-			device_id: string;
-			passes: { token: string; kind: string; name: string }[];
+			devices: { id: string; label: string; token: string; url: string }[];
+			passes: { token: string; kind: string; name: string; url: string }[];
 			expected: string;
 		}
 
@@ -629,9 +628,43 @@ describe("door scanning", () => {
 			expect(body.capacity).toBe(5);
 			expect(body.passes).toHaveLength(6);
 			expect(body.passes.filter((p) => p.kind === "reserved")).toHaveLength(3);
-			/* Pasted once per phone, never seen by a camera, so length
-			   costs nothing here. */
-			expect(body.device_token).toMatch(/^[a-f0-9]{32}$/);
+			/*
+			 * Sixteen, in the same uppercase alphabet as a pass, so the
+			 * phone can be authorised by scanning rather than by
+			 * somebody typing it in. Twice a pass code's length because
+			 * a device token IS the gate and holds for a whole shift,
+			 * where a pass is one person behind that gate.
+			 */
+			/* One per queue, plus a spare. */
+			expect(body.devices).toHaveLength(5);
+			/*
+			 * Namespaced, because scanner_devices.id is unique across
+			 * every event rather than per event. The real door owns
+			 * queue-1 to queue-5, and the test door claiming the same
+			 * names failed the moment both existed, which would have
+			 * been discovered on event day.
+			 */
+			expect(body.devices.map((d) => d.id)).toEqual([
+				'test-queue-1',
+				'test-queue-2',
+				'test-queue-3',
+				'test-queue-4',
+				'test-queue-5',
+			]);
+
+			body.devices.forEach((scanner) => {
+				expect(scanner.token).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{16}$/);
+
+				/* The thing the phone actually scans. Uppercase
+				   throughout, and under /D/ so it can never be read as
+				   somebody's pass. */
+				expect(scanner.url).toBe(scanner.url.toUpperCase());
+				expect(scanner.url).toContain(`/SCAN/D/${scanner.token}`);
+			});
+
+			/* Each phone its own, so a lost handset costs one revocation
+			   rather than re-authorising the whole door. */
+			expect(new Set(body.devices.map((d) => d.token)).size).toBe(5);
 
 			/*
 			 * Pass codes are eight characters from the unambiguous
@@ -675,7 +708,7 @@ describe("door scanning", () => {
 			const signIn = await SELF.fetch(`${WORKER_ORIGIN}/api/scan/session`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ device_token: door.device_token }),
+				body: JSON.stringify({ device_token: door.devices[0].token }),
 			});
 
 			expect(signIn.status).toBe(200);

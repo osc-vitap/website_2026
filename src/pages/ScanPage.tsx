@@ -5,7 +5,7 @@ import {
   useState,
 } from 'react';
 import { useScanner } from '../scan/useScanner';
-import { feedback, primeFeedback } from '../scan/haptics';
+import { feedback, primeFeedback } from '../scan/feedback';
 
 /*
  * The door.
@@ -54,6 +54,43 @@ interface GateState {
   reserved_issued?: number;
 }
 
+/*
+ * What the camera is allowed to act on, per screen.
+ *
+ * A device code authorises a phone for the whole shift and a pass
+ * admits one person, so the two must never be mistaken for each other.
+ * They are told apart by the path segment the code sits under, /D/ or
+ * /E/, rather than by length, which could collide.
+ */
+const parts = (text: string) => text.trim().split(/[/?#]/).filter(Boolean);
+
+const PASS = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/i;
+const DEVICE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{16}$/i;
+
+/* Passes printed before the codes were shortened. Still honoured so a
+   sheet from last week does not read as an unknown pass at the door. */
+const LEGACY_PASS = /^[a-f0-9]{16,64}$/i;
+
+const acceptPass = (text: string): string | null => {
+  const segments = parts(text);
+  const last = segments[segments.length - 1] ?? '';
+
+  /* A device code held up at the door is not a pass. */
+  if (segments.some((segment) => segment.toUpperCase() === 'D')) return null;
+
+  if (PASS.test(last)) return last.toUpperCase();
+  if (LEGACY_PASS.test(last)) return last.toLowerCase();
+
+  return null;
+};
+
+const acceptDevice = (text: string): string | null => {
+  const segments = parts(text);
+  const last = segments[segments.length - 1] ?? '';
+
+  return DEVICE.test(last) ? last.toUpperCase() : null;
+};
+
 /* Green means go, amber means stop and talk, red means do not admit. */
 const LOOK: Record<Verdict, { bg: string; label: string }> = {
   admitted: { bg: 'bg-emerald-500', label: 'Let them in' },
@@ -71,6 +108,15 @@ const ScanPage = () => {
   const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState('');
   const [deviceToken, setDeviceToken] = useState('');
+
+  /*
+   * Whether the camera is up to read a device code rather than a pass.
+   *
+   * Pairing by QR because the alternative is typing sixteen characters
+   * onto a phone, four times, at the start of a shift, with a queue
+   * already forming.
+   */
+  const [pairing, setPairing] = useState(false);
 
   const [result, setResult] = useState<ClaimResult | null>(null);
   const [claiming, setClaiming] = useState(false);
@@ -162,47 +208,23 @@ const ScanPage = () => {
    * checked in when a person decides they are, so the camera waits for
    * a tap.
    */
-  const scanner = useScanner({
-    onToken: claim,
-    paused: claiming || !device || result !== null,
-    /*
-     * No camera until the device has signed in. Asking earlier put an
-     * iOS permission prompt in front of the sign-in form, before the
-     * volunteer knew what the app was, and acquired a stream at a
-     * moment when the video element did not exist to attach it to.
-     */
-    enabled: Boolean(device),
-  });
-
-  clearRef.current = scanner.release;
-
-  /* Sign in with the device token, once per phone per event. */
-  const signIn = async (event: React.FormEvent) => {
-    event.preventDefault();
-
+  /* Authorise this phone, from a scanned code or a typed one. */
+  const signInWithToken = useCallback(async (token: string) => {
     setSigningIn(true);
     setSignInError('');
-
-    /*
-     * Inside the tap that submits the form, which is the last
-     * guaranteed user gesture before scanning starts. Some platforms
-     * only allow a haptic from within one, and without this the very
-     * first admission of a shift is the one nobody feels.
-     */
-    primeFeedback(sound);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/scan/session`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device_token: deviceToken.trim() }),
+        body: JSON.stringify({ device_token: token.trim() }),
       });
 
       if (!response.ok) {
         setSignInError(
           response.status === 401
-            ? 'That token was not recognised.'
+            ? 'That code was not recognised.'
             : 'Could not sign in. Check the connection.',
         );
         return;
@@ -210,6 +232,7 @@ const ScanPage = () => {
 
       const body = await response.json();
 
+      setPairing(false);
       setDevice({ id: body.device_id, label: body.label });
       setDeviceToken('');
     } catch {
@@ -217,6 +240,55 @@ const ScanPage = () => {
     } finally {
       setSigningIn(false);
     }
+  }, []);
+
+  /*
+   * One camera, two jobs.
+   *
+   * While pairing it reads a device code and authorises the phone;
+   * once signed in it reads passes. Which codes count is decided by
+   * `accept` rather than by the hook guessing from shape, so a device
+   * code held up at the door cannot be read as a pass.
+   */
+  const scanner = useScanner({
+    onToken: pairing ? signInWithToken : claim,
+
+    accept: pairing ? acceptDevice : acceptPass,
+
+    paused: claiming || signingIn || (Boolean(device) && result !== null),
+
+    /*
+     * No camera until it is actually wanted. Asking on load put an iOS
+     * permission prompt in front of the sign-in screen, before the
+     * volunteer knew what the app was, and acquired a stream at a
+     * moment when the video element did not exist to attach it to.
+     */
+    enabled: Boolean(device) || pairing,
+  });
+
+  clearRef.current = scanner.release;
+
+  const signIn = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    /*
+     * Inside the tap, which is the last guaranteed user gesture before
+     * scanning starts. iOS will not unlock an AudioContext outside one,
+     * so without this every verdict for the rest of the shift would be
+     * silent. It also plays a tone, which is how a volunteer finds out
+     * in the first second whether this handset makes any noise at all.
+     */
+    primeFeedback(sound);
+
+    void signInWithToken(deviceToken);
+  };
+
+  /* Starting the camera to pair is a tap too, so audio unlocks whether
+     the code is scanned or typed. */
+  const startPairing = () => {
+    primeFeedback(sound);
+    setSignInError('');
+    setPairing(true);
   };
 
   /* Is this phone already signed in? */
@@ -300,6 +372,58 @@ const ScanPage = () => {
     };
   }, [device]);
 
+  /* Pairing: the camera is up, waiting for one of the five codes. */
+  if (!device && pairing) {
+    return (
+      <div className="screen-h flex flex-col overflow-hidden bg-black">
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <video
+            ref={scanner.videoRef}
+            className="absolute inset-0 h-full w-full object-cover"
+            playsInline
+            muted
+            autoPlay
+          />
+
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="h-56 w-56 rounded-2xl border-4 border-white/70" />
+          </div>
+
+          <div className="absolute inset-x-0 top-0 bg-black/70 px-5 py-4">
+            <div className="text-lg font-bold text-white">
+              {signingIn ? 'Authorising…' : 'Point at the queue code'}
+            </div>
+
+            <div className="mt-1 text-sm text-gray-300">
+              It is on the admin panel, one per queue.
+            </div>
+          </div>
+
+          {(scanner.status !== 'running' || signInError) && (
+            <div className="absolute inset-x-0 bottom-0 bg-amber-500 px-5 py-4 text-sm font-semibold text-black">
+              {signInError ||
+                (scanner.status === 'denied'
+                  ? 'Camera blocked. Allow it in the browser settings.'
+                  : scanner.status === 'unavailable'
+                    ? 'This browser cannot run the scanner. Use Chrome.'
+                    : 'Starting the camera…')}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-dark-700 bg-dark-900 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setPairing(false)}
+            className="min-h-[44px] rounded-lg px-4 text-sm font-semibold text-gray-400"
+          >
+            Type the code instead
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!device) {
     return (
       /* Same dvh problem as the scanner: centred inside a 100vh box on
@@ -310,17 +434,35 @@ const ScanPage = () => {
           <h1 className="text-2xl font-bold text-white">Door scanner</h1>
 
           <p className="mt-2 text-sm text-gray-400">
-            Enter the token for this phone. You only do this once.
+            Authorise this phone once. Scanning the queue code is quicker
+            than typing it.
           </p>
+
+          {/*
+            * First, and full size. Sixteen characters typed onto a phone
+            * four times at the start of a shift is the slowest possible
+            * way to start a door.
+            */}
+          <button
+            type="button"
+            onClick={startPairing}
+            className="mt-6 flex min-h-[52px] w-full items-center justify-center rounded-lg bg-brand-primary text-base font-semibold text-white"
+          >
+            Scan the queue code
+          </button>
+
+          <div className="mt-6 text-center text-xs uppercase tracking-widest text-gray-600">
+            or type it
+          </div>
 
           <input
             value={deviceToken}
-            onChange={(e) => setDeviceToken(e.target.value)}
+            onChange={(e) => setDeviceToken(e.target.value.toUpperCase())}
             autoComplete="off"
-            autoCapitalize="none"
+            autoCapitalize="characters"
             spellCheck={false}
-            placeholder="Device token"
-            className="mt-6 w-full rounded-lg border border-dark-600 bg-dark-800 px-4 py-3 font-mono text-white placeholder:text-gray-600 focus:border-brand-primary focus:outline-none"
+            placeholder="Queue code"
+            className="mt-3 w-full rounded-lg border border-dark-600 bg-dark-800 px-4 py-3 font-mono uppercase text-white placeholder:text-gray-600 focus:border-brand-primary focus:outline-none"
           />
 
           {signInError && (
@@ -332,7 +474,7 @@ const ScanPage = () => {
           <button
             type="submit"
             disabled={signingIn || !deviceToken.trim()}
-            className="mt-4 flex min-h-[52px] w-full items-center justify-center rounded-lg bg-brand-primary text-base font-semibold text-white disabled:opacity-40"
+            className="mt-3 flex min-h-[52px] w-full items-center justify-center rounded-lg border border-dark-600 text-base font-semibold text-white disabled:opacity-40"
           >
             {signingIn ? 'Signing in…' : 'Start scanning'}
           </button>

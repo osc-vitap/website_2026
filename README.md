@@ -4,6 +4,20 @@ Welcome to the official repository for the Open Source Community (OSC) VIT-AP we
 
 ---
 
+## 📄 [READ THE CONTRIBUTOR SHEET](CONTRIBUTOR-SHEET.md)
+
+**New here? Start there, not here.**
+
+You cannot push to this repo directly. Fork it, branch, then open a pull
+request from your fork. The [contributor sheet](CONTRIBUTOR-SHEET.md) walks
+through that step by step, and covers every API endpoint, how admin sign in
+works, the database, and the checks your pull request has to pass.
+
+The rest of this README is a short content guide for people who already
+know their way around.
+
+---
+
 ## 🚀 Quick Start (Development)
 
 To get this project up and running on your local machine:

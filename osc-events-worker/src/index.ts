@@ -651,6 +651,18 @@ const SEAT_CODE_PATTERN = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKLMN
 /* 22 rows of 26 seats, the same map the seating page draws. */
 const SEAT_ID_PATTERN = /^R(?:[1-9]|1[0-9]|2[0-2])-S(?:[1-9]|1[0-9]|2[0-6])$/;
 
+/*
+ * The front rows belong to the club. The map hides them, but the map is
+ * only a suggestion, so the rule is enforced here where it counts.
+ */
+const TEAM_ROWS = [1, 2];
+
+function isTeamSeat(seatId: string): boolean {
+	const match = /^R(\d+)-S\d+$/.exec(seatId);
+
+	return match ? TEAM_ROWS.includes(Number(match[1])) : false;
+}
+
 const MAX_SEATS_PER_RESERVATION = 20;
 
 const MAX_SEAT_CODES_PER_BATCH = 200;
@@ -4500,6 +4512,14 @@ export default {
 							index,
 							field: 'seat_id',
 							message: 'That is not a seat on this map.',
+						});
+
+						shapeOk = false;
+					} else if (isTeamSeat(seatId)) {
+						fieldErrors.push({
+							index,
+							field: 'seat_id',
+							message: 'The first two rows are held for the OSC team and cannot be reserved.',
 						});
 
 						shapeOk = false;

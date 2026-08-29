@@ -59,6 +59,17 @@ export const seatLabel = (seatId: string): string => {
     : seatId;
 };
 
+/* The front rows are held back for the club, so nobody can pick them */
+export const TEAM_ROWS = [1, 2];
+
+export const seatRow = (seatId: string): number => {
+  const match = /^R(\d+)-S\d+$/.exec(seatId);
+  return match ? Number(match[1]) : 0;
+};
+
+export const isTeamSeat = (seatId: string): boolean =>
+  TEAM_ROWS.includes(seatRow(seatId));
+
 export interface ReserveSeatRow {
   seat_id: string;
   code: string;

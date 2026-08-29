@@ -14,7 +14,12 @@ import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { getArmchairTexture } from './ArmchairTexture';
 import { getScreenLabelTexture } from './ScreenLabelTexture';
-import { MAX_SEATS, fetchTakenSeats, seatLabel } from '../data/seatingApi';
+import {
+  MAX_SEATS,
+  fetchTakenSeats,
+  isTeamSeat,
+  seatLabel,
+} from '../data/seatingApi';
 import ReserveDialog from '../pages/seating/ReserveDialog';
 
 /* Seat blocks across a row and rows in each section, taken from the
@@ -80,7 +85,7 @@ const ROW_WIDTH =
 
 const SEAT_BOTTOM = seatData[seatData.length - 1].y;
 
-const STAGE_TOP = SEAT_BOTTOM - 4;
+const STAGE_TOP = SEAT_BOTTOM - 6.5;
 const STAGE_BOTTOM = STAGE_TOP - 8.5;
 const STAGE_HALF_WIDTH = ROW_WIDTH / 2 + 5.5;
 const STAGE_ARC = 2.2;
@@ -112,6 +117,13 @@ const colorUnselected = new THREE.Color('#474d5a');
 const colorHover = new THREE.Color('#8b93a5');
 const colorSelected = new THREE.Color('#3b82f6');
 const colorTaken = new THREE.Color('#5a2f33');
+const colorTeam = new THREE.Color('#4e3f73');
+
+const teamSeats = new Set(
+  seatData
+    .map((seat, index) => (isTeamSeat(seat.id) ? index : -1))
+    .filter((index) => index >= 0),
+);
 const scratchColor = new THREE.Color();
 
 /* How quickly a seat settles on its new colour, lower is gentler */
@@ -125,6 +137,7 @@ interface SeatsInstancedProps {
   setHovered: Dispatch<SetStateAction<number | null>>;
   onLimit: () => void;
   onTaken: () => void;
+  onTeam: () => void;
 }
 
 function SeatsInstanced({
@@ -135,6 +148,7 @@ function SeatsInstanced({
   setHovered,
   onLimit,
   onTaken,
+  onTeam,
 }: SeatsInstancedProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const tint = useRef(
@@ -144,6 +158,7 @@ function SeatsInstanced({
 
   const colorFor = useCallback(
     (index: number, hover: number | null) => {
+      if (teamSeats.has(index)) return colorTeam;
       if (taken.has(index)) return colorTaken;
       if (selected.has(index)) return colorSelected;
       if (hover === index) return colorHover;
@@ -237,7 +252,10 @@ function SeatsInstanced({
         e.stopPropagation();
         if (e.instanceId !== undefined) {
           setHovered(e.instanceId);
-          document.body.style.cursor = taken.has(e.instanceId) ? 'not-allowed' : 'pointer';
+          document.body.style.cursor =
+            taken.has(e.instanceId) || teamSeats.has(e.instanceId)
+              ? 'not-allowed'
+              : 'pointer';
         }
       }}
       onPointerOut={() => {
@@ -248,6 +266,11 @@ function SeatsInstanced({
         e.stopPropagation();
         const id = e.instanceId;
         if (id === undefined) return;
+
+        if (teamSeats.has(id)) {
+          onTeam();
+          return;
+        }
 
         if (taken.has(id)) {
           onTaken();
@@ -737,15 +760,19 @@ export default function SeatingLayout() {
   const [chip, setChip] = useState<{
     label: string;
     taken: boolean;
+    team: boolean;
   } | null>(null);
 
   /* Moving onto the next seat replaces the text and cancels the pending
      hide, so the chip never blinks between neighbours */
   useEffect(() => {
     if (hovered !== null) {
+      const id = seatData[hovered].id;
+
       setChip({
-        label: seatLabel(seatData[hovered].id),
+        label: seatLabel(id),
         taken: taken.has(hovered),
+        team: isTeamSeat(id),
       });
       return;
     }
@@ -838,6 +865,7 @@ export default function SeatingLayout() {
           { color: '#474d5a', label: 'Available' },
           { color: '#3b82f6', label: 'Selected' },
           { color: '#5a2f33', label: 'Taken' },
+          { color: '#4e3f73', label: 'OSC team' },
         ].map((item) => (
           <div
             key={item.label}
@@ -889,9 +917,11 @@ export default function SeatingLayout() {
       {/* Hover Tooltip Overlay */}
       <div
         className={`absolute left-1/2 -translate-x-1/2 backdrop-blur-md border text-white px-6 py-3 rounded-full font-bold tracking-widest text-sm pointer-events-none z-40 shadow-xl transition-all duration-[320ms] ease-out ${
-          chip?.taken
-            ? 'bg-[#4a2a2a]/90 border-[#6b3a3a]'
-            : 'bg-[#2e2e33]/90 border-[#3e3e44]'
+          chip?.team
+            ? 'bg-[#4e3f73]/90 border-[#6d5a9c]'
+            : chip?.taken
+              ? 'bg-[#4a2a2a]/90 border-[#6b3a3a]'
+              : 'bg-[#2e2e33]/90 border-[#3e3e44]'
         } ${selected.size > 0 ? 'bottom-32 md:bottom-28' : 'bottom-8'} ${
           chip
             ? 'opacity-100 translate-y-0'
@@ -899,7 +929,13 @@ export default function SeatingLayout() {
         }`}
       >
         {chip
-          ? `${chip.label.toUpperCase()}${chip.taken ? ' | TAKEN' : ''}`
+          ? `${chip.label.toUpperCase()}${
+              chip.team
+                ? ' | OSC TEAM'
+                : chip.taken
+                  ? ' | TAKEN'
+                  : ''
+            }`
           : 'HOVER A SEAT'}
       </div>
 
@@ -974,6 +1010,11 @@ export default function SeatingLayout() {
           setHovered={setHovered}
           onLimit={() => setNotice(`You can reserve at most ${MAX_SEATS} seats at once.`)}
           onTaken={() => setNotice('That seat is already taken.')}
+          onTeam={() =>
+            setNotice(
+              'The first two rows are held for the OSC team.',
+            )
+          }
         />
         <StageArea />
       </Canvas>

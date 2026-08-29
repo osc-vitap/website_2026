@@ -164,7 +164,7 @@ describe("seat reservations", () => {
 
 	it("turns away a registration number that is not registered", async () => {
 		const response = await reserve([
-			{ seat_id: "R1-S1", code: "AB3D-7K2M", college_registration_number: "22BCE9999" },
+			{ seat_id: "R3-S1", code: "AB3D-7K2M", college_registration_number: "22BCE9999" },
 		]);
 
 		expect(response.status).toBe(400);
@@ -183,8 +183,8 @@ describe("seat reservations", () => {
 	it("reports every bad row of one request together", async () => {
 		const response = await reserve([
 			{ seat_id: "R23-S1", code: "AB3D-7K2M", college_registration_number: "22BCE1234" },
-			{ seat_id: "R1-S1", code: "NOPE", college_registration_number: "22BCE1234" },
-			{ seat_id: "R1-S2", code: "ZZZZ-2222", college_registration_number: "22BCE1234" },
+			{ seat_id: "R3-S1", code: "NOPE", college_registration_number: "22BCE1234" },
+			{ seat_id: "R3-S2", code: "ZZZZ-2222", college_registration_number: "22BCE1234" },
 		]);
 
 		expect(response.status).toBe(400);
@@ -207,8 +207,8 @@ describe("seat reservations", () => {
 		).run();
 
 		const response = await reserve([
-			{ seat_id: "R1-S1", code: "AB3D-7K2M", college_registration_number: "22BCE1234" },
-			{ seat_id: "R1-S1", code: "CCCC-4444", college_registration_number: "22BCE1234" },
+			{ seat_id: "R3-S1", code: "AB3D-7K2M", college_registration_number: "22BCE1234" },
+			{ seat_id: "R3-S1", code: "CCCC-4444", college_registration_number: "22BCE1234" },
 		]);
 
 		expect(response.status).toBe(400);
@@ -260,6 +260,40 @@ describe("seat reservations", () => {
 		const response = await reserve(seats);
 
 		expect(response.status).toBe(400);
+	});
+
+	it("refuses the front two rows however the request is shaped", async () => {
+		for (const seat of ["R1-S1", "R1-S26", "R2-S13"]) {
+			const response = await reserve([
+				{ seat_id: seat, code: "AB3D-7K2M", college_registration_number: "22BCE1234" },
+			]);
+
+			expect(response.status, seat).toBe(400);
+
+			const body = await response.json<ReserveBody>();
+
+			expect(body.field_errors?.[0], seat).toMatchObject({
+				index: 0,
+				field: "seat_id",
+				message: "The first two rows are held for the OSC team and cannot be reserved.",
+			});
+		}
+
+		// a blocked seat smuggled in beside a good one fails the whole request
+		const mixed = await reserve([
+			{ seat_id: "R22-S1", code: "AB3D-7K2M", college_registration_number: "22BCE1234" },
+			{ seat_id: "R2-S4", code: "CD4E-8L3N", college_registration_number: "23BCE5678" },
+		]);
+
+		expect(mixed.status).toBe(400);
+
+		const seated = await env.DB.prepare(`SELECT COUNT(*) AS total FROM seat_reservations`).first<{ total: number }>();
+
+		expect(seated?.total).toBe(0);
+
+		const rows3 = await (await SELF.fetch(`${WORKER_ORIGIN}/api/events/gittyup26/seats`)).json<SeatsBody>();
+
+		expect(rows3.seats).toEqual([]);
 	});
 
 	it("keeps every seat admin route behind the admin check", async () => {

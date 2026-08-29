@@ -206,9 +206,10 @@ const emptyForm: EventForm = {
 const TABS = [
   { id: 'door', label: 'Door', Icon: DoorOpen },
   { id: 'events', label: 'Events', Icon: Calendar },
+  { id: 'team', label: 'Team', Icon: Users },
+  { id: 'contributors', label: 'Contributors', Icon: Github },
   { id: 'seating', label: 'Seating', Icon: Armchair },
   { id: 'posters', label: 'Posters', Icon: FileImage },
-  { id: 'contributors', label: 'Contributors', Icon: Users },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -1116,11 +1117,12 @@ setRegistrations(
 
         {tab === 'seating' && <AdminSeating />}
 
+        {tab === 'team' && <AdminMembers />}
+
         {tab === 'contributors' && <AdminContributors />}
 
         {tab === 'events' && (
           <>
-            <AdminMembers />
       {/* Statistics */}
 
       {/*

@@ -6,6 +6,15 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 const WORKER_ORIGIN = "https://events.oscvitap.com";
 const SESSION_ID = "test-admin-session-token";
 
+interface TestContributor {
+	id?: number;
+	login: string;
+	avatar_url: string;
+	html_url: string;
+	display_order?: number;
+	created_at?: string;
+}
+
 async function fetchWorker(path: string, init?: RequestInit): Promise<Response> {
 	const request = new IncomingRequest(`${WORKER_ORIGIN}${path}`, init);
 	const ctx = createExecutionContext();
@@ -43,7 +52,7 @@ describe("Contributors API", () => {
 		const response = await fetchWorker("/api/contributors");
 		expect(response.status).toBe(200);
 
-		const data = (await response.json()) as { contributors: any[] };
+		const data = (await response.json()) as { contributors: TestContributor[] };
 		expect(data.contributors.length).toBe(1);
 		expect(data.contributors[0].login).toBe("torvalds");
 	});
@@ -78,7 +87,7 @@ describe("Contributors API", () => {
 		});
 
 		expect(postRes.status).toBe(201);
-		const postData = (await postRes.json()) as { success: boolean; contributor: any };
+		const postData = (await postRes.json()) as { success: boolean; contributor: TestContributor };
 		expect(postData.success).toBe(true);
 		expect(postData.contributor.login).toBe("octocat");
 		expect(postData.contributor.avatar_url).toBe("https://avatars.githubusercontent.com/octocat");
@@ -91,7 +100,7 @@ describe("Contributors API", () => {
 			headers: { Cookie: `osc_admin_session=${SESSION_ID}` },
 		});
 		expect(getRes.status).toBe(200);
-		const getData = (await getRes.json()) as { contributors: any[] };
+		const getData = (await getRes.json()) as { contributors: TestContributor[] };
 		expect(getData.contributors.length).toBe(1);
 		expect(getData.contributors[0].login).toBe("octocat");
 
@@ -104,7 +113,7 @@ describe("Contributors API", () => {
 
 		// Verify deletion
 		const getAfterDelete = await fetchWorker("/api/contributors");
-		const getAfterData = (await getAfterDelete.json()) as { contributors: any[] };
+		const getAfterData = (await getAfterDelete.json()) as { contributors: TestContributor[] };
 		expect(getAfterData.contributors.length).toBe(0);
 	});
 });

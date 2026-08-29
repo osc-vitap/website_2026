@@ -6,7 +6,7 @@ export { API_BASE_URL };
 
 export const SEAT_EVENT_SLUG = 'gittyup26';
 
-export const MAX_SEATS = 25;
+export const MAX_SEATS = 30;
 
 const SEAT_CODE_ALPHABET =
   'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

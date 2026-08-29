@@ -17,6 +17,11 @@ dist-ssr/
 # Poster masters pulled from R2 and the PDF built from them — half a
 # gigabyte of print artwork that lives in the bucket, not here.
 /dist-posters/
+
+# Entry passes. devices.json holds scanner tokens in the clear and the
+# QR images are working credentials: anyone holding one can walk in.
+/.test-passes/
+/entry-qr/
 *.local
 
 # Editor directories and files

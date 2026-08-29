@@ -41,7 +41,7 @@ const AdminContributors = () => {
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [loading, setLoading] = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   const [search, setSearch] = useState('');
   const [newHandle, setNewHandle] = useState('');

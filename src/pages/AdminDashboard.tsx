@@ -1100,7 +1100,6 @@ setRegistrations(
         {tab === 'events' && (
           <>
             <AdminMembers />
-
       {/* Statistics */}
 
       {/*

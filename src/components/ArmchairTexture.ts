@@ -54,26 +54,26 @@ export const getArmchairTexture = () => {
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
+  /* A quiet base under the whole chair, so the gaps between its parts
+     read as soft shadow instead of hard black lines */
+  ctx.fillStyle = shade(ctx, 26, 212, 0.3, 0.24);
+  roundedRect(ctx, 16, 26, 224, 186, 34);
+  ctx.fill();
+
   /* The seat faces the stage, so the back rest is at the top of the
      canvas and the arm rests sit beside the lower cushion */
-  ctx.fillStyle = shade(ctx, 116, 210, 0.52, 0.36);
-  roundedRect(ctx, 12, 116, 36, 96, 16);
+  ctx.fillStyle = shade(ctx, 108, 206, 0.62, 0.54);
+  roundedRect(ctx, 16, 108, 30, 98, 15);
   ctx.fill();
-  roundedRect(ctx, 208, 116, 36, 96, 16);
-  ctx.fill();
-
-  ctx.fillStyle = shade(ctx, 22, 116, 0.72, 1);
-  roundedRect(ctx, 28, 22, 200, 94, 30);
+  roundedRect(ctx, 210, 108, 30, 98, 15);
   ctx.fill();
 
-  /* A brighter lip along the top of the back rest, so the seat reads as
-     a solid object and not a flat tile */
-  ctx.fillStyle = shade(ctx, 22, 40, 1, 0.82);
-  roundedRect(ctx, 40, 22, 176, 20, 10);
+  ctx.fillStyle = shade(ctx, 30, 110, 0.88, 1);
+  roundedRect(ctx, 32, 30, 192, 80, 32);
   ctx.fill();
 
-  ctx.fillStyle = shade(ctx, 126, 216, 0.96, 0.66);
-  roundedRect(ctx, 44, 126, 168, 90, 26);
+  ctx.fillStyle = shade(ctx, 122, 204, 0.92, 0.78);
+  roundedRect(ctx, 48, 122, 160, 82, 28);
   ctx.fill();
 
   const texture = new THREE.CanvasTexture(canvas);

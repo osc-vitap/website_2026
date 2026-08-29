@@ -16,6 +16,9 @@ import {
   Trash2,
   AlertTriangle,
   LogOut,
+  DoorOpen,
+  FileImage,
+  Armchair,
 } from 'lucide-react';
 import AdminAuthSplash from '../components/AdminAuthSplash';
 import { clearOauthLoopMarker } from '../data/adminAuth';
@@ -191,6 +194,22 @@ const emptyForm: EventForm = {
   is_open: true,
 };
 
+/*
+ * The panel does four unrelated jobs, and stacking them made a page you
+ * scrolled past three of to reach the fourth. One at a time instead: a
+ * column of tabs on a desktop, a row of them on a phone.
+ *
+ * Door first, because on the day it is the only one that matters.
+ */
+const TABS = [
+  { id: 'door', label: 'Door', Icon: DoorOpen },
+  { id: 'events', label: 'Events', Icon: Calendar },
+  { id: 'seating', label: 'Seating', Icon: Armchair },
+  { id: 'posters', label: 'Posters', Icon: FileImage },
+] as const;
+
+type TabId = (typeof TABS)[number]['id'];
+
 const AdminDashboard = () => {
   /*
    * First, and unconditionally. Installing the app happens from the
@@ -201,6 +220,22 @@ const AdminDashboard = () => {
 
   const [user, setUser] =
     useState<AdminUser | null>(null);
+
+  /*
+   * Remembered, so whoever is running the door on the day does not
+   * land on the events list every time they reopen the panel.
+   */
+  const [tab, setTab] = useState<TabId>(() => {
+    const saved = localStorage.getItem('osc-admin-tab');
+
+    return TABS.some((entry) => entry.id === saved)
+      ? (saved as TabId)
+      : 'door';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('osc-admin-tab', tab);
+  }, [tab]);
 
   /*
    * Set when the Worker says we are not signed in. The dashboard used
@@ -1011,15 +1046,54 @@ setRegistrations(
         )}
       </div>
 
-      {/* On event day this is the thing anyone opening the panel wants
-          to see first, so it sits above the posters. */}
-      <AdminEntryGate slug="gittyup26" />
+      <div className="lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8">
 
-      <AdminDoorTest />
+        {/*
+          * A column beside the content on a desktop, a scrollable row
+          * above it on a phone. Same buttons either way, so there is one
+          * set to keep working rather than a drawer and a tab bar that
+          * drift apart.
+          */}
+        <nav
+          aria-label="Panel sections"
+          className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-2 lg:mx-0 lg:mb-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0"
+        >
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              aria-current={tab === id ? 'page' : undefined}
+              className={`flex min-h-[44px] shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors lg:w-full lg:justify-start ${
+                tab === id
+                  ? 'bg-brand-primary/15 text-brand-accent'
+                  : 'text-gray-500 hover:text-white'
+              }`}
+            >
+              <Icon size={16} aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </nav>
 
-      <AdminPosters />
+        {/* min-w-0 so a wide table scrolls inside the column rather than
+            stretching the grid and pushing the tabs off screen. */}
+        <div className="min-w-0">
 
-      <AdminSeating />
+        {tab === 'door' && (
+          <>
+            <AdminEntryGate slug="gittyup26" />
+
+            <AdminDoorTest />
+          </>
+        )}
+
+        {tab === 'posters' && <AdminPosters />}
+
+        {tab === 'seating' && <AdminSeating />}
+
+        {tab === 'events' && (
+          <>
 
       {/* Statistics */}
 
@@ -1420,6 +1494,12 @@ setRegistrations(
           </>
         )}
 
+      </div>
+
+          </>
+        )}
+
+        </div>
       </div>
 
       {/* Create Event Modal */}

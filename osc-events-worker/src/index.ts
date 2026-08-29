@@ -2292,6 +2292,48 @@ export default {
 
 			/*
 			 * ============================================================
+			 * CONTRIBUTORS
+			 * ============================================================
+			 */
+
+			if (request.method === 'GET' && url.pathname === '/api/contributors') {
+				const { results } = await env.DB.prepare(
+					`
+	          SELECT
+	            id,
+	            login,
+	            name,
+	            description,
+	            avatar_url,
+	            html_url,
+	            display_order,
+	            created_at
+	          FROM contributors
+	          ORDER BY display_order ASC, id ASC
+	        `,
+				).all<{
+					id: number;
+					login: string;
+					name: string | null;
+					description: string | null;
+					avatar_url: string;
+					html_url: string;
+					display_order: number;
+					created_at: string;
+				}>();
+
+				return json(
+					{
+						contributors: results,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			/*
+			 * ============================================================
 			 * GITHUB OAUTH
 			 * ============================================================
 			 */
@@ -2718,6 +2760,264 @@ export default {
 						github_username: session.github_username,
 						role: `${GITHUB_ORG}-member`,
 						expires_at: session.expires_at,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			/*
+			 * ============================================================
+			 * ADMIN CONTRIBUTORS
+			 * ============================================================
+			 */
+
+			if (request.method === 'GET' && url.pathname === '/api/admin/contributors') {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const { results } = await env.DB.prepare(
+					`
+	          SELECT
+	            id,
+	            login,
+	            name,
+	            description,
+	            avatar_url,
+	            html_url,
+	            display_order,
+	            created_at
+	          FROM contributors
+	          ORDER BY display_order ASC, id ASC
+	        `,
+				).all<{
+					id: number;
+					login: string;
+					name: string | null;
+					description: string | null;
+					avatar_url: string;
+					html_url: string;
+					display_order: number;
+					created_at: string;
+				}>();
+
+				return json(
+					{
+						contributors: results,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			if (request.method === 'POST' && url.pathname === '/api/admin/contributors') {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				let body: {
+					login?: string;
+					username?: string;
+					name?: string;
+					description?: string;
+					avatar_url?: string;
+					html_url?: string;
+				};
+
+				try {
+					body = (await request.json()) as typeof body;
+				} catch {
+					return json({ error: 'Invalid JSON payload' }, 400, request, env);
+				}
+
+				const rawInput = (body.login || body.username || '').trim();
+				const normalizedLogin = normalizeGithub(rawInput);
+
+				if (!normalizedLogin) {
+					return json({ error: 'A valid GitHub username or profile URL is required' }, 400, request, env);
+				}
+
+				const existing = await env.DB.prepare(
+					`SELECT id, login FROM contributors WHERE LOWER(login) = LOWER(?)`,
+				)
+					.bind(normalizedLogin)
+					.first<{ id: number; login: string }>();
+
+				if (existing) {
+					return json({ error: `Contributor @${existing.login} already exists` }, 409, request, env);
+				}
+
+				const customName = body.name?.trim() || null;
+				const customDescription = body.description?.trim() || null;
+
+				const avatar_url =
+					body.avatar_url && body.avatar_url.trim().startsWith('http')
+						? body.avatar_url.trim()
+						: `https://avatars.githubusercontent.com/${encodeURIComponent(normalizedLogin)}`;
+
+				const html_url =
+					body.html_url && body.html_url.trim().startsWith('http')
+						? body.html_url.trim()
+						: `https://github.com/${encodeURIComponent(normalizedLogin)}`;
+
+				const maxOrder = await env.DB.prepare(
+					`SELECT MAX(display_order) AS max_order FROM contributors`,
+				).first<{ max_order: number | null }>();
+
+				const nextOrder = (maxOrder?.max_order ?? 0) + 1;
+
+				const insertResult = await env.DB.prepare(
+					`
+	          INSERT INTO contributors (login, name, description, avatar_url, html_url, display_order)
+	          VALUES (?, ?, ?, ?, ?, ?)
+	        `,
+				)
+					.bind(normalizedLogin, customName, customDescription, avatar_url, html_url, nextOrder)
+					.run();
+
+				const newId = insertResult.meta.last_row_id;
+
+				return json(
+					{
+						success: true,
+						contributor: {
+							id: newId,
+							login: normalizedLogin,
+							name: customName,
+							description: customDescription,
+							avatar_url,
+							html_url,
+							display_order: nextOrder,
+						},
+					},
+					201,
+					request,
+					env,
+				);
+			}
+
+			const adminContributorIdMatch = url.pathname.match(/^\/api\/admin\/contributors\/(\d+)$/);
+
+			if ((request.method === 'PATCH' || request.method === 'PUT') && adminContributorIdMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const contributorId = Number(adminContributorIdMatch[1]);
+
+				const current = await env.DB.prepare(`SELECT * FROM contributors WHERE id = ?`)
+					.bind(contributorId)
+					.first<{
+						id: number;
+						login: string;
+						name: string | null;
+						description: string | null;
+						avatar_url: string;
+						html_url: string;
+						display_order: number;
+					}>();
+
+				if (!current) {
+					return json({ error: 'Contributor not found' }, 404, request, env);
+				}
+
+				let body: {
+					login?: string;
+					name?: string | null;
+					description?: string | null;
+					avatar_url?: string;
+					html_url?: string;
+					display_order?: number;
+				};
+
+				try {
+					body = (await request.json()) as typeof body;
+				} catch {
+					return json({ error: 'Invalid JSON payload' }, 400, request, env);
+				}
+
+				let login = current.login;
+				if (body.login !== undefined) {
+					const norm = normalizeGithub(body.login.trim());
+					if (!norm) {
+						return json({ error: 'GitHub login cannot be empty' }, 400, request, env);
+					}
+					login = norm;
+				}
+
+				const name = body.name !== undefined ? (body.name ? body.name.trim() : null) : current.name;
+				const description =
+					body.description !== undefined ? (body.description ? body.description.trim() : null) : current.description;
+				const avatar_url =
+					body.avatar_url !== undefined && body.avatar_url.trim().startsWith('http')
+						? body.avatar_url.trim()
+						: current.avatar_url;
+				const html_url =
+					body.html_url !== undefined && body.html_url.trim().startsWith('http')
+						? body.html_url.trim()
+						: current.html_url;
+				const display_order =
+					typeof body.display_order === 'number' ? body.display_order : current.display_order;
+
+				await env.DB.prepare(
+					`
+	          UPDATE contributors
+	          SET login = ?, name = ?, description = ?, avatar_url = ?, html_url = ?, display_order = ?
+	          WHERE id = ?
+	        `,
+				)
+					.bind(login, name, description, avatar_url, html_url, display_order, contributorId)
+					.run();
+
+				return json(
+					{
+						success: true,
+						contributor: {
+							id: contributorId,
+							login,
+							name,
+							description,
+							avatar_url,
+							html_url,
+							display_order,
+						},
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			if (request.method === 'DELETE' && adminContributorIdMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const contributorId = Number(adminContributorIdMatch[1]);
+
+				const result = await env.DB.prepare(`DELETE FROM contributors WHERE id = ?`)
+					.bind(contributorId)
+					.run();
+
+				if (!result.meta.changes) {
+					return json({ error: 'Contributor not found' }, 404, request, env);
+				}
+
+				return json(
+					{
+						success: true,
+						deleted_id: contributorId,
 					},
 					200,
 					request,

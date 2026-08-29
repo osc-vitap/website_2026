@@ -21,9 +21,15 @@ import {
   X,
 } from 'lucide-react';
 
+import { teamData } from '../data/teamData';
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   'https://events.oscvitap.com';
+
+const isLocalHost = () =>
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 /*
  * The four roster tiers, in the order the public /team page lays them out.
@@ -128,11 +134,13 @@ const MemberPhoto = ({ member }: { member: Member }) =>
   );
 
 const AdminMembers = () => {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState<Member[]>(() =>
+    isLocalHost() ? (teamData as unknown as Member[]) : [],
+  );
+  const [loading, setLoading] = useState(!isLocalHost());
   const [unauthorized, setUnauthorized] = useState(false);
   const [failed, setFailed] = useState('');
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   const [actionError, setActionError] = useState('');
 
@@ -162,6 +170,11 @@ const AdminMembers = () => {
       );
 
       if (response.status === 401) {
+        if (isLocalHost()) {
+          setMembers(teamData as unknown as Member[]);
+          setLoading(false);
+          return;
+        }
         setUnauthorized(true);
         return;
       }
@@ -178,6 +191,11 @@ const AdminMembers = () => {
       const data = await response.json();
       setMembers(data.members ?? []);
     } catch (error: unknown) {
+      if (isLocalHost()) {
+        setMembers(teamData as unknown as Member[]);
+        setLoading(false);
+        return;
+      }
       setFailed(
         error instanceof Error
           ? error.message

@@ -182,9 +182,26 @@ export function useScanner({ onToken, paused, enabled }: UseScannerOptions) {
      * bare token, and some readers hand back the URL with a trailing
      * slash. Take the last non-empty path segment either way.
      */
-    const token = text.trim().split(/[/?#]/).filter(Boolean).pop() ?? '';
+    const raw = text.trim().split(/[/?#]/).filter(Boolean).pop() ?? '';
 
-    if (!/^[a-f0-9]{16,64}$/i.test(token)) return;
+    /*
+     * Two shapes.
+     *
+     * Current passes are eight characters from the unambiguous
+     * uppercase alphabet, which is what keeps the QR in its dense
+     * alphanumeric mode. The long hex form is what earlier passes used;
+     * it is still accepted so a sheet printed before the change keeps
+     * working rather than reading as an unknown pass at the door.
+     */
+    const short = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/i.test(raw);
+
+    const legacy = /^[a-f0-9]{16,64}$/i.test(raw);
+
+    if (!short && !legacy) return;
+
+    /* Stored uppercase, so a reader that hands back lower case still
+       matches rather than silently missing. */
+    const token = short ? raw.toUpperCase() : raw.toLowerCase();
 
     if (heldTokenRef.current === token) return;
 

@@ -924,15 +924,8 @@ function randomToken(): string {
 }
 
 /*
- * A random token as plain hex, no dashes.
- *
- * Entry passes use this rather than randomToken because the value ends
- * up inside a QR code and then back out of a camera: hex is a single
- * character class the scanner can validate in one expression, and it
- * survives being read aloud, typed by hand, or pasted out of a
- * spreadsheet in a way a dashed UUID pair does not.
- *
- * Sixteen bytes. Guessing one is not a thing that happens.
+ * A random token as plain hex, no dashes. Used for scanner device
+ * tokens, which are pasted once per phone and never go near a camera.
  */
 function hexToken(bytes = 16): string {
 	const buffer = new Uint8Array(bytes);
@@ -940,6 +933,34 @@ function hexToken(bytes = 16): string {
 	crypto.getRandomValues(buffer);
 
 	return [...buffer].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/*
+ * The code inside an entry pass QR. Eight characters, uppercase.
+ *
+ * Short and uppercase for one reason: a QR code encodes uppercase
+ * letters, digits and a handful of symbols in alphanumeric mode at 5.5
+ * bits a character, and everything else in byte mode at 8. One
+ * lowercase letter anywhere in the payload drops the whole symbol into
+ * byte mode. A 32 character lowercase hex token inside a lowercase URL
+ * was the densest possible way to say very little, which is a slower
+ * read and a worse one across a foyer.
+ *
+ * Same alphabet as the seat codes, which excludes I, O, U, 0 and 1, so
+ * nothing here can be misread aloud or mistyped from a printed sheet.
+ *
+ * Thirty two to the eighth is about 1.1e12. The claim endpoint is
+ * behind a scanner device session and rate limited, and a few hundred
+ * of those codes are live at once, so a guess lands about once in two
+ * billion attempts. That is proportionate for a one day door; the
+ * previous 128 bits was not buying anything the gate was not already.
+ */
+function passCode(): string {
+	const bytes = new Uint8Array(8);
+
+	crypto.getRandomValues(bytes);
+
+	return [...bytes].map((byte) => SEAT_CODE_ALPHABET[byte % SEAT_CODE_ALPHABET.length]).join('');
 }
 
 function getCookie(request: Request, name: string): string | null {
@@ -4079,9 +4100,31 @@ export default {
 
 				const passes: { token: string; kind: string; name: string; seat_id: string | null }[] = [];
 
+				/*
+				 * Unique within the batch by construction. token is the
+				 * primary key, so a repeat would fail the whole insert;
+				 * at eight characters a collision is about one in a
+				 * hundred million for a set this size, but a set is
+				 * cheaper than finding out.
+				 */
+				const minted = new Set<string>();
+
+				const freshCode = (): string => {
+					for (let attempt = 0; attempt < 20; attempt += 1) {
+						const code = passCode();
+
+						if (!minted.has(code)) {
+							minted.add(code);
+							return code;
+						}
+					}
+
+					throw new Error('could not mint a unique pass code');
+				};
+
 				for (let n = 1; n <= reserved; n += 1) {
 					passes.push({
-						token: hexToken(),
+						token: freshCode(),
 						kind: 'reserved',
 						name: `Test Reserved ${n}`,
 						seat_id: `R3-S${n}`,
@@ -4090,7 +4133,7 @@ export default {
 
 				for (let n = 1; n <= registered; n += 1) {
 					passes.push({
-						token: hexToken(),
+						token: freshCode(),
 						kind: 'registered',
 						name: `Test Registered ${n}`,
 						seat_id: null,
@@ -4134,7 +4177,18 @@ export default {
 					`${passes.length} passes, capacity ${capacity}`,
 				);
 
-				const base = siteOrigin(request);
+				/*
+				 * Uppercased, deliberately.
+				 *
+				 * A QR encodes uppercase letters, digits and a few
+				 * symbols including : / and . in alphanumeric mode, and
+				 * anything else in byte mode at half the density. One
+				 * lowercase character anywhere drops the whole symbol
+				 * into byte mode, so the host has to shout too, not just
+				 * the code. Hostnames are case insensitive and the path
+				 * is matched case insensitively at the other end.
+				 */
+				const base = siteOrigin(request).toUpperCase();
 
 				return json(
 					{
@@ -4149,7 +4203,7 @@ export default {
 						device_id: 'test-queue',
 						passes: passes.map((pass) => ({
 							...pass,
-							url: `${base}/e/${pass.token}`,
+							url: `${base}/E/${pass.token}`,
 						})),
 						expected: `${reserved} reserved in, ${Math.max(
 							0,

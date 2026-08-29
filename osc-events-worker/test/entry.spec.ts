@@ -629,11 +629,36 @@ describe("door scanning", () => {
 			expect(body.capacity).toBe(5);
 			expect(body.passes).toHaveLength(6);
 			expect(body.passes.filter((p) => p.kind === "reserved")).toHaveLength(3);
+			/* Pasted once per phone, never seen by a camera, so length
+			   costs nothing here. */
 			expect(body.device_token).toMatch(/^[a-f0-9]{32}$/);
 
-			/* The tokens are what a camera has to read back, so they are
-			   the same single character class the scanner validates. */
-			body.passes.forEach((p) => expect(p.token).toMatch(/^[a-f0-9]{32}$/));
+			/*
+			 * Pass codes are eight characters from the unambiguous
+			 * uppercase alphabet. Uppercase is what keeps the QR in its
+			 * alphanumeric mode at 5.5 bits a character rather than byte
+			 * mode at 8, and the alphabet has no I, O, U, 0 or 1 in it,
+			 * so nothing can be misread off a printed sheet.
+			 */
+			body.passes.forEach((p) =>
+				expect(p.token).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/),
+			);
+
+			/* All of them different, since token is the primary key. */
+			expect(new Set(body.passes.map((p) => p.token)).size).toBe(body.passes.length);
+		});
+
+		/*
+		 * One lowercase character anywhere drops the whole symbol into
+		 * byte mode, so the host has to shout too, not just the code.
+		 */
+		it("hands back an all-uppercase URL", async () => {
+			const body = await (await testDoor("POST", await asAdmin())).json<TestDoor>();
+
+			body.passes.forEach((p) => {
+				expect(p.url).toBe(p.url.toUpperCase());
+				expect(p.url).toContain(`/E/${p.token}`);
+			});
 		});
 
 		/*

@@ -238,6 +238,56 @@ if (process.argv.includes('--probe')) {
 /* The real run                                                      */
 /* ---------------------------------------------------------------- */
 
+/*
+ * Old shape against new, measured by the only thing that matters at a
+ * door: how small the code can get and still read.
+ *
+ * A QR encodes uppercase letters, digits and a few symbols including
+ * : / and . in alphanumeric mode at 5.5 bits a character, and anything
+ * else in byte mode at 8. One lowercase character anywhere drops the
+ * whole symbol into byte mode, so a lowercase URL wrapping a lowercase
+ * hex token was paying twice: once for the length, once for the case.
+ */
+if (process.argv.includes('--compare')) {
+	const cases = [
+		['old', 'https://www.oscvitap.com/e/9f3c1a7b4e2d8065b1a4c7e0d3f68259', '#000000'],
+		['new', 'HTTPS://OSCVITAP.COM/E/K7M2XR4P', '#000000'],
+	];
+
+	console.log('shape  chars  smallest size that still decodes\n');
+
+	for (const [label, payload, ink] of cases) {
+		const png = path.join(tempDir, `cmp-${label}.png`);
+
+		render(payload, ink, png);
+
+		let smallest = null;
+
+		/* Step down until it stops reading. */
+		for (const size of [512, 384, 256, 192, 160, 128, 112, 96, 80, 72, 64, 56, 48]) {
+			const { data, info } = await sharp(png)
+				.resize(size, size, { fit: 'inside' })
+				.flatten({ background: '#ffffff' })
+				.ensureAlpha()
+				.raw()
+				.toBuffer({ resolveWithObject: true });
+
+			const code = jsQR(new Uint8ClampedArray(data), info.width, info.height);
+
+			if (code?.data === payload) smallest = size;
+			else break;
+		}
+
+		console.log(
+			`${label.padEnd(6)} ${String(payload.length).padStart(5)}  ${
+				smallest ? `${smallest}px` : 'did not decode'
+			}`,
+		);
+	}
+
+	process.exit(0);
+}
+
 const inFile = arg('in', null);
 
 if (!inFile) {
@@ -248,7 +298,18 @@ if (!inFile) {
 
 const passes = JSON.parse(readFileSync(path.resolve(projectRoot, inFile), 'utf8'));
 
-const BASE = process.env.ENTRY_BASE_URL ?? 'https://www.oscvitap.com/e';
+/*
+ * Uppercase, and the apex rather than www.
+ *
+ * Both are density, not style. Uppercase keeps the payload in the QR's
+ * alphanumeric mode, which is 5.5 bits a character against byte mode's
+ * 8, and dropping www is four fewer characters. Measured with
+ * --compare: the old lowercase form stopped decoding below 72px, this
+ * one reads down to 48px, so it scans from half again the distance.
+ *
+ * Hostnames are case insensitive and the apex redirects to www.
+ */
+const BASE = process.env.ENTRY_BASE_URL ?? 'HTTPS://OSCVITAP.COM/E';
 
 console.log(`${passes.length} passes into ${outDir}\n`);
 

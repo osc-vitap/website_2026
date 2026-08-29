@@ -38,8 +38,23 @@ const REGISTERED = 10;
    up a new one per run. Obviously a fixture at a glance. */
 const EVENT_ID = 'local-fixture-gittyup26';
 
-/* The same shape the real generator will mint: 128 bits, hex. */
+/* Device tokens are pasted once per phone and never seen by a camera,
+   so length costs nothing. */
 const token = () => randomBytes(16).toString('hex');
+
+/*
+ * Pass codes, the same shape the Worker mints: eight characters from an
+ * alphabet with no I, O, U, 0 or 1 in it.
+ *
+ * Uppercase because a QR encodes uppercase letters, digits and a few
+ * symbols in alphanumeric mode at 5.5 bits a character and everything
+ * else in byte mode at 8. One lowercase character anywhere drops the
+ * whole symbol into byte mode and the code gets denser for nothing.
+ */
+const PASS_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+const passCode = () =>
+	[...randomBytes(8)].map((b) => PASS_ALPHABET[b % PASS_ALPHABET.length]).join('');
 
 const quote = (value) => `'${String(value).replace(/'/g, "''")}'`;
 
@@ -47,7 +62,7 @@ const passes = [];
 
 for (let n = 1; n <= RESERVED; n += 1) {
 	passes.push({
-		token: token(),
+		token: passCode(),
 		kind: 'reserved',
 		name: `Test Reserved ${n}`,
 		email: `test.reserved${n}@vitapstudent.ac.in`,
@@ -58,7 +73,7 @@ for (let n = 1; n <= RESERVED; n += 1) {
 
 for (let n = 1; n <= REGISTERED; n += 1) {
 	passes.push({
-		token: token(),
+		token: passCode(),
 		kind: 'registered',
 		name: `Test Registered ${n}`,
 		email: `test.registered${n}@vitapstudent.ac.in`,

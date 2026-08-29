@@ -1295,6 +1295,21 @@ describe("rate limiting", () => {
 		expect(last?.headers.get("Retry-After")).toBe("60");
 	});
 
+	/*
+	 * Given its own timeout because it is the only test here that is a
+	 * small load test.
+	 *
+	 * Sixty one registrations at once, each a rate limit check and a
+	 * write, is about half a second on a developer machine and well over
+	 * five on a two core CI runner, where they stop being concurrent and
+	 * queue instead. It failed on a commit that changed one line of JSX
+	 * and nothing in this Worker, which is the shape of a timeout that
+	 * depends on the machine rather than the code.
+	 *
+	 * Raising the ceiling for this one test rather than globally: every
+	 * other test here finishes in milliseconds, and a suite-wide timeout
+	 * would hide a real hang somewhere else.
+	 */
 	it("stops a flood of fabricated registration numbers from one IP", async () => {
 		await seedEvent({ slug: "flood-event", title: "Flood Event" });
 
@@ -1308,7 +1323,7 @@ describe("rate limiting", () => {
 		const throttled = responses.filter(r => r.status === 429).length;
 
 		expect(throttled).toBeGreaterThan(0);
-	});
+	}, 30_000);
 
 	it("throttles the OAuth entry point", async () => {
 		let last: Response | null = null;

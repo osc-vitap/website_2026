@@ -80,7 +80,7 @@ const ROW_WIDTH =
 const SEAT_BOTTOM = seatData[seatData.length - 1].y;
 
 const STAGE_TOP = SEAT_BOTTOM - 4;
-const STAGE_BOTTOM = STAGE_TOP - 7;
+const STAGE_BOTTOM = STAGE_TOP - 8.5;
 const STAGE_HALF_WIDTH = ROW_WIDTH / 2 + 5.5;
 const STAGE_ARC = 2.2;
 
@@ -294,9 +294,9 @@ function stageShape(): THREE.Shape {
 }
 
 const SCREEN_BEZEL = 0.14;
-const SCREEN_RADIUS = 0.32;
+const SCREEN_RADIUS = 0.45;
 const SCREEN_BOTTOM = STAGE_BOTTOM + SCREEN_BEZEL;
-const SCREEN_TOP = SCREEN_BOTTOM + 2.4;
+const SCREEN_TOP = SCREEN_BOTTOM + 6;
 
 /* Corners are cut back along both edges and joined through the old
    point, so the outline has no sharp vertex left */
@@ -367,8 +367,8 @@ const SCREEN_TINT_ANGLE = Math.PI / 4;
 function screenShape(inset: number): THREE.Shape {
   const bottom = SCREEN_BOTTOM - inset;
   const top = SCREEN_TOP + inset;
-  const halfTop = 10.4 + inset;
-  const halfBottom = 11.2 + inset;
+  const halfTop = 9.3 + inset;
+  const halfBottom = 9.5 + inset;
 
   return roundedShape(
     [

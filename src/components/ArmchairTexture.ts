@@ -2,27 +2,87 @@ import * as THREE from 'three';
 
 let cachedTexture: THREE.CanvasTexture | null = null;
 
+const SIZE = 256;
+
+/* The map is multiplied by the seat colour, so this canvas only carries
+   the shape and its shading, never a colour */
+const roundedRect = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) => {
+  const r = Math.min(radius, width / 2, height / 2);
+
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+};
+
+const shade = (
+  ctx: CanvasRenderingContext2D,
+  top: number,
+  bottom: number,
+  from: number,
+  to: number,
+) => {
+  const gradient = ctx.createLinearGradient(0, top, 0, bottom);
+  const step = (value: number) => {
+    const level = Math.round(value * 255);
+    return `rgb(${level}, ${level}, ${level})`;
+  };
+
+  gradient.addColorStop(0, step(from));
+  gradient.addColorStop(1, step(to));
+
+  return gradient;
+};
+
 export const getArmchairTexture = () => {
   if (cachedTexture) return cachedTexture;
-  
+
   const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
-  
-  ctx.strokeStyle = 'white';
-  ctx.lineWidth = 1.5; // Slightly thinner for elegance
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  
-  ctx.scale(128 / 24, 128 / 24);
-  
-  const path = new Path2D("M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H7v-2a2 2 0 0 0-4 0ZM5 18v2M19 18v2");
-  ctx.stroke(path);
-  
+
+  /* The seat faces the stage, so the back rest is at the top of the
+     canvas and the arm rests sit beside the lower cushion */
+  ctx.fillStyle = shade(ctx, 116, 210, 0.52, 0.36);
+  roundedRect(ctx, 12, 116, 36, 96, 16);
+  ctx.fill();
+  roundedRect(ctx, 208, 116, 36, 96, 16);
+  ctx.fill();
+
+  ctx.fillStyle = shade(ctx, 22, 116, 0.72, 1);
+  roundedRect(ctx, 28, 22, 200, 94, 30);
+  ctx.fill();
+
+  /* A brighter lip along the top of the back rest, so the seat reads as
+     a solid object and not a flat tile */
+  ctx.fillStyle = shade(ctx, 22, 40, 1, 0.82);
+  roundedRect(ctx, 40, 22, 176, 20, 10);
+  ctx.fill();
+
+  ctx.fillStyle = shade(ctx, 126, 216, 0.96, 0.66);
+  roundedRect(ctx, 44, 126, 168, 90, 26);
+  ctx.fill();
+
   const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 16;
+  texture.generateMipmaps = true;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+
   cachedTexture = texture;
   return texture;
 };

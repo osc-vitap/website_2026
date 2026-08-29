@@ -413,7 +413,7 @@ describe("seat reservations", () => {
 		});
 
 		expect(removed.status).toBe(200);
-		expect(await removed.json()).toEqual({ ok: true });
+		expect(await removed.json()).toEqual({ ok: true, notified: true });
 
 		const after = await (
 			await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/seats`, { headers: cookie })
@@ -439,6 +439,41 @@ describe("seat reservations", () => {
 		]);
 
 		expect(rebooked.status).toBe(200);
+
+		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+	});
+
+	it("skips the cancellation notice when the admin asks it to", async () => {
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+        VALUES ('seat-session', '1', 'ada', datetime('now', '+1 hour'))
+      `,
+		).run();
+
+		const cookie = { Cookie: "osc_admin_session=seat-session" };
+
+		await reserve([{ seat_id: "R22-S1", code: "AB3D-7K2M", college_registration_number: "22BCE1234" }]);
+
+		const listed = await (
+			await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/seats`, { headers: cookie })
+		).json<{ reservations: ReservationRow[] }>();
+
+		const id = listed.reservations[0].id;
+
+		const quiet = await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/seats/${id}?notify=false`, {
+			method: "DELETE",
+			headers: cookie,
+		});
+
+		expect(quiet.status).toBe(200);
+		expect(await quiet.json()).toEqual({ ok: true, notified: false });
+
+		const after = await (
+			await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/seats`, { headers: cookie })
+		).json<{ reservations: ReservationRow[] }>();
+
+		expect(after.reservations).toHaveLength(0);
 
 		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
 	});

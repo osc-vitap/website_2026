@@ -1,5 +1,6 @@
 import { sendMail } from './mail/smtp';
 import { renderSeatReservationEmail } from './mail/seatReservationEmail';
+import { renderSeatCancellationEmail } from './mail/seatCancellationEmail';
 
 /*
  * Local development origins are always allowed. Every other
@@ -725,6 +726,52 @@ interface SeatMailRow {
  * One mail per reserved seat, sent one at a time so there is a single
  * SMTP conversation, and never allowed to fail the reservation.
  */
+function sendSeatCancellationMail(env: Env, ctx: ExecutionContext, event: SeatMailEvent, row: SeatMailRow): void {
+	const user = env.OSC_SMTP_USER?.trim();
+
+	const pass = env.OSC_SMTP_PASS?.trim();
+
+	if (!user || !pass) {
+		return;
+	}
+
+	const eventDate = formatSeatEventDate(event.event_date);
+
+	const venue = (event.venue ?? '').trim() || SEAT_EVENT_VENUE;
+
+	ctx.waitUntil(
+		(async () => {
+			try {
+				const message = renderSeatCancellationEmail({
+					name: row.name,
+					seatId: row.seat_id,
+					seatLabel: seatLabel(row.seat_id),
+					eventTitle: event.title,
+					eventDate,
+					eventTime: SEAT_EVENT_TIME,
+					venue,
+					registrationNumber: row.college_registration_number,
+				});
+
+				await sendMail(
+					{ host: 'smtp.gmail.com', port: 587, user, pass },
+					{
+						to: row.email,
+						toName: row.name,
+						fromName: 'Open Source Community',
+						replyTo: 'osc@vitap.ac.in',
+						subject: message.subject,
+						html: message.html,
+						text: message.text,
+					},
+				);
+			} catch (error) {
+				console.error('Seat cancellation mail failed:', row.seat_id, error);
+			}
+		})(),
+	);
+}
+
 function sendSeatReservationMails(env: Env, ctx: ExecutionContext, event: SeatMailEvent, rows: SeatMailRow[]): void {
 	const user = env.OSC_SMTP_USER?.trim();
 
@@ -2801,16 +2848,39 @@ export default {
 
 				const event = await env.DB.prepare(
 					`
-	            SELECT id
+	            SELECT id, title, event_date, venue
 	            FROM events
 	            WHERE slug = ?
 	          `,
 				)
 					.bind(slug)
-					.first<{ id: string }>();
+					.first<{ id: string; title: string; event_date: string; venue: string | null }>();
 
 				if (!event) {
 					return json({ error: 'Event not found' }, 404, request, env);
+				}
+
+				/* Read before the delete, because the row carries the only
+				   copy of who to tell */
+				const seated = await env.DB.prepare(
+					`
+	            SELECT id, seat_id, name, email, college_registration_number
+	            FROM seat_reservations
+	            WHERE id = ?
+	              AND event_id = ?
+	          `,
+				)
+					.bind(reservationId, event.id)
+					.first<{
+						id: number;
+						seat_id: string;
+						name: string;
+						email: string;
+						college_registration_number: string;
+					}>();
+
+				if (!seated) {
+					return json({ error: 'Reservation not found' }, 404, request, env);
 				}
 
 				/*
@@ -2831,7 +2901,15 @@ export default {
 					return json({ error: 'Reservation not found' }, 404, request, env);
 				}
 
-				return json({ ok: true }, 200, request, env);
+				/* A test row or a duplicate should not mail a student, so
+				   the admin can turn the notice off */
+				const notify = url.searchParams.get('notify') !== 'false';
+
+				if (notify) {
+					sendSeatCancellationMail(env, ctx, event, seated);
+				}
+
+				return json({ ok: true, notified: notify }, 200, request, env);
 			}
 
 			/*

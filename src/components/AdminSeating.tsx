@@ -191,6 +191,8 @@ const AdminSeating = () => {
   const [confirmRemove, setConfirmRemove] =
     useState(0);
   const [removing, setRemoving] = useState(0);
+  const [notifyOnRemove, setNotifyOnRemove] =
+    useState(true);
 
   const [search, setSearch] = useState('');
   const [downloading, setDownloading] =
@@ -472,7 +474,7 @@ const AdminSeating = () => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/admin/events/${EVENT_SLUG}/seats/${reservation.id}`,
+        `${API_BASE_URL}/api/admin/events/${EVENT_SLUG}/seats/${reservation.id}?notify=${notifyOnRemove}`,
         {
           method: 'DELETE',
           credentials: 'include',
@@ -503,7 +505,11 @@ const AdminSeating = () => {
       }
 
       setActionNote(
-        `Removed ${reservation.seat_id}. The seat is free again and code ${reservation.code} can be used once more.`,
+        `Removed ${reservation.seat_id}. The seat is free again and code ${reservation.code} can be used once more.${
+          notifyOnRemove
+            ? ` ${reservation.name} has been emailed about it.`
+            : ' Nobody was emailed.'
+        }`,
       );
 
       await load();
@@ -1321,6 +1327,26 @@ const AdminSeating = () => {
                                 and its code?
                               </span>
 
+                              <label className="flex items-center gap-1.5 text-xs text-gray-400">
+                                <input
+                                  type="checkbox"
+                                  checked={
+                                    notifyOnRemove
+                                  }
+                                  onChange={(
+                                    changed,
+                                  ) =>
+                                    setNotifyOnRemove(
+                                      changed
+                                        .target
+                                        .checked,
+                                    )
+                                  }
+                                  className="h-3.5 w-3.5 rounded border-dark-700 bg-transparent"
+                                />
+                                Email them
+                              </label>
+
                               <button
                                 type="button"
                                 onClick={() =>
@@ -1466,6 +1492,26 @@ const AdminSeating = () => {
                               {confirmRemove ===
                               reservation.id ? (
                                 <div className="flex items-center justify-end gap-2">
+                                  <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-gray-400">
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        notifyOnRemove
+                                      }
+                                      onChange={(
+                                        changed,
+                                      ) =>
+                                        setNotifyOnRemove(
+                                          changed
+                                            .target
+                                            .checked,
+                                        )
+                                      }
+                                      className="h-3.5 w-3.5 rounded border-dark-700 bg-transparent"
+                                    />
+                                    Email them
+                                  </label>
+
                                   <button
                                     type="button"
                                     onClick={() =>

@@ -269,6 +269,7 @@ describe("seat reservations", () => {
 			["DELETE", "/api/admin/events/gittyup26/seat-codes/AB3D-7K2M"],
 			["GET", "/api/admin/events/gittyup26/seats"],
 			["GET", "/api/admin/events/gittyup26/seats.csv"],
+			["DELETE", "/api/admin/events/gittyup26/seats/1"],
 		] as const;
 
 		for (const [method, path] of routes) {
@@ -371,6 +372,73 @@ describe("seat reservations", () => {
 
 		expect(text).toContain("Row 22 Seat 1");
 		expect(text).toContain("22BCE1234");
+
+		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+	});
+
+	it("removes a reservation as an admin and frees the seat and the code", async () => {
+		await env.DB.prepare(
+			`
+        INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+        VALUES ('seat-session', '1', 'ada', datetime('now', '+1 hour'))
+      `,
+		).run();
+
+		const cookie = { Cookie: "osc_admin_session=seat-session" };
+
+		const booked = await reserve([
+			{ seat_id: "R22-S1", code: "AB3D-7K2M", college_registration_number: "22BCE1234" },
+		]);
+
+		expect(booked.status).toBe(200);
+
+		const before = await (
+			await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/seats`, { headers: cookie })
+		).json<{ reservations: ReservationRow[] }>();
+
+		expect(before.reservations).toHaveLength(1);
+
+		const id = before.reservations[0].id;
+
+		const badId = await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/seats/nope`, {
+			method: "DELETE",
+			headers: cookie,
+		});
+
+		expect(badId.status).toBe(400);
+
+		const removed = await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/seats/${id}`, {
+			method: "DELETE",
+			headers: cookie,
+		});
+
+		expect(removed.status).toBe(200);
+		expect(await removed.json()).toEqual({ ok: true });
+
+		const after = await (
+			await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/seats`, { headers: cookie })
+		).json<{ reservations: ReservationRow[] }>();
+
+		expect(after.reservations).toHaveLength(0);
+
+		const publicSeats = await (
+			await SELF.fetch(`${WORKER_ORIGIN}/api/events/gittyup26/seats`)
+		).json<SeatsBody>();
+
+		expect(publicSeats.seats).not.toContain("R22-S1");
+
+		const again = await SELF.fetch(`${WORKER_ORIGIN}/api/admin/events/gittyup26/seats/${id}`, {
+			method: "DELETE",
+			headers: cookie,
+		});
+
+		expect(again.status).toBe(404);
+
+		const rebooked = await reserve([
+			{ seat_id: "R22-S1", code: "AB3D-7K2M", college_registration_number: "22BCE1234" },
+		]);
+
+		expect(rebooked.status).toBe(200);
 
 		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
 	});

@@ -188,6 +188,10 @@ const AdminSeating = () => {
     useState('');
   const [revoking, setRevoking] = useState('');
 
+  const [confirmRemove, setConfirmRemove] =
+    useState(0);
+  const [removing, setRemoving] = useState(0);
+
   const [search, setSearch] = useState('');
   const [downloading, setDownloading] =
     useState(false);
@@ -456,6 +460,62 @@ const AdminSeating = () => {
     } finally {
       setRevoking('');
       setConfirmRevoke('');
+    }
+  };
+
+  const remove = async (
+    reservation: SeatReservation,
+  ) => {
+    setRemoving(reservation.id);
+    setActionError('');
+    setActionNote('');
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/admin/events/${EVENT_SLUG}/seats/${reservation.id}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        },
+      );
+
+      if (response.status === 401) {
+        setUnauthorized(true);
+        return;
+      }
+
+      if (response.status === 404) {
+        setActionNote(
+          `${reservation.seat_id} was already removed. The list below has been refreshed.`,
+        );
+
+        await load();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          await messageFrom(
+            response,
+            `Could not remove ${reservation.seat_id} (${response.status})`,
+          ),
+        );
+      }
+
+      setActionNote(
+        `Removed ${reservation.seat_id}. The seat is free again and code ${reservation.code} can be used once more.`,
+      );
+
+      await load();
+    } catch (error: unknown) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : `Could not remove ${reservation.seat_id}`,
+      );
+    } finally {
+      setRemoving(0);
+      setConfirmRemove(0);
     }
   };
 
@@ -1251,13 +1311,68 @@ const AdminSeating = () => {
                             </dd>
                           </div>
                         </dl>
+
+                        <div className="mt-3">
+                          {confirmRemove ===
+                          reservation.id ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs text-gray-400">
+                                Free this seat
+                                and its code?
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  remove(
+                                    reservation,
+                                  )
+                                }
+                                disabled={
+                                  removing ===
+                                  reservation.id
+                                }
+                                className="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                              >
+                                {removing ===
+                                reservation.id
+                                  ? 'Removing…'
+                                  : 'Yes, remove'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setConfirmRemove(
+                                    0,
+                                  )
+                                }
+                                className="rounded-lg border border-dark-700 px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/5"
+                              >
+                                Keep
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setConfirmRemove(
+                                  reservation.id,
+                                )
+                              }
+                              className="rounded-lg border border-dark-700 px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/5"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
                       </li>
                     ),
                   )}
                 </ul>
 
                 <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full min-w-[980px]">
+                  <table className="w-full min-w-[1080px]">
                     <thead>
                       <tr className="border-b border-dark-700 text-left">
                         <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-500">
@@ -1286,6 +1401,10 @@ const AdminSeating = () => {
 
                         <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-500">
                           Reserved
+                        </th>
+
+                        <th className="px-5 py-3 text-right text-xs uppercase tracking-wider text-gray-500">
+                          Remove
                         </th>
                       </tr>
                     </thead>
@@ -1340,6 +1459,57 @@ const AdminSeating = () => {
                             <td className="px-5 py-4 text-sm text-gray-400">
                               {when(
                                 reservation.created_at,
+                              )}
+                            </td>
+
+                            <td className="px-5 py-4 text-right">
+                              {confirmRemove ===
+                              reservation.id ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      remove(
+                                        reservation,
+                                      )
+                                    }
+                                    disabled={
+                                      removing ===
+                                      reservation.id
+                                    }
+                                    className="whitespace-nowrap rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                                  >
+                                    {removing ===
+                                    reservation.id
+                                      ? 'Removing…'
+                                      : 'Yes, remove'}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setConfirmRemove(
+                                        0,
+                                      )
+                                    }
+                                    className="rounded-lg border border-dark-700 px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/5"
+                                  >
+                                    Keep
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setConfirmRemove(
+                                      reservation.id,
+                                    )
+                                  }
+                                  aria-label={`Remove the reservation for ${reservation.seat_id}`}
+                                  className="rounded-lg border border-dark-700 px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/5"
+                                >
+                                  Remove
+                                </button>
                               )}
                             </td>
                           </tr>

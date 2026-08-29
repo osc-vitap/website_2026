@@ -663,7 +663,7 @@ function isTeamSeat(seatId: string): boolean {
 	return match ? TEAM_ROWS.includes(Number(match[1])) : false;
 }
 
-const MAX_SEATS_PER_RESERVATION = 20;
+const MAX_SEATS_PER_RESERVATION = 25;
 
 const MAX_SEAT_CODES_PER_BATCH = 200;
 

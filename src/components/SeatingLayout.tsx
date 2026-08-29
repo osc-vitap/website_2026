@@ -884,8 +884,7 @@ export default function SeatingLayout() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  /* Twenty seats exist in total, so what is left to pick shrinks as
-     others are taken */
+  /* What is left to pick shrinks as other people take seats */
   const remaining = Math.max(
     0,
     MAX_SEATS - taken.size,

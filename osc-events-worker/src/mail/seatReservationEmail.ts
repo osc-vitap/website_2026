@@ -1,0 +1,258 @@
+export interface SeatReservationMailData {
+	name: string;
+	seatId: string;
+	seatLabel: string;
+	eventTitle: string;
+	eventDate: string;
+	eventTime: string;
+	venue: string;
+	registrationNumber: string;
+}
+
+const SUBJECT = 'Your seat at gitty up is reserved';
+const EVENT_URL = 'https://www.oscvitap.com/gittyup26';
+
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
+function firstName(value: string): string {
+	const first = value.trim().split(/\s+/)[0];
+	return first || value.trim();
+}
+
+function renderHtml(data: SeatReservationMailData): string {
+	const name = escapeHtml(data.name);
+	const greeting = escapeHtml(firstName(data.name));
+	const seatLabel = escapeHtml(data.seatLabel);
+	const eventTitle = escapeHtml(data.eventTitle);
+	const eventDate = escapeHtml(data.eventDate);
+	const eventTime = escapeHtml(data.eventTime);
+	const venue = escapeHtml(data.venue);
+	const registrationNumber = escapeHtml(data.registrationNumber);
+
+	return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="x-apple-disable-message-reformatting" />
+<meta name="color-scheme" content="only dark" />
+<meta name="supported-color-schemes" content="only dark" />
+<title>${SUBJECT}</title>
+
+<style type="text/css">
+  @font-face { font-family:'Objectivity'; font-style:normal; font-weight:300;
+    src:url('https://www.oscvitap.com/fonts/objectivity/Objectivity-Light.woff2') format('woff2'); }
+  @font-face { font-family:'Objectivity'; font-style:normal; font-weight:400;
+    src:url('https://www.oscvitap.com/fonts/objectivity/Objectivity-Regular.woff2') format('woff2'); }
+  @font-face { font-family:'Objectivity'; font-style:normal; font-weight:500;
+    src:url('https://www.oscvitap.com/fonts/objectivity/Objectivity-Medium.woff2') format('woff2'); }
+  @font-face { font-family:'Objectivity'; font-style:normal; font-weight:700;
+    src:url('https://www.oscvitap.com/fonts/objectivity/Objectivity-Bold.woff2') format('woff2'); }
+
+  :root { color-scheme: only dark; supported-color-schemes: only dark; }
+
+  u + .body .gmail-blend-screen { background: #000000; mix-blend-mode: screen; }
+  u + .body .gmail-blend-difference { background: #000000; mix-blend-mode: difference; }
+
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; display: block; }
+  body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #0b0b0d !important; }
+
+  [data-ogsc] .bg { background-color: #0b0b0d !important; }
+  [data-ogsc] .t-title, [data-ogsc] .t-h2 { color: #ffffff !important; }
+  [data-ogsc] .t-body { color: #d6d6db !important; }
+  [data-ogsc] .t-muted { color: #86868b !important; }
+
+  a { color: #b79dff; }
+
+  @media only screen and (max-width: 620px) {
+    .wrap { width: 100% !important; }
+    .pad { padding-left: 24px !important; padding-right: 24px !important; }
+    .t-title { font-size: 40px !important; line-height: 44px !important; }
+    .t-deck { font-size: 19px !important; line-height: 28px !important; }
+    .t-seat { font-size: 32px !important; line-height: 38px !important; }
+    .t-h2 { font-size: 25px !important; line-height: 32px !important; }
+    .t-body { font-size: 17px !important; line-height: 28px !important; }
+    .fluid { width: 100% !important; height: auto !important; }
+  }
+</style>
+</head>
+
+<body class="body bg" style="margin:0; padding:0; background-color:#0b0b0d;">
+
+<div style="display:none; font-size:1px; color:#0b0b0d; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">
+  ${seatLabel} &middot; ${eventDate} &middot; ${venue}
+  &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+</div>
+
+<table role="presentation" class="bg" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#0b0b0d" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); margin:0; padding:0;">
+<tr>
+<td align="center" bgcolor="#0b0b0d" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:0;">
+
+  <!--[if mso]><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600"><tr><td bgcolor="#0b0b0d"><![endif]-->
+  <table role="presentation" class="wrap" border="0" cellpadding="0" cellspacing="0" width="600" style="width:600px; max-width:600px; background-color:#0b0b0d;">
+
+    <tr><td class="pad" align="left" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:56px 48px 0 48px;">
+      <img src="https://www.oscvitap.com/email/osc_email_v3.webp"
+           width="281" height="80" alt="Open Source Community, Campus Club at VIT-AP"
+           style="display:block; width:281px; height:auto; border:0; border-radius:10px;" />
+    </td></tr>
+
+    <tr><td class="pad" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:36px 48px 0 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <div style="height:1px; line-height:1px; font-size:0; background-color:#1c1c1e;">&nbsp;</div></div></div>
+    </td></tr>
+
+    <tr><td class="pad" align="left" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:44px 48px 0 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <p class="t-muted" style="margin:0; font-family:'SF Mono',SFMono-Regular,ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:16px; letter-spacing:2.6px; text-transform:uppercase; color:#86868b;">
+        Seat reservation
+      </p>
+      <h1 class="t-title" style="margin:18px 0 0 0; font-family:'Objectivity','SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:52px; line-height:56px; letter-spacing:-1.6px; font-weight:700; color:#ffffff; mso-line-height-rule:exactly;">
+        You&rsquo;re all set.
+      </h1>
+      <p class="t-deck" style="margin:20px 0 0 0; font-family:'Objectivity','SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:21px; line-height:31px; letter-spacing:-0.4px; font-weight:300; color:#ffffff; mso-line-height-rule:exactly;">
+        ${greeting}, your seat at ${eventTitle} is reserved. Everything you need is below.
+      </p></div></div>
+    </td></tr>
+
+    <tr><td class="pad" align="left" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:38px 48px 0 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"
+             style="border:1px solid #2e2e33; border-radius:14px; background-color:#0b0b0e;">
+        <tr>
+          <td align="left" style="padding:28px 30px;">
+            <p class="t-seat" style="margin:0; font-family:'Objectivity','SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:38px; line-height:44px; letter-spacing:-1.2px; font-weight:700; color:#ffffff; mso-line-height-rule:exactly;">
+              ${seatLabel}
+            </p>
+            <p class="t-body" style="margin:10px 0 0 0; font-family:'SF Mono',SFMono-Regular,ui-monospace,Menlo,Consolas,monospace; font-size:14px; line-height:22px; color:#d6d6db; mso-line-height-rule:exactly;">
+              ${name} &nbsp;&middot;&nbsp; ${registrationNumber}
+            </p>
+          </td>
+        </tr>
+      </table></div></div>
+    </td></tr>
+
+    <tr><td class="pad" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:44px 48px 0 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <div style="height:1px; line-height:1px; font-size:0; background-color:#1c1c1e;">&nbsp;</div></div></div>
+    </td></tr>
+
+    <tr><td class="pad" align="left" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:32px 48px 0 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td align="left" style="font-family:'Objectivity','SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:30px; line-height:36px; letter-spacing:-0.9px; font-weight:700; color:#ffffff; mso-line-height-rule:exactly;">
+            ${eventDate}
+          </td>
+        </tr>
+        <tr>
+          <td align="left" class="t-body" style="padding-top:10px; font-family:'Objectivity','SF Pro Text',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:17px; line-height:27px; color:#d6d6db; mso-line-height-rule:exactly;">
+            ${eventTime}<br />${venue}
+          </td>
+        </tr>
+      </table></div></div>
+    </td></tr>
+
+    <tr><td class="pad" align="left" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:28px 48px 0 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <p class="t-body" style="margin:0; font-family:'Objectivity','SF Pro Text',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:17px; line-height:29px; letter-spacing:-0.1px; color:#d6d6db; mso-line-height-rule:exactly;">
+        Bring your student ID. Check in with a volunteer before taking your seat.
+      </p></div></div>
+    </td></tr>
+
+    <tr><td class="pad" align="left" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:32px 48px 0 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td align="center" bgcolor="#ffffff" style="border-radius:980px; background-color:#ffffff;">
+            <a href="${EVENT_URL}"
+               style="display:inline-block; padding:15px 34px; font-family:'Objectivity','SF Pro Text',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:17px; line-height:20px; font-weight:700; letter-spacing:-0.2px; color:#0b0b0d; text-decoration:none; border-radius:980px;">
+              Event details
+            </a>
+          </td>
+        </tr>
+      </table>
+      <p class="t-muted" style="margin:16px 0 0 0; font-family:'SF Mono',SFMono-Regular,ui-monospace,Menlo,Consolas,monospace; font-size:14px; line-height:20px; color:#86868b;">
+        <a href="${EVENT_URL}" style="color:#b79dff; text-decoration:none;">oscvitap.com/gittyup26</a>
+      </p></div></div>
+    </td></tr>
+
+    <tr><td class="pad" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:48px 48px 0 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <div style="height:1px; line-height:1px; font-size:0; background-color:#1c1c1e;">&nbsp;</div></div></div>
+    </td></tr>
+
+    <tr><td class="pad" align="left" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:24px 48px 0 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <p class="t-muted" style="margin:0; font-family:'Objectivity','SF Pro Text',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:13px; line-height:21px; color:#86868b;">
+        Faculty Coordinator &middot; <span style="color:#a1a1a6;">Dr. Asish Kumar Dalai</span>
+      </p>
+      <p class="t-muted" style="margin:14px 0 0 0; font-family:'Objectivity','SF Pro Text',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:13px; line-height:21px; color:#86868b;">
+        For more details<br />
+        <span style="color:#a1a1a6;">Faariz, President</span> &middot;
+        <a href="tel:+917010616263" style="color:#a1a1a6; text-decoration:none;">+91 70106 16263</a><br />
+        <span style="color:#a1a1a6;">Izhaan, Vice President</span> &middot;
+        <a href="tel:+919905158193" style="color:#a1a1a6; text-decoration:none;">+91 99051 58193</a>
+      </p></div></div>
+    </td></tr>
+
+    <tr><td class="pad" align="left" style="background-color:#0b0b0d; background-image:linear-gradient(#0b0b0d,#0b0b0d); padding:26px 48px 64px 48px;"><div class="gmail-blend-screen"><div class="gmail-blend-difference">
+      <p class="t-muted" style="margin:0; font-family:'Objectivity','SF Pro Text',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size:13px; line-height:21px; color:#86868b;">
+        Open Source Community &middot; Campus Club at VIT&#8209;AP
+      </p></div></div>
+    </td></tr>
+
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>`;
+}
+
+function renderText(data: SeatReservationMailData): string {
+	return `YOU'RE ALL SET
+
+
+${firstName(data.name)}, your seat at ${data.eventTitle} is reserved.
+Everything you need is below.
+
+
+${data.seatLabel.toUpperCase()}
+${data.name} · ${data.registrationNumber}
+
+
+....................................................................
+
+${data.eventDate}
+${data.eventTime}
+${data.venue}
+
+Bring your student ID. Check in with a volunteer before taking your
+seat.
+
+Event details: ${EVENT_URL}
+
+....................................................................
+
+Faculty Coordinator · Dr. Asish Kumar Dalai
+
+For more details
+Faariz, President · +91 70106 16263
+Izhaan, Vice President · +91 99051 58193
+
+Open Source Community · Campus Club at VIT-AP`;
+}
+
+export function renderSeatReservationEmail(
+	data: SeatReservationMailData,
+): { subject: string; html: string; text: string } {
+	return {
+		subject: SUBJECT,
+		html: renderHtml(data),
+		text: renderText(data),
+	};
+}

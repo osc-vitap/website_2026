@@ -6027,7 +6027,8 @@ export default {
 	              venue,
 	              event_date,
 	              event_end_at,
-	              is_open
+	              is_open,
+	              seats_open
 	            FROM events
 	            WHERE slug = ?
 	          `,
@@ -6041,6 +6042,7 @@ export default {
 						event_date: string | null;
 						event_end_at: string | null;
 						is_open: number;
+						seats_open: number | null;
 					}>();
 
 				if (!event) {
@@ -6056,10 +6058,20 @@ export default {
 				}
 
 				/*
-				 * Closing the event is the kill switch for seating too,
-				 * and it is the only stop when there is no end time set.
+				 * Seating follows registration unless it has been told
+				 * otherwise.
+				 *
+				 * Closing an event used to close seat booking with it,
+				 * because is_open was the only flag there was. That is
+				 * right most of the time and wrong at the end:
+				 * registration shuts while codes are still out, and the
+				 * people holding them are locked out of seats that
+				 * plainly exist. seats_open is NULL for every event that
+				 * does not care, which is the old behaviour exactly.
 				 */
-				if (!event.is_open) {
+				const seatingOpen = event.seats_open === null ? Boolean(event.is_open) : event.seats_open === 1;
+
+				if (!seatingOpen) {
 					return json(
 						{
 							error: 'Seat reservations are closed',

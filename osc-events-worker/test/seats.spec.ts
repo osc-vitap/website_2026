@@ -511,4 +511,63 @@ describe("seat reservations", () => {
 
 		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
 	});
+
+	/*
+	 * Seating follows registration unless it is told otherwise.
+	 *
+	 * Closing an event used to close seat booking with it, because
+	 * is_open was the only flag there was. That is right most of the
+	 * time and wrong at the end of a sign-up window: registration shuts
+	 * while codes are still out, and whoever holds one is locked out of
+	 * a seat that plainly exists.
+	 */
+	describe("its own switch", () => {
+		const shut = () =>
+			env.DB.prepare(`UPDATE events SET is_open = 0 WHERE slug = 'gittyup26'`).run();
+
+		const seating = (value: number | null) =>
+			env.DB.prepare(`UPDATE events SET seats_open = ? WHERE slug = 'gittyup26'`)
+				.bind(value)
+				.run();
+
+		const book = () =>
+			reserve([
+				{
+					seat_id: "R5-S3",
+					code: "AB3D-7K2M",
+					college_registration_number: "22BCE1234",
+				},
+			]);
+
+		/* The default, and every event that has never thought about it. */
+		it("closes with the event when it has no opinion", async () => {
+			await shut();
+			await seating(null);
+
+			const response = await book();
+
+			expect(response.status).toBe(409);
+			expect((await response.json<ReserveBody>()).error).toBe("Seat reservations are closed");
+		});
+
+		/* The case this exists for: registration shut, codes still out. */
+		it("stays open when told to, with registration shut", async () => {
+			await shut();
+			await seating(1);
+
+			const response = await book();
+
+			expect(response.status).toBe(200);
+			expect((await response.json<ReserveBody>()).ok).toBe(true);
+		});
+
+		/* And the other way: the room fills before sign-ups do. */
+		it("shuts on its own while registration is still running", async () => {
+			await seating(0);
+
+			const response = await book();
+
+			expect(response.status).toBe(409);
+		});
+	});
 });

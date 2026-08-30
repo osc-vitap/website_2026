@@ -2765,3 +2765,94 @@ describe("admin outside the organisation", () => {
 		});
 	});
 });
+
+
+
+
+describe("news API", () => {
+	afterEach(async () => {
+		await env.DB.prepare(`DELETE FROM news`).run();
+		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+	});
+
+	it("returns empty news publicly", async () => {
+		const request = new IncomingRequest("http://events.oscvitap.com/api/news", { method: "GET" });
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, env, ctx);
+		await waitOnExecutionContext(ctx);
+
+		expect(response.status).toBe(200);
+		const data = await response.json() as { news: any[] };
+		expect(data.news).toEqual([]);
+	});
+
+	it("allows admins to create, read, update, and delete news", async () => {
+		const SESSION_ID = "test-news-session";
+		await env.DB.prepare(`
+			INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+			VALUES (?, '123', 'testadmin', datetime('now', '+1 hour'))
+		`).bind(SESSION_ID).run();
+
+		// Create
+		const createReq = new IncomingRequest("http://events.oscvitap.com/api/admin/news", {
+			method: "POST",
+			headers: { Cookie: `osc_admin_session=${SESSION_ID}` },
+			body: JSON.stringify({
+				title: "Test News",
+				category: "[Test]",
+				date: "Today",
+				excerpt: "This is a test news.",
+				link: "/test"
+			})
+		});
+		let ctx = createExecutionContext();
+		let response = await worker.fetch(createReq, env, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(201);
+
+		// Get Public
+		const getReq = new IncomingRequest("http://events.oscvitap.com/api/news", { method: "GET" });
+		ctx = createExecutionContext();
+		response = await worker.fetch(getReq, env, ctx);
+		await waitOnExecutionContext(ctx);
+		let data = await response.json() as { news: any[] };
+		expect(data.news.length).toBe(1);
+		expect(data.news[0].title).toBe("Test News");
+		const newsId = data.news[0].id;
+
+		// Edit
+		const editReq = new IncomingRequest(`http://events.oscvitap.com/api/admin/news/${newsId}`, {
+			method: "PATCH",
+			headers: { Cookie: `osc_admin_session=${SESSION_ID}` },
+			body: JSON.stringify({
+				title: "Updated News",
+				category: "[Update]",
+				date: "Tomorrow",
+				excerpt: "Updated excerpt",
+				link: null
+			})
+		});
+		ctx = createExecutionContext();
+		response = await worker.fetch(editReq, env, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(200);
+
+		// Delete
+		const deleteReq = new IncomingRequest(`http://events.oscvitap.com/api/admin/news/${newsId}`, {
+			method: "DELETE",
+			headers: { Cookie: `osc_admin_session=${SESSION_ID}` }
+		});
+		ctx = createExecutionContext();
+		response = await worker.fetch(deleteReq, env, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(200);
+
+		// Verify deletion
+		const getReq2 = new IncomingRequest("http://events.oscvitap.com/api/news", { method: "GET" });
+		ctx = createExecutionContext();
+		response = await worker.fetch(getReq2, env, ctx);
+		await waitOnExecutionContext(ctx);
+		data = await response.json() as { news: any[] };
+		expect(data.news.length).toBe(0);
+	});
+});

@@ -1,6 +1,6 @@
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Clock, HelpCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { ArrowRight, HelpCircle, Loader2, Lock, ShieldCheck } from 'lucide-react';
 import PosterGround from './PosterGround';
 import PosterWordmark from './PosterWordmark';
 import { gridFontSize } from './posterGrid';
@@ -44,7 +44,7 @@ type RegistrationState =
  * 28px. The width moved with it — 204px to 309px across the three
  * states at 640px.
  *
- * Which is why both settled labels are short enough to sit on one line
+ * Which is why every settled label is short enough to sit on one line
  * at 320px, the narrowest phone this page is reached from. Below `sm`
  * the box is the panel's full width, so only the height is at stake
  * there.
@@ -169,7 +169,7 @@ const PosterPage = ({
    *
    * Three states rather than a boolean. It was a boolean that started
    * false, so for the whole of the fetch — and permanently if the fetch
-   * never came back — the page said registration was opening soon in
+   * never came back — the page said registration was closed in
    * the same confident type it uses when that is actually true. On
    * campus wifi that is long enough to read, believe and walk away
    * from. Not knowing yet is a different thing from knowing it is shut,
@@ -768,8 +768,8 @@ const PosterPage = ({
                       color: variant.accent,
                     }}
                   >
-                    <Clock size={18} className="shrink-0" />
-                    Opening soon
+                    <Lock size={18} className="shrink-0" />
+                    Registration closed
                   </div>
                 )}
 
@@ -787,7 +787,7 @@ const PosterPage = ({
                   {registration === 'open' &&
                     'Registration is open.'}
                   {registration === 'closed' &&
-                    'Registration is not open yet.'}
+                    'Registration is closed.'}
                 </p>
               </div>
 

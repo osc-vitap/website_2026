@@ -2782,7 +2782,7 @@ describe("news API", () => {
 		await waitOnExecutionContext(ctx);
 
 		expect(response.status).toBe(200);
-		const data = await response.json() as { news: any[] };
+		const data = await response.json() as { news: Record<string, unknown>[] };
 		expect(data.news).toEqual([]);
 	});
 
@@ -2815,7 +2815,7 @@ describe("news API", () => {
 		ctx = createExecutionContext();
 		response = await worker.fetch(getReq, env, ctx);
 		await waitOnExecutionContext(ctx);
-		let data = await response.json() as { news: any[] };
+		let data = await response.json() as { news: { id: number; title: string; category: string; date: string; excerpt: string; link: string | null }[] };
 		expect(data.news.length).toBe(1);
 		expect(data.news[0].title).toBe("Test News");
 		const newsId = data.news[0].id;
@@ -2852,7 +2852,7 @@ describe("news API", () => {
 		ctx = createExecutionContext();
 		response = await worker.fetch(getReq2, env, ctx);
 		await waitOnExecutionContext(ctx);
-		data = await response.json() as { news: any[] };
+		data = await response.json() as { news: { id: number; title: string; category: string; date: string; excerpt: string; link: string | null }[] };
 		expect(data.news.length).toBe(0);
 	});
 });

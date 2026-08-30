@@ -4829,7 +4829,7 @@ export default {
 				if (!auth.authorized) return auth.response;
 
 				try {
-					const body: any = await request.json();
+					const body = (await request.json()) as { title?: string, category?: string, date?: string, excerpt?: string, link?: string };
 					const { title, category, date, excerpt, link } = body;
 
 					if (!title || !category || !date || !excerpt) {
@@ -4856,7 +4856,7 @@ export default {
 
 				if (request.method === 'PATCH') {
 					try {
-						const body: any = await request.json();
+						const body = (await request.json()) as { title?: string, category?: string, date?: string, excerpt?: string, link?: string };
 						const { title, category, date, excerpt, link } = body;
 						
 						if (!title || !category || !date || !excerpt) {

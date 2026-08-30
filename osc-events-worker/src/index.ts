@@ -4984,6 +4984,83 @@ export default {
 				return json(await gateState(env, event.id), 200, request, env);
 			}
 
+			
+			if (request.method === 'GET' && (url.pathname === '/api/admin/news' || url.pathname === '/api/admin/news/')) {
+				const auth = await requireAdmin(request, env);
+				if (!auth.authorized) return auth.response;
+
+				try {
+					const { results } = await env.DB.prepare(
+						`SELECT * FROM news ORDER BY created_at DESC`
+					).all();
+					return json({ news: results }, 200, request, env);
+				} catch (err) {
+					console.error(err);
+					return json({ error: 'Failed to fetch news' }, 500, request, env);
+				}
+			}
+
+			if (request.method === 'POST' && (url.pathname === '/api/admin/news' || url.pathname === '/api/admin/news/')) {
+				const auth = await requireAdmin(request, env);
+				if (!auth.authorized) return auth.response;
+
+				try {
+					const body = (await request.json()) as { title?: string, category?: string, date?: string, excerpt?: string, link?: string };
+					const { title, category, date, excerpt, link } = body;
+
+					if (!title || !category || !date || !excerpt) {
+						return json({ error: 'Missing required fields' }, 400, request, env);
+					}
+
+					await env.DB.prepare(
+						`INSERT INTO news (title, category, date, excerpt, link) VALUES (?, ?, ?, ?, ?)`
+					).bind(title, category, date, excerpt, link || null).run();
+
+					return json({ success: true }, 201, request, env);
+				} catch (err) {
+					console.error(err);
+					return json({ error: 'Failed to create news' }, 500, request, env);
+				}
+			}
+
+			const adminNewsMatch = url.pathname.match(/^\/api\/admin\/news\/(\d+)$/);
+			if (adminNewsMatch) {
+				const auth = await requireAdmin(request, env);
+				if (!auth.authorized) return auth.response;
+
+				const newsId = parseInt(adminNewsMatch[1], 10);
+
+				if (request.method === 'PATCH') {
+					try {
+						const body = (await request.json()) as { title?: string, category?: string, date?: string, excerpt?: string, link?: string };
+						const { title, category, date, excerpt, link } = body;
+						
+						if (!title || !category || !date || !excerpt) {
+							return json({ error: 'Missing required fields' }, 400, request, env);
+						}
+
+						await env.DB.prepare(
+							`UPDATE news SET title = ?, category = ?, date = ?, excerpt = ?, link = ? WHERE id = ?`
+						).bind(title, category, date, excerpt, link || null, newsId).run();
+
+						return json({ success: true }, 200, request, env);
+					} catch (err) {
+						console.error(err);
+						return json({ error: 'Failed to update news' }, 500, request, env);
+					}
+				}
+
+				if (request.method === 'DELETE') {
+					try {
+						await env.DB.prepare(`DELETE FROM news WHERE id = ?`).bind(newsId).run();
+						return json({ success: true }, 200, request, env);
+					} catch (err) {
+						console.error(err);
+						return json({ error: 'Failed to delete news' }, 500, request, env);
+					}
+				}
+			}
+
 			if (request.method === 'GET' && (url.pathname === '/api/admin/events' || url.pathname === '/api/admin/events/')) {
 				const auth = await requireAdmin(request, env);
 
@@ -5307,6 +5384,19 @@ export default {
 			 * PUBLIC EVENTS API
 			 * ============================================================
 			 */
+
+			
+			if (request.method === 'GET' && (url.pathname === '/api/news' || url.pathname === '/api/news/')) {
+				try {
+					const { results } = await env.DB.prepare(
+						`SELECT * FROM news ORDER BY created_at DESC`
+					).all();
+					return json({ news: results }, 200, request, env);
+				} catch (err) {
+					console.error(err);
+					return json({ error: 'Failed to fetch news' }, 500, request, env);
+				}
+			}
 
 			if (request.method === 'GET' && (url.pathname === '/api/events' || url.pathname === '/api/events/')) {
 				/*

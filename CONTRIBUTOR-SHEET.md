@@ -180,6 +180,7 @@ is blocked by the browser.
 | POST | `/api/events/:slug/register` | Signs a person or team up |
 | GET | `/api/events/:slug/seats` | Which seats are already taken |
 | POST | `/api/events/:slug/seats/reserve` | Books seats using a seat code |
+| GET | `/api/news` | All news and announcements, sorted by newest |
 
 ### Needs you to be signed in
 
@@ -207,6 +208,10 @@ All of these return 401 if you are not signed in as an admin.
 | GET | `/api/admin/events/:slug/entry/log` | Every scan including the refusals |
 | POST | `/api/admin/entry-test` | Builds a throwaway door for trying the scanner |
 | DELETE | `/api/admin/entry-test` | Removes it again |
+| GET | `/api/admin/news` | All news |
+| POST | `/api/admin/news` | Creates a news item |
+| PATCH | `/api/admin/news/:id` | Edits a news item |
+| DELETE | `/api/admin/news/:id` | Deletes a news item |
 
 ### The door scanner
 

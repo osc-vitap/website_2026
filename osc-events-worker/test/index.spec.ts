@@ -465,6 +465,50 @@ describe("registration cap", () => {
 		expect(await isOpen("team-capped")).toMatchObject({ is_open: 0 });
 	});
 
+	/*
+	 * What the "N seats left" notice on the form reads.
+	 */
+	it("serves the seats left on the public event endpoints", async () => {
+		await seedEvent({ slug: "seats-event", title: "Seats Event", registration_cap: 5 });
+		await fill("seats-event", 2);
+
+		const one = await (await fetchWorker("/api/events/seats-event")).json<{
+			event: { registration_cap: number | null; seats_left: number | null };
+		}>();
+
+		expect(one.event).toMatchObject({ registration_cap: 5, seats_left: 3 });
+
+		const listed = await (await fetchWorker("/api/events")).json<{
+			events: { slug: string; seats_left: number | null }[];
+		}>();
+
+		expect(listed.events.find((event) => event.slug === "seats-event")).toMatchObject({
+			seats_left: 3,
+		});
+	});
+
+	it("reports no seats rather than a negative count when the cap is overshot", async () => {
+		await seedEvent({ slug: "overshot-event", title: "Overshot Event", registration_cap: 2 });
+		await fill("overshot-event", 4);
+
+		const body = await (await fetchWorker("/api/events/overshot-event")).json<{
+			event: { seats_left: number | null };
+		}>();
+
+		expect(body.event.seats_left).toBe(0);
+	});
+
+	it("leaves seats_left null on an uncapped event", async () => {
+		await seedEvent({ slug: "no-cap-event", title: "No Cap Event" });
+		await fill("no-cap-event", 2);
+
+		const body = await (await fetchWorker("/api/events/no-cap-event")).json<{
+			event: { registration_cap: number | null; seats_left: number | null };
+		}>();
+
+		expect(body.event).toMatchObject({ registration_cap: null, seats_left: null });
+	});
+
 	it("refuses the next registration once the cap has closed the form", async () => {
 		await seedEvent({ slug: "full-event", title: "Full Event", registration_cap: 1 });
 		await fill("full-event", 1);

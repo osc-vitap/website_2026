@@ -1969,6 +1969,36 @@ async function processCompletedEvents(env: Env): Promise<void> {
 }
 
 /*
+ * How many registrations an event will still take, for the public
+ * event endpoints — the number the form prints as "N seats left".
+ *
+ * NULL for an uncapped event, which is how the site tells "no cap" from
+ * "no seats": the notice is only rendered when this is a number.
+ *
+ * Clamped at zero with max(). The cap is enforced hourly, so between
+ * the run that should have closed the form and the one that does, the
+ * count can pass the cap — and "-3 seats left" on a poster is worse
+ * than the overshoot it is reporting.
+ *
+ * This is the only place the count leaks out publicly, and only as a
+ * remainder against a cap the club published anyway. The rows
+ * themselves stay behind the admin gate.
+ */
+const SEATS_LEFT_SQL = `
+  CASE
+    WHEN registration_cap IS NULL THEN NULL
+    ELSE max(
+      registration_cap - (
+        SELECT COUNT(*)
+        FROM registrations r
+        WHERE r.event_id = events.id
+      ),
+      0
+    )
+  END AS seats_left
+`;
+
+/*
  * Close the registration form on any event that has reached its
  * registration_cap — GittyUp '26 at 1050, and nothing else today.
  *
@@ -5302,6 +5332,8 @@ export default {
 	              min_team_size,
 	              max_team_size,
 	              registration_deadline,
+	              registration_cap,
+	              ${SEATS_LEFT_SQL},
 	              archive_status
 	            FROM events
 	            ${includeArchived ? '' : "WHERE archive_status != 'archived'"}
@@ -5345,6 +5377,8 @@ export default {
 	              min_team_size,
 	              max_team_size,
 	              registration_deadline,
+	              registration_cap,
+	              ${SEATS_LEFT_SQL},
 	              archive_status
 	            FROM events
 	            WHERE slug = ?

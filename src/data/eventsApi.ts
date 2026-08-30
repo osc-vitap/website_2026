@@ -24,8 +24,48 @@ export interface ApiEvent {
   registration_type: string;
   min_team_size: number;
   max_team_size: number;
+  /** The ceiling the hourly job closes the form at. null = uncapped. */
+  registration_cap: number | null;
+  /** cap − registrations taken, clamped at 0. null on an uncapped event. */
+  seats_left: number | null;
   archive_status: string;
 }
+
+/*
+ * The line the registration forms print above the fields —
+ * "137 seats left" — for an event that has a registration cap.
+ *
+ * null for an uncapped event and for an API that has not answered yet,
+ * so both fall through to no notice at all rather than to a count of
+ * zero. Saying "no seats left" because a fetch failed would turn people
+ * away from a form that is open.
+ *
+ * Takes the number rather than the event because the two forms carry
+ * different event shapes, and the wording is the thing worth keeping in
+ * one place.
+ */
+export const seatsLeftLabel = (
+  seatsLeft: number | null | undefined,
+): string | null => {
+  if (typeof seatsLeft !== 'number') {
+    return null;
+  }
+
+  if (seatsLeft <= 0) {
+    /*
+     * The cap is enforced hourly, so the form can still be open with
+     * nothing left to give. Better said plainly than as "0 seats left"
+     * next to a live Confirm button.
+     */
+    return 'The last seats have gone';
+  }
+
+  return `${seatsLeft} seat${seatsLeft === 1 ? '' : 's'} left`;
+};
+
+/** The headline both forms carry above that count. */
+export const CLOSING_SOON_HEADLINE =
+  'Registrations closing soon';
 
 /*
  * The admin form saves cleared fields as empty strings rather than

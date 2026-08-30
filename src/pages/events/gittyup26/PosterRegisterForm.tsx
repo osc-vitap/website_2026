@@ -1,6 +1,11 @@
 import { FormEvent, useState } from 'react';
-import { ArrowRight, Check } from 'lucide-react';
-import { ApiEvent, API_BASE_URL } from '../../../data/eventsApi';
+import { ArrowRight, Check, Clock } from 'lucide-react';
+import {
+  ApiEvent,
+  API_BASE_URL,
+  CLOSING_SOON_HEADLINE,
+  seatsLeftLabel,
+} from '../../../data/eventsApi';
 import EventStartsIn from '../../../components/EventStartsIn';
 import RedirectToast from '../../../components/RedirectToast';
 import DateChangeToast from '../../../components/DateChangeToast';
@@ -227,6 +232,11 @@ const PosterRegisterForm = ({
     color: variant.text,
   };
 
+  /* null unless the event carries a cap, which today is GITTYUP at 1050. */
+  const seatsNotice = seatsLeftLabel(
+    event?.seats_left,
+  );
+
   if (done) {
     return (
       <div
@@ -343,6 +353,49 @@ const PosterRegisterForm = ({
           Back
         </button>
       </div>
+
+      {/*
+        * How much room is left, above the fields rather than under the
+        * button: it is the reason to fill the form in now, and someone
+        * who reads it after typing five fields has learnt it too late.
+        *
+        * Only rendered for an event that has a cap, and only from a
+        * number the API actually sent — see seatsLeftLabel. It is a
+        * snapshot taken when the page loaded, not a live counter; the
+        * server is still the one that decides whether a registration
+        * lands.
+        */}
+      {seatsNotice && (
+        <div
+          className="mt-4 flex items-center gap-3 rounded-2xl border px-4 py-3"
+          style={{
+            borderColor: `color-mix(in srgb, ${variant.accent} 45%, transparent)`,
+            backgroundColor: `color-mix(in srgb, ${variant.accent} 10%, transparent)`,
+          }}
+        >
+          <Clock
+            size={16}
+            className="shrink-0"
+            style={{ color: variant.accent }}
+          />
+
+          <span className="flex flex-col">
+            <span
+              className="font-postermono text-[10px] uppercase tracking-[0.18em]"
+              style={{ color: variant.text }}
+            >
+              {CLOSING_SOON_HEADLINE}
+            </span>
+
+            <span
+              className="text-sm font-bold"
+              style={{ color: variant.accent }}
+            >
+              {seatsNotice}
+            </span>
+          </span>
+        </div>
+      )}
 
       <div className="mt-5 flex flex-col gap-3">
         {FIELDS.map((field) => (

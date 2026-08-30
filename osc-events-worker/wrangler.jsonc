@@ -173,6 +173,17 @@
 		}
 	],
 
+	/**
+	 * The hourly scheduled job in src/index.ts. It closes the
+	 * registration form on any event that has reached its
+	 * registration_cap (GittyUp '26 at 1050), archives events whose
+	 * event_end_at has passed, and sweeps expired sessions and OAuth
+	 * states.
+	 *
+	 * One trigger for all three, so a cap is checked on the same hour
+	 * boundary the archive runs on — a form can therefore sit up to an
+	 * hour past its cap before it closes.
+	 */
 	"triggers": {
 		"crons": [
 			"0 * * * *"

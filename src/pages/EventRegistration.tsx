@@ -1,6 +1,10 @@
 import { FormEvent, useEffect, useId, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Github, Mail, User, Users } from 'lucide-react';
+import { ArrowLeft, Clock, Github, Mail, User, Users } from 'lucide-react';
+import {
+  CLOSING_SOON_HEADLINE,
+  seatsLeftLabel,
+} from '../data/eventsApi';
 import { Link, useParams } from 'react-router-dom';
 import {
   githubError,
@@ -33,6 +37,8 @@ interface Event {
   registration_type: RegistrationType;
   min_team_size: number;
   max_team_size: number;
+  /** cap − registrations taken, clamped at 0. null on an uncapped event. */
+  seats_left?: number | null;
   archive_status?: string;
 }
 
@@ -285,6 +291,11 @@ const EventRegistration = () => {
   const isTeam =
     event.registration_type === 'team';
 
+  /* null unless this event has a registration cap. */
+  const seatsNotice = seatsLeftLabel(
+    event.seats_left,
+  );
+
   return (
     <div className="container mx-auto max-w-5xl px-4 py-10 sm:py-12 md:px-6">
 
@@ -353,6 +364,35 @@ const EventRegistration = () => {
             {!event.is_open && (
               <div className="glass border border-red-500/30 rounded-lg p-4 text-red-400 mb-8">
                 Registration for this event is currently closed.
+              </div>
+            )}
+
+            {/*
+              * The room left, above the fields for the same reason the
+              * poster form carries it there: it is the reason to fill
+              * this in now, not a footnote to read afterwards.
+              *
+              * Only for an event with a registration cap, and only from
+              * a number the API sent — an unread count shows nothing
+              * rather than a zero. A snapshot from page load, not a
+              * live counter.
+              */}
+            {event.is_open === 1 && seatsNotice && (
+              <div className="glass mb-8 flex items-center gap-3 rounded-lg border border-brand-accent/40 p-4">
+                <Clock
+                  size={18}
+                  className="shrink-0 text-brand-accent"
+                />
+
+                <div>
+                  <div className="text-xs uppercase tracking-widest text-gray-300">
+                    {CLOSING_SOON_HEADLINE}
+                  </div>
+
+                  <div className="font-semibold text-brand-accent">
+                    {seatsNotice}
+                  </div>
+                </div>
               </div>
             )}
 

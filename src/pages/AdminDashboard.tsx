@@ -20,6 +20,7 @@ import {
   FileImage,
   Armchair,
   Package,
+  Megaphone,
 } from 'lucide-react';
 import AdminAuthSplash from '../components/AdminAuthSplash';
 import { clearOauthLoopMarker } from '../data/adminAuth';
@@ -31,6 +32,7 @@ import AdminSeating from '../components/AdminSeating';
 import AdminMembers from '../components/AdminMembers';
 import AdminContributors from '../components/AdminContributors';
 import AdminProjects from '../components/AdminProjects';
+import AdminNews from '../components/AdminNews';
 import { useAdminAppMeta } from '../data/adminAppMeta';
 
 const API_BASE_URL =
@@ -213,6 +215,7 @@ const TABS = [
   { id: 'contributors', label: 'Contributors', Icon: Github },
   { id: 'seating', label: 'Seating', Icon: Armchair },
   { id: 'posters', label: 'Posters', Icon: FileImage },
+  { id: 'news', label: 'News', Icon: Megaphone },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -1125,6 +1128,8 @@ setRegistrations(
         {tab === 'projects' && <AdminProjects />}
 
         {tab === 'contributors' && <AdminContributors />}
+                {tab === 'contributors' && <AdminContributors />}
+        {tab === 'news' && <AdminNews />}
 
         {tab === 'events' && (
           <>

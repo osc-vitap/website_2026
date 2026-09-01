@@ -19,6 +19,7 @@ interface SeedEvent {
 	registration_type?: "solo" | "team" | "workshop";
 	min_team_size?: number;
 	max_team_size?: number;
+	registration_cap?: number | null;
 }
 
 async function seedEvent(event: SeedEvent): Promise<void> {
@@ -34,9 +35,10 @@ async function seedEvent(event: SeedEvent): Promise<void> {
         archive_status,
         registration_type,
         min_team_size,
-        max_team_size
+        max_team_size,
+        registration_cap
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
 	)
 		.bind(
@@ -50,6 +52,7 @@ async function seedEvent(event: SeedEvent): Promise<void> {
 			event.registration_type ?? "solo",
 			event.min_team_size ?? 1,
 			event.max_team_size ?? 1,
+			event.registration_cap ?? null,
 		)
 		.run();
 }
@@ -366,6 +369,169 @@ describe("registration lifecycle", () => {
 			.first<{ is_open: number; archive_status: string }>();
 
 		expect(event).toMatchObject({ is_open: 0, archive_status: "archived" });
+	});
+});
+
+/*
+ * The hourly job that closes a form at its registration_cap — GittyUp
+ * '26 at 1050 in production, small numbers here.
+ */
+describe("registration cap", () => {
+	function runCron(): Promise<void> {
+		const ctx = createExecutionContext();
+
+		return worker
+			.scheduled({ scheduledTime: Date.now(), cron: "0 * * * *", noRetry() {} }, env, ctx)
+			.then(() => waitOnExecutionContext(ctx));
+	}
+
+	function isOpen(slug: string): Promise<{ is_open: number } | null> {
+		return env.DB.prepare(`SELECT is_open FROM events WHERE slug = ?`)
+			.bind(slug)
+			.first<{ is_open: number }>();
+	}
+
+	async function fill(slug: string, count: number): Promise<void> {
+		for (let i = 0; i < count; i += 1) {
+			await seedRegistration(slug, [
+				{
+					name: `Student ${i}`,
+					college_registration_number: `22BCE7${String(i).padStart(3, "0")}`,
+					email: `student${i}@vitapstudent.ac.in`,
+				},
+			]);
+		}
+	}
+
+	it("closes the form once the count reaches the cap", async () => {
+		await seedEvent({ slug: "capped-event", title: "Capped Event", registration_cap: 3 });
+		await fill("capped-event", 3);
+
+		await runCron();
+
+		expect(await isOpen("capped-event")).toMatchObject({ is_open: 0 });
+	});
+
+	it("leaves the form open below the cap", async () => {
+		await seedEvent({ slug: "roomy-event", title: "Roomy Event", registration_cap: 3 });
+		await fill("roomy-event", 2);
+
+		await runCron();
+
+		expect(await isOpen("roomy-event")).toMatchObject({ is_open: 1 });
+	});
+
+	it("leaves an uncapped event alone however many have registered", async () => {
+		await seedEvent({ slug: "uncapped-event", title: "Uncapped Event" });
+		await fill("uncapped-event", 4);
+
+		await runCron();
+
+		expect(await isOpen("uncapped-event")).toMatchObject({ is_open: 1 });
+	});
+
+	/*
+	 * The unit is registrations, not participants: two three-person teams
+	 * are two against a cap of two, not six.
+	 */
+	it("counts registrations rather than participants on a team event", async () => {
+		await seedEvent({
+			slug: "team-capped",
+			title: "Team Capped",
+			registration_type: "team",
+			min_team_size: 1,
+			max_team_size: 3,
+			registration_cap: 2,
+		});
+
+		await seedRegistration("team-capped", [
+			{ name: "A", college_registration_number: "22BCE8001", email: "a@vitapstudent.ac.in" },
+			{ name: "B", college_registration_number: "22BCE8002", email: "b@vitapstudent.ac.in" },
+			{ name: "C", college_registration_number: "22BCE8003", email: "c@vitapstudent.ac.in" },
+		]);
+
+		await runCron();
+
+		expect(await isOpen("team-capped")).toMatchObject({ is_open: 1 });
+
+		await seedRegistration("team-capped", [
+			{ name: "D", college_registration_number: "22BCE8004", email: "d@vitapstudent.ac.in" },
+			{ name: "E", college_registration_number: "22BCE8005", email: "e@vitapstudent.ac.in" },
+			{ name: "F", college_registration_number: "22BCE8006", email: "f@vitapstudent.ac.in" },
+		]);
+
+		await runCron();
+
+		expect(await isOpen("team-capped")).toMatchObject({ is_open: 0 });
+	});
+
+	/*
+	 * What the "N seats left" notice on the form reads.
+	 */
+	it("serves the seats left on the public event endpoints", async () => {
+		await seedEvent({ slug: "seats-event", title: "Seats Event", registration_cap: 5 });
+		await fill("seats-event", 2);
+
+		const one = await (await fetchWorker("/api/events/seats-event")).json<{
+			event: { registration_cap: number | null; seats_left: number | null };
+		}>();
+
+		expect(one.event).toMatchObject({ registration_cap: 5, seats_left: 3 });
+
+		const listed = await (await fetchWorker("/api/events")).json<{
+			events: { slug: string; seats_left: number | null }[];
+		}>();
+
+		expect(listed.events.find((event) => event.slug === "seats-event")).toMatchObject({
+			seats_left: 3,
+		});
+	});
+
+	it("reports no seats rather than a negative count when the cap is overshot", async () => {
+		await seedEvent({ slug: "overshot-event", title: "Overshot Event", registration_cap: 2 });
+		await fill("overshot-event", 4);
+
+		const body = await (await fetchWorker("/api/events/overshot-event")).json<{
+			event: { seats_left: number | null };
+		}>();
+
+		expect(body.event.seats_left).toBe(0);
+	});
+
+	it("leaves seats_left null on an uncapped event", async () => {
+		await seedEvent({ slug: "no-cap-event", title: "No Cap Event" });
+		await fill("no-cap-event", 2);
+
+		const body = await (await fetchWorker("/api/events/no-cap-event")).json<{
+			event: { registration_cap: number | null; seats_left: number | null };
+		}>();
+
+		expect(body.event).toMatchObject({ registration_cap: null, seats_left: null });
+	});
+
+	it("refuses the next registration once the cap has closed the form", async () => {
+		await seedEvent({ slug: "full-event", title: "Full Event", registration_cap: 1 });
+		await fill("full-event", 1);
+
+		await runCron();
+
+		const response = await fetchWorker("/api/events/full-event/register", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				members: [
+					{
+						name: "Late Student",
+						year_of_study: "2",
+						college_registration_number: "22BCE9999",
+						email: "late@vitapstudent.ac.in",
+					},
+				],
+			}),
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({ error: "Registration is closed" });
 	});
 });
 
@@ -1752,6 +1918,72 @@ describe("admin access", () => {
 		expect(row).toMatchObject({ slug: "stable-slug-26", venue: "A new room" });
 	});
 
+	it("stores a registration cap and clears it again", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+		await seedEvent({ slug: "cap-me", title: "Cap Me" });
+
+		const set = await asAdmin("/api/admin/events/cap-me", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ registration_cap: 1050 }),
+		});
+
+		expect(set.status).toBe(200);
+
+		expect(
+			await env.DB.prepare(`SELECT registration_cap FROM events WHERE slug = 'cap-me'`).first(),
+		).toMatchObject({ registration_cap: 1050 });
+
+		/*
+		 * An unrelated save must not silently uncap the event — the cap is
+		 * only touched when the field is sent.
+		 */
+		await asAdmin("/api/admin/events/cap-me", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ venue: "AB2 Auditorium" }),
+		});
+
+		expect(
+			await env.DB.prepare(`SELECT registration_cap FROM events WHERE slug = 'cap-me'`).first(),
+		).toMatchObject({ registration_cap: 1050 });
+
+		const cleared = await asAdmin("/api/admin/events/cap-me", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ registration_cap: null }),
+		});
+
+		expect(cleared.status).toBe(200);
+
+		expect(
+			await env.DB.prepare(`SELECT registration_cap FROM events WHERE slug = 'cap-me'`).first(),
+		).toMatchObject({ registration_cap: null });
+	});
+
+	it("rejects a registration cap that is not a whole number in range", async () => {
+		env.ADMIN_GITHUB_USERS = "";
+
+		await seedSession("admin");
+		await seedEvent({ slug: "bad-cap", title: "Bad Cap", registration_cap: 1050 });
+
+		for (const cap of [0, -1, 10.5, 100001, "1050"]) {
+			const response = await asAdmin("/api/admin/events/bad-cap", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ registration_cap: cap }),
+			});
+
+			expect(response.status).toBe(400);
+		}
+
+		expect(
+			await env.DB.prepare(`SELECT registration_cap FROM events WHERE slug = 'bad-cap'`).first(),
+		).toMatchObject({ registration_cap: 1050 });
+	});
+
 	it("rejects a slug that is not in canonical form", async () => {
 		env.ADMIN_GITHUB_USERS = "";
 
@@ -2763,5 +2995,96 @@ describe("admin outside the organisation", () => {
 
 			expect((await sessionCount())?.n).toBe(0);
 		});
+	});
+});
+
+
+
+
+describe("news API", () => {
+	afterEach(async () => {
+		await env.DB.prepare(`DELETE FROM news`).run();
+		await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+	});
+
+	it("returns empty news publicly", async () => {
+		const request = new IncomingRequest("http://events.oscvitap.com/api/news", { method: "GET" });
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, env, ctx);
+		await waitOnExecutionContext(ctx);
+
+		expect(response.status).toBe(200);
+		const data = await response.json() as { news: Record<string, unknown>[] };
+		expect(data.news).toEqual([]);
+	});
+
+	it("allows admins to create, read, update, and delete news", async () => {
+		const SESSION_ID = "test-news-session";
+		await env.DB.prepare(`
+			INSERT INTO admin_sessions (id, github_user_id, github_username, expires_at)
+			VALUES (?, '123', 'testadmin', datetime('now', '+1 hour'))
+		`).bind(SESSION_ID).run();
+
+		// Create
+		const createReq = new IncomingRequest("http://events.oscvitap.com/api/admin/news", {
+			method: "POST",
+			headers: { Cookie: `osc_admin_session=${SESSION_ID}` },
+			body: JSON.stringify({
+				title: "Test News",
+				category: "[Test]",
+				date: "Today",
+				excerpt: "This is a test news.",
+				link: "/test"
+			})
+		});
+		let ctx = createExecutionContext();
+		let response = await worker.fetch(createReq, env, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(201);
+
+		// Get Public
+		const getReq = new IncomingRequest("http://events.oscvitap.com/api/news", { method: "GET" });
+		ctx = createExecutionContext();
+		response = await worker.fetch(getReq, env, ctx);
+		await waitOnExecutionContext(ctx);
+		let data = await response.json() as { news: { id: number; title: string; category: string; date: string; excerpt: string; link: string | null }[] };
+		expect(data.news.length).toBe(1);
+		expect(data.news[0].title).toBe("Test News");
+		const newsId = data.news[0].id;
+
+		// Edit
+		const editReq = new IncomingRequest(`http://events.oscvitap.com/api/admin/news/${newsId}`, {
+			method: "PATCH",
+			headers: { Cookie: `osc_admin_session=${SESSION_ID}` },
+			body: JSON.stringify({
+				title: "Updated News",
+				category: "[Update]",
+				date: "Tomorrow",
+				excerpt: "Updated excerpt",
+				link: null
+			})
+		});
+		ctx = createExecutionContext();
+		response = await worker.fetch(editReq, env, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(200);
+
+		// Delete
+		const deleteReq = new IncomingRequest(`http://events.oscvitap.com/api/admin/news/${newsId}`, {
+			method: "DELETE",
+			headers: { Cookie: `osc_admin_session=${SESSION_ID}` }
+		});
+		ctx = createExecutionContext();
+		response = await worker.fetch(deleteReq, env, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(200);
+
+		// Verify deletion
+		const getReq2 = new IncomingRequest("http://events.oscvitap.com/api/news", { method: "GET" });
+		ctx = createExecutionContext();
+		response = await worker.fetch(getReq2, env, ctx);
+		await waitOnExecutionContext(ctx);
+		data = await response.json() as { news: { id: number; title: string; category: string; date: string; excerpt: string; link: string | null }[] };
+		expect(data.news.length).toBe(0);
 	});
 });

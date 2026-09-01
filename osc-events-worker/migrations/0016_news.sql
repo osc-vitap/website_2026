@@ -1,0 +1,9 @@
+CREATE TABLE news (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    category TEXT NOT NULL,
+    date TEXT NOT NULL,
+    excerpt TEXT NOT NULL,
+    link TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

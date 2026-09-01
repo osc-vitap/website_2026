@@ -1969,6 +1969,119 @@ async function processCompletedEvents(env: Env): Promise<void> {
 }
 
 /*
+ * How many registrations an event will still take, for the public
+ * event endpoints — the number the form prints as "N seats left".
+ *
+ * NULL for an uncapped event, which is how the site tells "no cap" from
+ * "no seats": the notice is only rendered when this is a number.
+ *
+ * Clamped at zero with max(). The cap is enforced hourly, so between
+ * the run that should have closed the form and the one that does, the
+ * count can pass the cap — and "-3 seats left" on a poster is worse
+ * than the overshoot it is reporting.
+ *
+ * This is the only place the count leaks out publicly, and only as a
+ * remainder against a cap the club published anyway. The rows
+ * themselves stay behind the admin gate.
+ */
+const SEATS_LEFT_SQL = `
+  CASE
+    WHEN registration_cap IS NULL THEN NULL
+    ELSE max(
+      registration_cap - (
+        SELECT COUNT(*)
+        FROM registrations r
+        WHERE r.event_id = events.id
+      ),
+      0
+    )
+  END AS seats_left
+`;
+
+/*
+ * Close the registration form on any event that has reached its
+ * registration_cap — GittyUp '26 at 1050, and nothing else today.
+ *
+ * This is the same state change the dashboard makes by hand: is_open
+ * goes to 0, exactly as PATCH /api/admin/events/:slug writes it with
+ * { "is_open": false }, and the registration handler already refuses
+ * everything with "Registration is closed" once it is. Nothing else is
+ * touched — the event stays listed, the rows already collected stay
+ * collected, and an organiser can reopen it from the dashboard (raise
+ * the cap first, or the next run closes it straight back).
+ *
+ * It does NOT call that endpoint. Every admin route is behind
+ * requireAdmin, which resolves a GitHub OAuth session out of a request
+ * cookie; a cron has no request and no session, so a Worker calling its
+ * own admin API would need a credential that bypasses that gate — a new
+ * way in, for a write it can already make directly against the same
+ * table. So the cron writes the row and the endpoint keeps being the
+ * only authenticated way in.
+ *
+ * The cap counts rows in registrations, per 0016_registration_cap.sql.
+ *
+ * Hourly granularity is the accepted cost: between two runs the count
+ * can pass the cap by however many registrations arrive in that hour.
+ * Making the cap exact means checking it inside the registration
+ * handler, where it would be one more read on the hot path and would
+ * have to be reconciled with the seat and team logic that already lives
+ * there.
+ */
+async function enforceRegistrationCaps(env: Env): Promise<void> {
+	const { results } = await env.DB.prepare(
+		`
+      SELECT
+        e.id,
+        e.slug,
+        e.registration_cap,
+        (
+          SELECT COUNT(*)
+          FROM registrations r
+          WHERE r.event_id = e.id
+        ) AS registration_count
+      FROM events e
+      WHERE e.is_open = 1
+        AND e.registration_cap IS NOT NULL
+    `,
+	).all<{
+		id: string;
+		slug: string;
+		registration_cap: number;
+		registration_count: number;
+	}>();
+
+	for (const event of results) {
+		if (event.registration_count < event.registration_cap) {
+			continue;
+		}
+
+		/*
+		 * is_open = 1 again in the WHERE, so a run that races another
+		 * writer — the archive job above, or an admin in the dashboard —
+		 * closes nothing that is already closed and reports honestly.
+		 */
+		const update = await env.DB.prepare(
+			`
+        UPDATE events
+        SET is_open = 0
+        WHERE id = ?
+          AND is_open = 1
+      `,
+		)
+			.bind(event.id)
+			.run();
+
+		if (update.meta.changes > 0) {
+			console.log(
+				'Registration cap reached, form closed:',
+				event.slug,
+				`${event.registration_count}/${event.registration_cap}`,
+			);
+		}
+	}
+}
+
+/*
  * Expired sessions and OAuth states are dead on read — the lookups all
  * filter on expires_at — but the rows themselves used to accumulate
  * forever. Sweeping them hourly keeps the tables at working-set size.
@@ -2074,6 +2187,18 @@ function parseStringArray(value: unknown, field: string): { ok: true; value: str
 
 export default {
 	async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+		/*
+		 * First, and in its own try: a cap that has been reached should be
+		 * enforced on this run even if archiving or the purge throws, and
+		 * a cap enforcement that throws must not cost the event its
+		 * archive.
+		 */
+		try {
+			await enforceRegistrationCaps(env);
+		} catch (error) {
+			console.error('Registration cap enforcement threw, continuing:', error);
+		}
+
 		await processCompletedEvents(env);
 
 		await purgeExpiredAuthRows(env);
@@ -4407,7 +4532,8 @@ export default {
 	          registration_type,
 	          min_team_size,
 	          max_team_size,
-	          registration_deadline
+	          registration_deadline,
+	          registration_cap
 	        FROM events
 	        WHERE slug = ?
 	      `,
@@ -4428,6 +4554,7 @@ export default {
 						min_team_size: number;
 						max_team_size: number;
 						registration_deadline: string | null;
+						registration_cap: number | null;
 					}>();
 
 				if (!existingEvent) {
@@ -4455,6 +4582,7 @@ export default {
 					max_team_size?: number;
 					is_open?: boolean;
 					registration_deadline?: string | null;
+					registration_cap?: number | null;
 				};
 
 				try {
@@ -4563,6 +4691,52 @@ export default {
 					maxTeamSize = 1;
 				}
 
+				/*
+				 * The ceiling the hourly job closes the form at. null
+				 * uncaps the event; omitting the field leaves whatever is
+				 * stored alone, the same as every other column here.
+				 */
+				let registrationCap = existingEvent.registration_cap;
+
+				if (body.registration_cap !== undefined) {
+					if (body.registration_cap === null) {
+						registrationCap = null;
+					} else {
+						const cap = body.registration_cap;
+
+						/*
+						 * A JSON number, not a coerced one: Number("") and
+						 * Number(true) both land on a plausible integer,
+						 * and a cap arrived at that way is a form that
+						 * closes at a number nobody chose.
+						 *
+						 * An upper bound as well as a lower one, for the
+						 * reason the entry gate capacity has both: a fat
+						 * finger that turns 1050 into 10500 silently
+						 * uncaps the event, and that only shows up as a
+						 * form nobody closed.
+						 */
+						if (typeof cap !== 'number' || !Number.isInteger(cap) || cap < 1 || cap > 100000) {
+							return json(
+								{
+									error: 'Registration cap must be a whole number between 1 and 100000, or null.',
+								},
+								400,
+								request,
+								env,
+							);
+						}
+
+						/*
+						 * Setting a cap at or below the count already taken
+						 * is allowed — it is how an organiser stops a form
+						 * at the next run without pretending the
+						 * registrations already collected are not there.
+						 */
+						registrationCap = cap;
+					}
+				}
+
 				try {
 					await env.DB.prepare(
 						`
@@ -4580,7 +4754,8 @@ export default {
 	          registration_deadline = ?,
 	          registration_type = ?,
 	          min_team_size = ?,
-	          max_team_size = ?
+	          max_team_size = ?,
+	          registration_cap = ?
 	        WHERE id = ?
 	      `,
 					)
@@ -4598,6 +4773,7 @@ export default {
 							registrationType,
 							minTeamSize,
 							maxTeamSize,
+							registrationCap,
 							existingEvent.id,
 						)
 						.run();
@@ -5241,6 +5417,83 @@ export default {
 				return json(await gateState(env, event.id), 200, request, env);
 			}
 
+			
+			if (request.method === 'GET' && (url.pathname === '/api/admin/news' || url.pathname === '/api/admin/news/')) {
+				const auth = await requireAdmin(request, env);
+				if (!auth.authorized) return auth.response;
+
+				try {
+					const { results } = await env.DB.prepare(
+						`SELECT * FROM news ORDER BY created_at DESC`
+					).all();
+					return json({ news: results }, 200, request, env);
+				} catch (err) {
+					console.error(err);
+					return json({ error: 'Failed to fetch news' }, 500, request, env);
+				}
+			}
+
+			if (request.method === 'POST' && (url.pathname === '/api/admin/news' || url.pathname === '/api/admin/news/')) {
+				const auth = await requireAdmin(request, env);
+				if (!auth.authorized) return auth.response;
+
+				try {
+					const body = (await request.json()) as { title?: string, category?: string, date?: string, excerpt?: string, link?: string };
+					const { title, category, date, excerpt, link } = body;
+
+					if (!title || !category || !date || !excerpt) {
+						return json({ error: 'Missing required fields' }, 400, request, env);
+					}
+
+					await env.DB.prepare(
+						`INSERT INTO news (title, category, date, excerpt, link) VALUES (?, ?, ?, ?, ?)`
+					).bind(title, category, date, excerpt, link || null).run();
+
+					return json({ success: true }, 201, request, env);
+				} catch (err) {
+					console.error(err);
+					return json({ error: 'Failed to create news' }, 500, request, env);
+				}
+			}
+
+			const adminNewsMatch = url.pathname.match(/^\/api\/admin\/news\/(\d+)$/);
+			if (adminNewsMatch) {
+				const auth = await requireAdmin(request, env);
+				if (!auth.authorized) return auth.response;
+
+				const newsId = parseInt(adminNewsMatch[1], 10);
+
+				if (request.method === 'PATCH') {
+					try {
+						const body = (await request.json()) as { title?: string, category?: string, date?: string, excerpt?: string, link?: string };
+						const { title, category, date, excerpt, link } = body;
+						
+						if (!title || !category || !date || !excerpt) {
+							return json({ error: 'Missing required fields' }, 400, request, env);
+						}
+
+						await env.DB.prepare(
+							`UPDATE news SET title = ?, category = ?, date = ?, excerpt = ?, link = ? WHERE id = ?`
+						).bind(title, category, date, excerpt, link || null, newsId).run();
+
+						return json({ success: true }, 200, request, env);
+					} catch (err) {
+						console.error(err);
+						return json({ error: 'Failed to update news' }, 500, request, env);
+					}
+				}
+
+				if (request.method === 'DELETE') {
+					try {
+						await env.DB.prepare(`DELETE FROM news WHERE id = ?`).bind(newsId).run();
+						return json({ success: true }, 200, request, env);
+					} catch (err) {
+						console.error(err);
+						return json({ error: 'Failed to delete news' }, 500, request, env);
+					}
+				}
+			}
+
 			if (request.method === 'GET' && (url.pathname === '/api/admin/events' || url.pathname === '/api/admin/events/')) {
 				const auth = await requireAdmin(request, env);
 
@@ -5265,6 +5518,7 @@ export default {
 	              e.min_team_size,
 	              e.max_team_size,
 	              e.registration_deadline,
+	              e.registration_cap,
 	              e.archive_status,
 	              e.archived_at,
 	              e.created_at,
@@ -5564,6 +5818,19 @@ export default {
 			 * ============================================================
 			 */
 
+			
+			if (request.method === 'GET' && (url.pathname === '/api/news' || url.pathname === '/api/news/')) {
+				try {
+					const { results } = await env.DB.prepare(
+						`SELECT * FROM news ORDER BY created_at DESC`
+					).all();
+					return json({ news: results }, 200, request, env);
+				} catch (err) {
+					console.error(err);
+					return json({ error: 'Failed to fetch news' }, 500, request, env);
+				}
+			}
+
 			if (request.method === 'GET' && (url.pathname === '/api/events' || url.pathname === '/api/events/')) {
 				/*
 				 * Archived events are hidden from the public list unless
@@ -5588,6 +5855,8 @@ export default {
 	              min_team_size,
 	              max_team_size,
 	              registration_deadline,
+	              registration_cap,
+	              ${SEATS_LEFT_SQL},
 	              archive_status
 	            FROM events
 	            ${includeArchived ? '' : "WHERE archive_status != 'archived'"}
@@ -5631,6 +5900,8 @@ export default {
 	              min_team_size,
 	              max_team_size,
 	              registration_deadline,
+	              registration_cap,
+	              ${SEATS_LEFT_SQL},
 	              archive_status
 	            FROM events
 	            WHERE slug = ?
@@ -6279,7 +6550,8 @@ export default {
 	              venue,
 	              event_date,
 	              event_end_at,
-	              is_open
+	              is_open,
+	              seats_open
 	            FROM events
 	            WHERE slug = ?
 	          `,
@@ -6293,6 +6565,7 @@ export default {
 						event_date: string | null;
 						event_end_at: string | null;
 						is_open: number;
+						seats_open: number | null;
 					}>();
 
 				if (!event) {
@@ -6308,10 +6581,20 @@ export default {
 				}
 
 				/*
-				 * Closing the event is the kill switch for seating too,
-				 * and it is the only stop when there is no end time set.
+				 * Seating follows registration unless it has been told
+				 * otherwise.
+				 *
+				 * Closing an event used to close seat booking with it,
+				 * because is_open was the only flag there was. That is
+				 * right most of the time and wrong at the end:
+				 * registration shuts while codes are still out, and the
+				 * people holding them are locked out of seats that
+				 * plainly exist. seats_open is NULL for every event that
+				 * does not care, which is the old behaviour exactly.
 				 */
-				if (!event.is_open) {
+				const seatingOpen = event.seats_open === null ? Boolean(event.is_open) : event.seats_open === 1;
+
+				if (!seatingOpen) {
 					return json(
 						{
 							error: 'Seat reservations are closed',

@@ -1,0 +1,12 @@
+-- Seating gets its own switch, separate from registration.
+--
+-- Closing an event has always closed seat booking with it, because
+-- is_open was the only flag there was. That is right most of the time
+-- and wrong at the end: registration shuts while codes are still out,
+-- and the people holding them are locked out of seats that exist.
+--
+-- NULL means "follow is_open", which is what every existing event
+-- wants and what a new one gets by default. 1 forces seating open with
+-- registration shut; 0 forces it shut while registration is still
+-- running, which is the case where the room fills before sign-ups do.
+ALTER TABLE events ADD COLUMN seats_open INTEGER;

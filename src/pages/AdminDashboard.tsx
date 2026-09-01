@@ -19,6 +19,7 @@ import {
   DoorOpen,
   FileImage,
   Armchair,
+  Package,
 } from 'lucide-react';
 import AdminAuthSplash from '../components/AdminAuthSplash';
 import { clearOauthLoopMarker } from '../data/adminAuth';
@@ -29,6 +30,7 @@ import AdminDoorTest from '../components/AdminDoorTest';
 import AdminSeating from '../components/AdminSeating';
 import AdminMembers from '../components/AdminMembers';
 import AdminContributors from '../components/AdminContributors';
+import AdminProjects from '../components/AdminProjects';
 import { useAdminAppMeta } from '../data/adminAppMeta';
 
 const API_BASE_URL =
@@ -206,6 +208,7 @@ const emptyForm: EventForm = {
 const TABS = [
   { id: 'door', label: 'Door', Icon: DoorOpen },
   { id: 'events', label: 'Events', Icon: Calendar },
+  { id: 'projects', label: 'Projects', Icon: Package },
   { id: 'team', label: 'Team', Icon: Users },
   { id: 'contributors', label: 'Contributors', Icon: Github },
   { id: 'seating', label: 'Seating', Icon: Armchair },
@@ -1118,6 +1121,8 @@ setRegistrations(
         {tab === 'seating' && <AdminSeating />}
 
         {tab === 'team' && <AdminMembers />}
+
+        {tab === 'projects' && <AdminProjects />}
 
         {tab === 'contributors' && <AdminContributors />}
 

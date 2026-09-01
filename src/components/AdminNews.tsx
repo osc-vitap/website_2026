@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Plus, Trash2, Pencil, RefreshCw, X, Save, AlertTriangle } from 'lucide-react';
+import MDEditor from '@uiw/react-md-editor';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://events.oscvitap.com';
 
@@ -339,16 +340,19 @@ export default function AdminNews() {
                   </div>
                 </div>
 
-                <div>
+                <div data-color-mode="dark">
                   <label className="block text-sm font-medium text-gray-300 mb-1">
                     Excerpt <span className="text-brand-primary">*</span>
                   </label>
-                  <textarea
+                  <MDEditor
                     value={form.excerpt}
-                    onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
-                    rows={4}
-                    className="w-full px-3 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white focus:outline-none focus:border-brand-primary transition-colors resize-y custom-scrollbar"
-                    placeholder="Short description..."
+                    onChange={(val) => setForm({ ...form, excerpt: val || '' })}
+                    preview="edit"
+                    height={200}
+                    className="w-full bg-dark-800 border border-dark-600 rounded-lg focus-within:border-brand-primary transition-colors custom-scrollbar"
+                    textareaProps={{
+                      placeholder: 'Short description (Supports Markdown)...'
+                    }}
                   />
                 </div>
 

@@ -123,6 +123,7 @@ beforeEach(async () => {
 		env.DB.prepare(`DELETE FROM registration_members`),
 		env.DB.prepare(`DELETE FROM registrations`),
 		env.DB.prepare(`DELETE FROM events`),
+		env.DB.prepare(`DELETE FROM news`),
 	]);
 });
 

@@ -19,6 +19,7 @@ import {
   DoorOpen,
   FileImage,
   Armchair,
+  Package,
   Megaphone,
 } from 'lucide-react';
 import AdminAuthSplash from '../components/AdminAuthSplash';
@@ -30,6 +31,7 @@ import AdminDoorTest from '../components/AdminDoorTest';
 import AdminSeating from '../components/AdminSeating';
 import AdminMembers from '../components/AdminMembers';
 import AdminContributors from '../components/AdminContributors';
+import AdminProjects from '../components/AdminProjects';
 import AdminNews from '../components/AdminNews';
 import { useAdminAppMeta } from '../data/adminAppMeta';
 
@@ -208,6 +210,7 @@ const emptyForm: EventForm = {
 const TABS = [
   { id: 'door', label: 'Door', Icon: DoorOpen },
   { id: 'events', label: 'Events', Icon: Calendar },
+  { id: 'projects', label: 'Projects', Icon: Package },
   { id: 'team', label: 'Team', Icon: Users },
   { id: 'contributors', label: 'Contributors', Icon: Github },
   { id: 'seating', label: 'Seating', Icon: Armchair },
@@ -1122,6 +1125,9 @@ setRegistrations(
 
         {tab === 'team' && <AdminMembers />}
 
+        {tab === 'projects' && <AdminProjects />}
+
+        {tab === 'contributors' && <AdminContributors />}
                 {tab === 'contributors' && <AdminContributors />}
         {tab === 'news' && <AdminNews />}
 

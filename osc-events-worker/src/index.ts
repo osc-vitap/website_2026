@@ -2099,6 +2099,92 @@ async function purgeExpiredAuthRows(env: Env): Promise<void> {
 	]);
 }
 
+/*
+ * Project row -> API response shape. The two list columns are JSON
+ * arrays; if a row is corrupted we surface an empty array rather than
+ * 500, so the admin can still load the page and fix the value.
+ */
+
+interface ProjectRow {
+	id: string;
+	title: string;
+	description: string;
+	tech_stack: string;
+	repo_url: string;
+	live_url: string | null;
+	contributors: string;
+	display_order: number;
+	created_at: string;
+	updated_at: string;
+}
+
+interface ProjectResponse {
+	id: string;
+	title: string;
+	description: string;
+	techStack: string[];
+	repoUrl: string;
+	liveUrl: string | null;
+	contributors: string[];
+	displayOrder: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+function rowToProject(row: ProjectRow): ProjectResponse {
+	let techStack: string[] = [];
+	let contributors: string[] = [];
+
+	try {
+		const parsedTech = JSON.parse(row.tech_stack);
+		if (Array.isArray(parsedTech) && parsedTech.every((entry) => typeof entry === 'string')) {
+			techStack = parsedTech;
+		}
+	} catch {
+		/* Corrupt column treated as empty; admin can fix via edit. */
+	}
+
+	try {
+		const parsedContrib = JSON.parse(row.contributors);
+		if (Array.isArray(parsedContrib) && parsedContrib.every((entry) => typeof entry === 'string')) {
+			contributors = parsedContrib;
+		}
+	} catch {
+		/* Corrupt column treated as empty. */
+	}
+
+	return {
+		id: row.id,
+		title: row.title,
+		description: row.description,
+		techStack,
+		repoUrl: row.repo_url,
+		liveUrl: row.live_url,
+		contributors,
+		displayOrder: row.display_order,
+		createdAt: row.created_at,
+		updatedAt: row.updated_at,
+	};
+}
+
+function isHttpUrl(value: string): boolean {
+	return /^https?:\/\//i.test(value);
+}
+
+function parseStringArray(value: unknown, field: string): { ok: true; value: string[] } | { ok: false; error: string } {
+	if (!Array.isArray(value)) {
+		return { ok: false, error: `${field} must be an array of strings.` };
+	}
+
+	if (!value.every((entry) => typeof entry === 'string')) {
+		return { ok: false, error: `${field} must be an array of strings.` };
+	}
+
+	const cleaned = value.map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+
+	return { ok: true, value: cleaned };
+}
+
 export default {
 	async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
 		/*
@@ -3143,6 +3229,353 @@ export default {
 					{
 						success: true,
 						deleted_id: contributorId,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			/*
+			 * ============================================================
+			 * PUBLIC PROJECTS
+			 * ============================================================
+			 */
+
+			if (request.method === 'GET' && (url.pathname === '/api/projects' || url.pathname === '/api/projects/')) {
+				const { results } = await env.DB.prepare(
+					`
+			          SELECT
+			            id, title, description, tech_stack, repo_url, live_url,
+			            contributors, display_order, created_at, updated_at
+			          FROM projects
+			          ORDER BY display_order ASC, id ASC
+			        `,
+				).all<ProjectRow>();
+
+				return json(
+					{
+						projects: results.map(rowToProject),
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			/*
+			 * ============================================================
+			 * ADMIN PROJECTS
+			 * ============================================================
+			 *
+			 * Slug as primary key, matching the events table. JSON-encoded
+			 * columns for the two list fields — validating array shape on
+			 * every write keeps the contract honest without a join table.
+			 */
+
+			if (request.method === 'GET' && (url.pathname === '/api/admin/projects' || url.pathname === '/api/admin/projects/')) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const { results } = await env.DB.prepare(
+					`
+	          SELECT
+	            id, title, description, tech_stack, repo_url, live_url,
+	            contributors, display_order, created_at, updated_at
+	          FROM projects
+	          ORDER BY display_order ASC, id ASC
+	        `,
+				).all<ProjectRow>();
+
+				return json(
+					{
+						projects: results.map(rowToProject),
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			if (request.method === 'POST' && (url.pathname === '/api/admin/projects' || url.pathname === '/api/admin/projects/')) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				let body: {
+					id?: string;
+					title?: string;
+					description?: string;
+					techStack?: unknown;
+					repoUrl?: string;
+					liveUrl?: string | null;
+					contributors?: unknown;
+					displayOrder?: number;
+				};
+
+				try {
+					body = (await request.json()) as typeof body;
+				} catch {
+					return json({ error: 'Invalid JSON payload' }, 400, request, env);
+				}
+
+				if (!body.id) {
+					return json({ error: 'Project id is required.' }, 400, request, env);
+				}
+
+				const id = normalizeSlug(body.id);
+
+				if (!id || !SLUG_PATTERN.test(id)) {
+					return json(
+						{ error: 'Project id must be lowercase letters, numbers and single hyphens.' },
+						400,
+						request,
+						env,
+					);
+				}
+
+				const title = body.title?.trim();
+
+				if (!title) {
+					return json({ error: 'Project title is required.' }, 400, request, env);
+				}
+
+				const repoUrl = body.repoUrl?.trim();
+
+				if (!repoUrl || !isHttpUrl(repoUrl)) {
+					return json({ error: 'A valid repository URL (http or https) is required.' }, 400, request, env);
+				}
+
+				const liveUrlRaw = body.liveUrl?.trim();
+				const liveUrl = liveUrlRaw ? liveUrlRaw : null;
+
+				if (liveUrl && !isHttpUrl(liveUrl)) {
+					return json({ error: 'Live URL must start with http or https.' }, 400, request, env);
+				}
+
+				const techStackResult = parseStringArray(body.techStack ?? [], 'techStack');
+				if (!techStackResult.ok) {
+					return json({ error: techStackResult.error }, 400, request, env);
+				}
+
+				const contributorsResult = parseStringArray(body.contributors ?? [], 'contributors');
+				if (!contributorsResult.ok) {
+					return json({ error: contributorsResult.error }, 400, request, env);
+				}
+
+				let displayOrder: number;
+
+				if (typeof body.displayOrder === 'number' && Number.isFinite(body.displayOrder)) {
+					displayOrder = Math.trunc(body.displayOrder);
+				} else {
+					const maxOrder = await env.DB.prepare(`SELECT MAX(display_order) AS max_order FROM projects`).first<{ max_order: number | null }>();
+					displayOrder = (maxOrder?.max_order ?? 0) + 1;
+				}
+
+				try {
+					await env.DB.prepare(
+						`
+	          INSERT INTO projects (id, title, description, tech_stack, repo_url, live_url, contributors, display_order)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	        `,
+					)
+						.bind(
+							id,
+							title,
+							body.description?.trim() ?? '',
+							JSON.stringify(techStackResult.value),
+							repoUrl,
+							liveUrl,
+							JSON.stringify(contributorsResult.value),
+							displayOrder,
+						)
+						.run();
+				} catch (error) {
+					console.error('Create project failed:', error);
+
+					return json(
+						{ error: 'Unable to create project. The id may already exist.' },
+						400,
+						request,
+						env,
+					);
+				}
+
+				const created = await env.DB.prepare(
+					`SELECT id, title, description, tech_stack, repo_url, live_url, contributors, display_order, created_at, updated_at FROM projects WHERE id = ?`,
+				)
+					.bind(id)
+					.first<ProjectRow>();
+
+				return json(
+					{
+						success: true,
+						project: created ? rowToProject(created) : null,
+					},
+					201,
+					request,
+					env,
+				);
+			}
+
+			const adminProjectIdMatch = url.pathname.match(/^\/api\/admin\/projects\/([^/]+)$/);
+
+			if ((request.method === 'PATCH' || request.method === 'PUT') && adminProjectIdMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const id = adminProjectIdMatch[1];
+
+				const current = await env.DB.prepare(
+					`SELECT id, title, description, tech_stack, repo_url, live_url, contributors, display_order, created_at, updated_at FROM projects WHERE id = ?`,
+				)
+					.bind(id)
+					.first<ProjectRow>();
+
+				if (!current) {
+					return json({ error: 'Project not found' }, 404, request, env);
+				}
+
+				let body: {
+					title?: string;
+					description?: string;
+					techStack?: unknown;
+					repoUrl?: string;
+					liveUrl?: string | null;
+					contributors?: unknown;
+					displayOrder?: number;
+				};
+
+				try {
+					body = (await request.json()) as typeof body;
+				} catch {
+					return json({ error: 'Invalid JSON payload' }, 400, request, env);
+				}
+
+				/* PATCH replaces arrays, it does not merge them: the admin
+				 * form round-trips the full array on every save, and a merge
+				 * would silently keep stale entries the form has dropped. */
+				let title = current.title;
+				if (body.title !== undefined) {
+					const trimmed = body.title.trim();
+					if (!trimmed) {
+						return json({ error: 'Project title cannot be empty.' }, 400, request, env);
+					}
+					title = trimmed;
+				}
+
+				let description = current.description;
+				if (body.description !== undefined) {
+					description = body.description.trim();
+				}
+
+				let repoUrl = current.repo_url;
+				if (body.repoUrl !== undefined) {
+					const trimmed = body.repoUrl.trim();
+					if (!trimmed || !isHttpUrl(trimmed)) {
+						return json({ error: 'A valid repository URL (http or https) is required.' }, 400, request, env);
+					}
+					repoUrl = trimmed;
+				}
+
+				let liveUrl = current.live_url;
+				if (body.liveUrl !== undefined) {
+					if (body.liveUrl === null) {
+						liveUrl = null;
+					} else {
+						const trimmed = body.liveUrl.trim();
+						liveUrl = trimmed ? trimmed : null;
+					}
+
+					if (liveUrl && !isHttpUrl(liveUrl)) {
+						return json({ error: 'Live URL must start with http or https.' }, 400, request, env);
+					}
+				}
+
+				let techStackJson = current.tech_stack;
+				if (body.techStack !== undefined) {
+					const result = parseStringArray(body.techStack, 'techStack');
+					if (!result.ok) {
+						return json({ error: result.error }, 400, request, env);
+					}
+					techStackJson = JSON.stringify(result.value);
+				}
+
+				let contributorsJson = current.contributors;
+				if (body.contributors !== undefined) {
+					const result = parseStringArray(body.contributors, 'contributors');
+					if (!result.ok) {
+						return json({ error: result.error }, 400, request, env);
+					}
+					contributorsJson = JSON.stringify(result.value);
+				}
+
+				let displayOrder = current.display_order;
+				if (body.displayOrder !== undefined) {
+					if (typeof body.displayOrder !== 'number' || !Number.isFinite(body.displayOrder)) {
+						return json({ error: 'displayOrder must be a number.' }, 400, request, env);
+					}
+					displayOrder = Math.trunc(body.displayOrder);
+				}
+
+				await env.DB.prepare(
+					`
+	          UPDATE projects
+	          SET title = ?, description = ?, tech_stack = ?, repo_url = ?,
+	              live_url = ?, contributors = ?, display_order = ?,
+	              updated_at = CURRENT_TIMESTAMP
+	          WHERE id = ?
+	        `,
+				)
+					.bind(title, description, techStackJson, repoUrl, liveUrl, contributorsJson, displayOrder, id)
+					.run();
+
+				const updated = await env.DB.prepare(
+					`SELECT id, title, description, tech_stack, repo_url, live_url, contributors, display_order, created_at, updated_at FROM projects WHERE id = ?`,
+				)
+					.bind(id)
+					.first<ProjectRow>();
+
+				return json(
+					{
+						success: true,
+						project: updated ? rowToProject(updated) : null,
+					},
+					200,
+					request,
+					env,
+				);
+			}
+
+			if (request.method === 'DELETE' && adminProjectIdMatch) {
+				const auth = await requireAdmin(request, env);
+
+				if (!auth.authorized) {
+					return auth.response;
+				}
+
+				const id = adminProjectIdMatch[1];
+
+				const result = await env.DB.prepare(`DELETE FROM projects WHERE id = ?`)
+					.bind(id)
+					.run();
+
+				if (!result.meta.changes) {
+					return json({ error: 'Project not found' }, 404, request, env);
+				}
+
+				return json(
+					{
+						success: true,
+						deleted_id: id,
 					},
 					200,
 					request,

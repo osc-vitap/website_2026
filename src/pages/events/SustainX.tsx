@@ -1,12 +1,15 @@
 import { motion } from 'framer-motion'
 import { EventPageFrame } from './eventPageKit'
 import { useEventPageMeta } from './useEventPageMeta'
+import { usePosterReady } from './gittyup26/usePosterReady'
 
 const SustainX = () => {
   useEventPageMeta(
     'SustainX',
     'A 2 day innovation hackathon focused on solving real world challenges'
   )
+
+  const ready = usePosterReady([])
 
   const questions = [
     'Address a specific, real sustainability problem?',
@@ -110,6 +113,16 @@ const SustainX = () => {
         </div>
         <div className="absolute top-0 right-0 w-[50vw] h-full min-h-screen bg-[#FFF5E1] -skew-x-12 translate-x-32 origin-bottom hidden lg:block z-0" />
       </div>
+
+      {!ready && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#003399]"
+          role="status"
+          aria-label="Loading"
+        >
+          <div className="h-9 w-9 animate-spin rounded-full border-2 border-transparent border-t-[#FFCC00] border-r-[#FFCC00]" />
+        </div>
+      )}
     </EventPageFrame>
   )
 }

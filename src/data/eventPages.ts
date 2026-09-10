@@ -1,5 +1,6 @@
 import { ComponentType } from 'react';
 import GittyUp26 from '../pages/events/GittyUp26';
+import SustainX from '../pages/events/SustainX';
 
 /*
  * Registry of standalone event pages.
@@ -37,6 +38,12 @@ export const eventPages: EventPage[] = [
     registrationSlug: 'gittyup26',
     aliases: ['gittyup'],
     component: GittyUp26,
+  },
+  {
+    slug: 'sustainx',
+    name: 'SustainX',
+    registrationSlug: 'sustainx',
+    component: SustainX,
   },
 ];
 
